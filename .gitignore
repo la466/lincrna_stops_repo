@@ -3,4 +3,6 @@ __pycache__
 temp_files/
 temp_data/
 source_data/
+results/
 _*
+observed*

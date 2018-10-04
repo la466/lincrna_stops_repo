@@ -4,6 +4,23 @@ import unittest
 
 class Test_generic(unittest.TestCase):
 
+    def test_Bed_Feature(self):
+        input_file = "test_data/generic/test_Bed_Feature/input.txt"
+        input_lines = read_many_fields(input_file, "\t")
+        for line in input_lines:
+            features = Bed_Feature(line)
+            self.assertEqual(line[0], features.chr)
+            self.assertEqual(int(line[1]), features.start)
+            self.assertEqual(int(line[2]), features.stop)
+            self.assertEqual(line[3], features.name)
+            self.assertEqual(line[4], features.score)
+            self.assertEqual(line[5], features.strand)
+            self.assertEqual(int(line[6]), features.thickStart)
+            self.assertEqual(int(line[7]), features.thickEnd)
+            self.assertEqual(int(line[9]), features.featureCount)
+            self.assertEqual(line[10], features.featureSizes)
+            self.assertEqual(line[11], features.featureStarts)
+
     def test_calc_eff_p(self):
         true_value = 3
         sim_values = [7, 4, 1, 1, 1, 3, 2, 4, 5]

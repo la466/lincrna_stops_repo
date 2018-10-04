@@ -16,6 +16,26 @@ import shutil
 import subprocess
 import time
 
+class Bed_Feature(object):
+    """
+    Return features of a line from a bed file
+    """
+    def __init__(self, line):
+        self.chr = line[0]
+        self.start = int(line[1])
+        self.stop = int(line[2])
+        self.name = line[3]
+        self.score = line[4]
+        self.strand = line[5]
+        self.thickStart = int(line[6])
+        self.thickEnd = int(line[7])
+        self.featureCount = int(line[9])
+        self.featureSizes = line[10]
+        self.featureStarts = line[11]
+        if len(line[12:]):
+            self.info = line[12:]
+
+
 def blast_all_against_all(db_name, fasta_file_name, output_file_name, blast_db_path):
     '''
     Blast all the sequences in a fasta file against each-other.

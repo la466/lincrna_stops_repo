@@ -1,0 +1,6 @@
+chr1	11	14	item1.1	.	+	10	20	.	2	.	.	info1	info2	info3	info4
+chr1	16	20	item1.2	.	+	10	20	.	2	.	.	info1	info2	info3	info4
+chr2	124	424	item2.1	.	+	100	2000	.	4	.	.	info10	info20	info30	info40
+chr2	260	710	item2.2	.	+	100	2000	.	4	.	.	info10	info20	info30	info40
+chr2	202	1002	item2.3	.	+	100	2000	.	4	.	.	info10	info20	info30	info40
+chr2	500	1611	item2.4	.	+	100	2000	.	4	.	.	info10	info20	info30	info40
