@@ -422,6 +422,12 @@ def parse_arguments(description, arguments, floats = None, flags = None, ints = 
     args = parser.parse_args()
     return(args)
 
+def print_simulation(number, all):
+    """
+    Print the simulation number out of total
+    """
+    print("Simulation {0}/{1}".format(number, len(all)))
+
 def read_families(file):
     '''
     Read a families file (one family of paralogous genes per line, the member genes separated by commas) into a list,
@@ -487,6 +493,13 @@ def remove_file(file_name):
         os.remove(file_name)
     except FileNotFoundError:
         pass
+
+def remove_files(file_list):
+    '''
+    Remove files in list
+    '''
+    for file in file_list:
+        remove_file(file)
 
 def reverse_complement(base):
     '''

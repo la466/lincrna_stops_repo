@@ -45,13 +45,14 @@ def build_seqs_from_exons_fasta(input_fasta, output_fasta):
     gen.write_to_fasta(names, seqs, output_fasta)
 
 
-def entries_to_bed(source_path, output_file):
+def entries_to_bed(source_path, output_file, exclude_XY=None):
     """
     Generate a file containing the exon info from a bed file
 
     Args:
-        source_path(str): the source path for the origin .bed file
-        output_file(str): output .bed file to contain the exon info
+        source_path (str): the source path for the origin .bed file
+        output_file (str): output .bed file to contain the exon info
+        exclude_XY (bool): if true, exclude cases on X and Y chr
     """
     # read the file in
     lines = gen.read_many_fields(source_path, "\t")
@@ -72,7 +73,11 @@ def entries_to_bed(source_path, output_file):
                     # add the info if exists
                     if hasattr(features, "info"):
                         output_list.extend(features.info)
-                    outfile.write("{0}\n".format("\t".join(gen.stringify(output_list))))
+                    if exclude_XY:
+                        if features.chr not in ["chrX", "chrY"]:
+                            outfile.write("{0}\n".format("\t".join(gen.stringify(output_list))))
+                    else:
+                        outfile.write("{0}\n".format("\t".join(gen.stringify(output_list))))
             else:
                 print('Error in the number of features')
 
@@ -110,7 +115,7 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
 
 
 
-def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta):
+def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, exclude_XY=None):
     """
     Generate a file containing the exon sequences for a given .bed file
 
@@ -119,9 +124,10 @@ def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq
         genome_fasta (str): the source path for the genome fasta
         output_bed (str): output .bed file to contain the exon info
         output_fasta (str): output fasta containing sequences
+        exclude_XY (bool): if true, exclude cases on the X and Y chr
     """
     # create the exon bed file
-    entries_to_bed(source_path, output_bed)
+    entries_to_bed(source_path, output_bed, exclude_XY)
     # generate the fasta from the file
     fasta_from_intervals(output_bed, output_fasta, genome_fasta, names=True)
     # build the sequences from the exons

@@ -1,0 +1,8 @@
+sim_no,seq1,seq2,seq3
+gc,0.5,0.4375,0.4
+real,15,21,21
+sim_1,5,nan,8
+sim_2,11,30,18
+sim_3,17,nan,22
+sim_4,nan,nan,22
+sim_5,nan,15,26

@@ -1,5 +1,5 @@
 import generic as gen
-import sim_ops as simo
+import sim_ops_containers as simopc
 import file_ops as fo
 import time
 
@@ -22,7 +22,7 @@ def main():
 
     # extract sequences from source file
     if extract_seqs:
-        fo.extract_seqs(source_exons_path, genome_fasta, exons_bed, exons_fasta, seqs_fasta)
+        fo.extract_seqs(source_exons_path, genome_fasta, exons_bed, exons_fasta, seqs_fasta, exclude_XY=True)
 
     # *****
     # might need to do some filtering of sequences in here
@@ -30,7 +30,7 @@ def main():
 
     sim_orf_length_output_file = "{0}/sim_orf_lengths.csv".format(output_directory)
     if sim_orf_length:
-        simo.sim_orf_length(seqs_fasta, required_simulations, sim_orf_length_output_file)
+        simopc.sim_orf_length(seqs_fasta, required_simulations, sim_orf_length_output_file)
 
 
 

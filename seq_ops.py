@@ -1,62 +1,168 @@
 import generic as gen
+import numpy as np
+import itertools as it
 import re
+import collections
 
-def get_shortest_orf(seq, strict_stop=None):
+def calc_seq_gc(seq):
     """
-    Get the shortest ORF in a sequence
+    Calculate GC content of a sequence
+
+    Args:
+        seq (str): input string
+
+    Return:
+        gc (float): gc content of string
+    """
+    gc = np.divide(sum([1 for i in list(seq) if i in ["G", "C"]]), len(seq))
+    return gc
+
+
+def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=None):
+    """
+    Generate a sequence based on dinucleotide and nucleotide frequencies.
+
+    Args:
+        seq (str): the sequence to simulate
+        dinucleotide_choices (list): a list of sorted dinucleotides
+        dicnucleotide_probabilities (list): a list of associated dinucleotide probablities
+        nucleotide_choices (list): a list of sorted nucleotides
+        nucleotide_probabilities (list): a list of associated nucleotide probabilities
+        seed (bool): optionally set the randomisation seed
+
+    Returns:
+        sim_sequence (str): the simulated sequence
+    """
+
+    # optionally set seed
+    if seed:
+        np.random.seed(seed)
+
+    required_dints = int(len(seq)/2)
+    sim_content = list(np.random.choice(dinucleotide_choices, required_dints, p=dicnucleotide_probabilities))
+    if len(seq) % 2 != 0:
+        sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
+    sim_sequence = "".join(sim_content)
+
+    return sim_sequence
+
+
+def get_dinucleotide_content(seqs, as_string=None):
+    """
+    Get the dinucleotide content of a list of seqs
+
+    Args:
+        seqs (list): list of sequences
+
+    Returns:
+        dinucleotide_content (dict): dict[dinucleotide] = dinucleotide proportion
+    """
+
+    dinucleotide_list = ["".join(i) for i in it.product("ACGT", repeat=2)]
+    dinucleotide_count = collections.defaultdict(lambda: 0)
+
+    if as_string:
+        seqs = ["".join(seqs)]
+
+    total_dints = 0
+    for seq in seqs:
+        dinucleotide_regex = re.compile('.{2}')
+        dinucleotides1 = re.findall(dinucleotide_regex, seq)
+        dinucleotides2 = re.findall(dinucleotide_regex, seq[1:])
+
+        total_dints += len(dinucleotides1) + len(dinucleotides2)
+
+        # get the counts
+        for dint in dinucleotide_list:
+            dinucleotide_count[dint] += dinucleotides1.count(dint)
+            dinucleotide_count[dint] += dinucleotides2.count(dint)
+
+    dinucleotide_content = {}
+    # get proportions
+    for i, count in dinucleotide_count.items():
+        dinucleotide_content[i] = np.divide(count, total_dints)
+
+    return dinucleotide_content
+
+
+def get_nucleotide_content(seqs):
+    """
+    Get the nucleotide content of a list of seqs
+
+    Args:
+        seqs (list): list of sequences
+
+    Returns:
+        nucleotide_content (dict): dict[nucleotide] = nucleotide proportion
+    """
+
+    nts = ["A", "C", "G", "T"]
+    seqs_string = "".join(seqs)
+    seqs_nts = list(seqs_string)
+    nucleotide_content = {}
+    for nt in nts:
+        nucleotide_content[nt] = np.divide(seqs_nts.count(nt), len(seqs_nts))
+    return nucleotide_content
+
+
+def get_longest_orf(seq, strict_stop=None):
+    """
+    Get the longest ORF in a sequence
 
     Args:
         seq (str): the sequence
 
     Returns:
-        shortest_orf (int): the shortest ORF length in nucleotides
+        longest (int): the longest ORF length in nucleotides
     """
+
     orfs = []
     stops = ["TAA", "TAG", "TGA"]
+    reg = re.compile('^ATG(.{3})+?(?=(TAA|TAG|TGA))')
+
     start_re = re.compile("ATG")
-    codon_re = re.compile(".{3}")
     starts = start_re.finditer(seq)
     for start in starts:
         start_index = start.start()
         query_seq = seq[start_index:]
-        query_codons = codon_re.findall(query_seq)
-        stops_exist = [stop for stop in stops if stop in query_codons]
-        # if a stop codon exists
-        if len(stops_exist):
-            for i, codon in enumerate(query_codons):
-                if codon in stops:
-                    # only cound coding codons, i.e not the stop codon
-                    nts = i*3
-                    #only want cases where there is something more than a START:STOP
-                    if nts > 3:
-                        orfs.append(nts)
-        # or if the sequence doesnt have a stop, use the full length of the rest of the sequence
+        orf_search = re.finditer(reg, query_seq)
+        lengths = [len(match.group(0)) for match in orf_search]
+        if len(lengths):
+            orfs.append(lengths[0])
         else:
-            # if we haven't specified a strict stop
+            # if we haven't specific that there needs to be a stop
             if not strict_stop:
                 orfs.append(len(query_seq))
-    # return the shortest orf
+
+    # return the longest orf
     if len(orfs):
-        return min(orfs)
+        return max(orfs)
     else:
-        return "na"
+        return np.nan
 
 
-def get_shortest_orfs(seqs):
+def get_longest_orfs(seqs):
     """
-    Get the shortest open reading frames in a list of sequences
+    Get the longest open reading frames in a list of sequences
 
     Args:
-        seqs (list): a list of sequences
+        seqs (list/dict): a list/dictionary of sequences
 
     Returns:
-        shortest_orfs (list): A list contaning then shortest length reading frame for each seq
+        longest_orfs (list/dict): A list/dictionary contaning then longest length reading frame for each seq
     """
 
-    shortest_orfs = []
-    for seq in seqs:
-        shortest_orfs.append(get_shortest_orf(seq))
-    return shortest_orfs
+    if isinstance(seqs, list):
+        longest_orfs = []
+        for seq in seqs:
+            longest_orfs.append(get_longest_orf(seq))
+        return longest_orfs
+
+    if isinstance(seqs, dict):
+        longest_orfs = {}
+        for seq in seqs:
+            longest_orfs[seq] = get_longest_orf(seqs[seq])
+        return longest_orfs
 
 
 def fasta_to_dict(fasta_path):
