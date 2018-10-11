@@ -78,7 +78,7 @@ class Test_generic(unittest.TestCase):
         self.assertEqual(expected, observed)
 
     def test_line_count2(self):
-        file = "test_data/single-exon_wo_retrocopies_UCSC_ESE_positions_1000_test.txt"
+        file = "test_data/generic/test_line_count2/single-exon_wo_retrocopies_UCSC_ESE_positions_1000_test.txt"
         expected = 646
         observed = line_count(file)
         self.assertEqual(expected, observed)
