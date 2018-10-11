@@ -6,8 +6,8 @@ import time
 def main():
 
     description = ""
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length"], flags = [4,5], ints=[3])
-    source_exons_path, genome_fasta, output_directory, required_simulations, extract_seqs, sim_orf_length = args.source_exons_path, args.genome_fasta, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count"], flags = [4,5,6], ints=[3])
+    source_exons_path, genome_fasta, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count = args.source_exons_path, args.genome_fasta, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count
 
     # set a start time
     start = time.time()
@@ -31,6 +31,10 @@ def main():
     sim_orf_length_output_file = "{0}/sim_orf_lengths.csv".format(output_directory)
     if sim_orf_length:
         simopc.sim_orf_length(seqs_fasta, required_simulations, sim_orf_length_output_file)
+
+    sim_stop_count_output_file = "{0}/sim_stop_count.csv".format(output_directory)
+    if sim_stop_count:
+        simopc.sim_stop_count(seqs_fasta, required_simulations, sim_stop_count_output_file)
 
 
 

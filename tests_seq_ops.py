@@ -17,6 +17,21 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = fasta_to_dict(input_file)
         self.assertEqual(expected, observed)
 
+    def test_generate_nt_matched_seq(self):
+        input_file = "test_data/seq_ops/test_generate_nt_matched_seq/input.fasta"
+        expected_file = "test_data/seq_ops/test_generate_nt_matched_seq/expected.fasta"
+        input_names, input_seqs = gen.read_fasta(input_file)
+        expected_names, expected = gen.read_fasta(expected_file)
+        dinucleotides = ["AA", "AC", "AG", "AT", "CA", "CC", "CG", "CT", "GA", "GC", "GG", "GT", "TA", "TC", "TG", "TT"]
+        dinucleotide_probabilities = [0.01, 0.08, 0.06, 0.1, 0.02, 0.15, 0.03, 0.05, 0.2, 0.02, 0.015, 0.015, 0.0625, 0.0625, 0.0825, 0.0425]
+        nucleotides = ["A", "C", "G", "T"]
+        nucleotide_probabilities = [0.1,0.4,0.25,0.25]
+        seed = 5
+        observed = []
+        for seq in input_seqs:
+            observed.append(generate_nt_matched_seq(seq, dinucleotides, dinucleotide_probabilities, nucleotides, nucleotide_probabilities, seed=seed))
+        self.assertEqual(expected, observed)
+
     def test_get_dinucleotide_content(self):
         input_file = "test_data/seq_ops/test_get_dinucleotide_content/input.fasta"
         names, seqs = gen.read_fasta(input_file)
@@ -39,21 +54,6 @@ class Test_Seq_Ops(unittest.TestCase):
             "TA": np.divide(4,48), "TC": np.divide(2,48), "TG": np.divide(2,48), "TT": np.divide(2,48)
         }
         observed = get_dinucleotide_content(seqs, as_string=True)
-        self.assertEqual(expected, observed)
-
-    def test_generate_nt_matched_seq(self):
-        input_file = "test_data/seq_ops/test_generate_nt_matched_seq/input.fasta"
-        expected_file = "test_data/seq_ops/test_generate_nt_matched_seq/expected.fasta"
-        input_names, input_seqs = gen.read_fasta(input_file)
-        expected_names, expected = gen.read_fasta(expected_file)
-        dinucleotides = ["AA", "AC", "AG", "AT", "CA", "CC", "CG", "CT", "GA", "GC", "GG", "GT", "TA", "TC", "TG", "TT"]
-        dinucleotide_probabilities = [0.01, 0.08, 0.06, 0.1, 0.02, 0.15, 0.03, 0.05, 0.2, 0.02, 0.015, 0.015, 0.0625, 0.0625, 0.0825, 0.0425]
-        nucleotides = ["A", "C", "G", "T"]
-        nucleotide_probabilities = [0.1,0.4,0.25,0.25]
-        seed = 5
-        observed = []
-        for seq in input_seqs:
-            observed.append(generate_nt_matched_seq(seq, dinucleotides, dinucleotide_probabilities, nucleotides, nucleotide_probabilities, seed=seed))
         self.assertEqual(expected, observed)
 
     def test_get_longest_orf(self):
@@ -93,4 +93,35 @@ class Test_Seq_Ops(unittest.TestCase):
         names, seqs = gen.read_fasta(input_file)
         expected = {"A": np.divide(7,18), "C": np.divide(3,18), "G": np.divide(5,18), "T": np.divide(3,18)}
         observed = get_nucleotide_content(seqs)
+        self.assertEqual(expected, observed)
+
+    def test_get_stop_count(self):
+        input_file = "test_data/seq_ops/test_get_stop_count/input.fasta"
+        names, seqs = gen.read_fasta(input_file)
+        expected = [1,5,2,0,3]
+        observed = []
+        for seq in seqs:
+            observed.append(get_stop_count(seq))
+        self.assertEqual(expected, observed)
+
+    def test_get_stop_counts_list(self):
+        input_file = "test_data/seq_ops/test_get_stop_counts_list/input.fasta"
+        names, seqs = gen.read_fasta(input_file)
+        expected = [1,6,7,0,10]
+        observed = get_stop_counts(seqs)
+        self.assertEqual(expected, observed)
+
+    def test_get_stop_counts_dict(self):
+        input_file = "test_data/seq_ops/test_get_stop_counts_dict/input.fasta"
+        seqs = fasta_to_dict(input_file)
+        expected = {"seq1": 1, "seq2": 6, "seq3": 7, "seq4": 0, "seq5": 10}
+        observed = get_stop_counts(seqs)
+        self.assertEqual(expected, observed)
+
+    def test_get_unique_seqs(self):
+        input_file = "test_data/seq_ops/test_get_unique_seqs/input.fasta"
+        expected_file = "test_data/seq_ops/test_get_unique_seqs/expected.fasta"
+        names, seqs = gen.read_fasta(input_file)
+        expected = fasta_to_dict(expected_file)
+        observed = get_unique_seqs(names, seqs)
         self.assertEqual(expected, observed)

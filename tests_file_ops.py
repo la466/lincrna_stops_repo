@@ -1,7 +1,17 @@
 from file_ops import *
 import unittest
 
-class File_Ops(unittest.TestCase):
+class Test_File_Ops(unittest.TestCase):
+
+    def test_build_seqs_from_exons_fasta(self):
+        input_file = "test_data/file_ops/test_build_seqs_from_exons_fasta/input.fasta"
+        expected = "test_data/file_ops/test_build_seqs_from_exons_fasta/expected.fasta"
+        observed = "test_data/file_ops/test_build_seqs_from_exons_fasta/observed.fasta"
+        gen.remove_file(observed)
+        build_seqs_from_exons_fasta(input_file, observed)
+        expected = gen.read_fasta(expected)
+        observed = gen.read_fasta(observed)
+        self.assertEqual(observed,expected)
 
     def test_entries_to_bed(self):
         input_file = "test_data/file_ops/test_entries_to_bed/input.bed"
@@ -23,12 +33,8 @@ class File_Ops(unittest.TestCase):
         observed = gen.read_fasta(observed)
         self.assertEqual(observed,expected)
 
-    def test_build_seqs_from_exons_fasta(self):
-        input_file = "test_data/file_ops/test_build_seqs_from_exons_fasta/input.fasta"
-        expected = "test_data/file_ops/test_build_seqs_from_exons_fasta/expected.fasta"
-        observed = "test_data/file_ops/test_build_seqs_from_exons_fasta/observed.fasta"
-        gen.remove_file(observed)
-        build_seqs_from_exons_fasta(input_file, observed)
-        expected = gen.read_fasta(expected)
-        observed = gen.read_fasta(observed)
-        self.assertEqual(observed,expected)
+    def test_order_temp_files(self):
+        input = ["./path/0.34242.3.txt", "./path/0.321111.1.txt", "./path/0.983243.4.txt", "./path/0.2131313.2.txt"]
+        expected = {3: "./path/0.34242.3.txt", 1: "./path/0.321111.1.txt", 4: "./path/0.983243.4.txt", 2: "./path/0.2131313.2.txt"}
+        observed = order_temp_files(input)
+        self.assertEqual(expected, observed)

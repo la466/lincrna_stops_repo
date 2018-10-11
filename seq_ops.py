@@ -165,6 +165,63 @@ def get_longest_orfs(seqs):
         return longest_orfs
 
 
+def get_stop_count(seq):
+    """
+    Get the number of stop codons in any reading frame for a sequence.
+
+    Args:
+        seq (str): given sequence
+
+    Returns:
+        stop_count (int): number of stop codons found in any reading frame
+    """
+
+    stop_regex = re.compile('(TAA|TAG|TGA)')
+    return len(re.findall(stop_regex, seq))
+
+
+def get_stop_counts(seqs):
+    """
+    Count the number of stop codons in any reading frame.
+
+    Args:
+        seqs (list/dict): list or dictionary holding the sequences
+
+    Returns:
+        stop_counts (list/dict): list or dictionary with the stop counts.
+    """
+
+    if isinstance(seqs, list):
+        return [get_stop_count(seq) for seq in seqs]
+
+    if isinstance(seqs, dict):
+        stop_counts = {}
+        for id, seq in seqs.items():
+            stop_counts[id] = get_stop_count(seq)
+        return stop_counts
+
+
+def get_unique_seqs(names, seqs_list):
+    """
+    From a list of fasta entries, return only unique sequences.
+
+    Args:
+        names (list): list of sequence identifiers
+        seqs_lists (list): list of corresponding seqs
+
+    Returns:
+        seqs (dict): dict[name] = seq of unique sequences
+    """
+
+    unique_seqs = []
+    seqs = {}
+    for i, name in enumerate(names):
+        if seqs_list[i] not in unique_seqs:
+            unique_seqs.append(seqs_list[i])
+            seqs[name] = seqs_list[i]
+    return seqs
+
+
 def fasta_to_dict(fasta_path):
     """
     Take a fasta file and return a dictionary of seqs with the

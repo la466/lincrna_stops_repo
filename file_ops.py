@@ -82,6 +82,25 @@ def entries_to_bed(source_path, output_file, exclude_XY=None):
                 print('Error in the number of features')
 
 
+def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, exclude_XY=None):
+    """
+    Generate a file containing the exon sequences for a given .bed file
+
+    Args:
+        source_path (str): the source path for the origin .bed file
+        genome_fasta (str): the source path for the genome fasta
+        output_bed (str): output .bed file to contain the exon info
+        output_fasta (str): output fasta containing sequences
+        exclude_XY (bool): if true, exclude cases on the X and Y chr
+    """
+    # create the exon bed file
+    entries_to_bed(source_path, output_bed, exclude_XY)
+    # generate the fasta from the file
+    fasta_from_intervals(output_bed, output_fasta, genome_fasta, names=True)
+    # build the sequences from the exons
+    build_seqs_from_exons_fasta(output_fasta, output_seq_fasta)
+
+
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
     """
     Takes a bed file and creates a fasta file with the corresponding sequences.
@@ -114,21 +133,19 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
     gen.write_to_fasta(names, seqs, fasta_file)
 
 
-
-def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, exclude_XY=None):
+def order_temp_files(files):
     """
-    Generate a file containing the exon sequences for a given .bed file
+    Get a dictionary of filelists by simulation number
 
     Args:
-        source_path (str): the source path for the origin .bed file
-        genome_fasta (str): the source path for the genome fasta
-        output_bed (str): output .bed file to contain the exon info
-        output_fasta (str): output fasta containing sequences
-        exclude_XY (bool): if true, exclude cases on the X and Y chr
+        files (list): list of files with format paths_to_file/randomFloat.simNo.ext
+
+    Returns:
+        filelist (dict): dict[simNo] = file
     """
-    # create the exon bed file
-    entries_to_bed(source_path, output_bed, exclude_XY)
-    # generate the fasta from the file
-    fasta_from_intervals(output_bed, output_fasta, genome_fasta, names=True)
-    # build the sequences from the exons
-    build_seqs_from_exons_fasta(output_fasta, output_seq_fasta)
+
+    filelist = {}
+    for file in files:
+        simulation_no = int(file.split('.')[-2])
+        filelist[simulation_no] = file
+    return filelist
