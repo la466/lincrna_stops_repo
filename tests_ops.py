@@ -6,10 +6,11 @@ class Test_Ops(unittest.TestCase):
 
     def test_build_sequences(self):
         input_file = "test_data/ops/test_build_sequences/input.fasta"
+        input_stops_file = "test_data/ops/test_build_sequences/input_stops.fasta"
         expected_file = "test_data/ops/test_build_sequences/expected.fasta"
         observed_file = "test_data/ops/test_build_sequences/observed.fasta"
         gen.remove_file(observed_file)
-        build_sequences(input_file, observed_file)
+        build_sequences(input_file, input_stops_file, observed_file)
         #use an arbritary seperator
         expected = gen.read_many_fields(expected_file, "#")
         observed = gen.read_many_fields(observed_file, "#")
@@ -74,3 +75,15 @@ class Test_Ops(unittest.TestCase):
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
+
+    def test_filter_coding_sequences(self):
+        input_file = "test_data/ops/test_filter_coding_sequences/input.fasta"
+        expected_file = "test_data/ops/test_filter_coding_sequences/expected.fasta"
+        observed_file = "test_data/ops/test_filter_coding_sequences/observed.fasta"
+        gen.remove_file(observed_file)
+        filter_coding_sequences(input_file, observed_file)
+        # use an arbritary delimiter
+        expected = gen.read_many_fields(expected_file, "#")
+        observed = gen.read_many_fields(observed_file, "#")
+        self.assertEqual(expected, observed)
+        

@@ -7,54 +7,43 @@ import re
 import collections
 
 
-def build_sequences(input_fasta, output_fasta):
+def build_sequences(input_fasta, input_stops_fasta, output_fasta):
     """
     Build sequences from a provided fasta
 
     Args:
         input_fasta (str): path to input fasta
+        input_stops_fasta (str): path to fasta containing the stop codons
         output_fasta (str): path for output fasta containing built sequences
     """
 
     names, seqs = gen.read_fasta(input_fasta)
-
-    # label the stop codons
-    for i, name in enumerate(names):
-        if len(seqs[i]) == 3 and seqs[i] in ["TAA", "TAG", "TGA"]:
-            names[i] = "{0}.stop_codon".format(name)
+    stop_names, stop_seqs = gen.read_fasta(input_stops_fasta)
 
     # create a dictionary containing all the parts
-    strands = {}
     sequence_parts_list = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
     for i, name in enumerate(names):
         splits = name.split('(')
         name_splits = splits[0].split('.')
         transcript_id = name_splits[0]
         exon_id = int(name_splits[1])
-        strand = splits[1].split(')')[0]
-        strands[transcript_id] = strand
-        if "stop_codon" in splits[1]:
-            if strand == "+":
-                exon_id = 99999999 # set to arbritarily long number to make sure it goes at the end
-            else:
-                exon_id = -99999999
         sequence_parts_list[transcript_id][exon_id] = seqs[i]
 
     # now build the sequences out
     sequence_dict = collections.defaultdict(lambda: [])
     for transcript_id in sequence_parts_list:
-        strand = strands[transcript_id]
-        if strand == "-":
-            reverse = True
-        else:
-            reverse = False
-        for exon_id in sorted(sequence_parts_list[transcript_id], reverse=reverse):
+        for exon_id in sorted(sequence_parts_list[transcript_id]):
             sequence_dict[transcript_id].append(sequence_parts_list[transcript_id][exon_id])
+
+    # add the stop codons
+    for i, stop_name in enumerate(stop_names):
+        transcript_id = stop_name.split(".")[0]
+        sequence_dict[transcript_id].append(stop_seqs[i])
 
     #output to file
     with open(output_fasta, "w") as outfile:
         for transcript_id in sorted(sequence_dict):
-            outfile.write(">{0}.{2}\n{1}\n".format(transcript_id, "".join(sequence_dict[transcript_id]), strands[transcript_id]))
+            outfile.write(">{0}\n{1}\n".format(transcript_id, "".join(sequence_dict[transcript_id])))
 
 
 def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, output_directory):
@@ -74,7 +63,7 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
     # get the required features
     full_exons_bed = "{0}/full_exons.bed".format(output_directory)
     full_CDS_bed = "{0}/full_CDS.bed".format(output_directory)
-    full_stops_bed = "{0}/full_CDS.bed".format(output_directory)
+    full_stops_bed = "{0}/full_stop_codons.bed".format(output_directory)
     if not os.path.isfile(full_exons_bed) or not os.path.isfile(full_CDS_bed) or not os.path.isfile(full_stops_bed):
         print("Extracting features from .gtf file...")
         extract_gtf_features(gtf, ["exon"], full_exons_bed)
@@ -91,10 +80,14 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
         fo.fasta_from_intervals(full_CDS_bed, full_CDS_fasta, genome_fasta, names=True)
         fo.fasta_from_intervals(full_stops_bed, full_stops_fasta, genome_fasta, names=True)
 
+    # build the coding sequences
+    cds_sequences_fasta = "{0}/cds_sequences.fasta".format(output_directory)
+    if not os.path.isfile(cds_sequences_fasta):
+        build_sequences(full_CDS_fasta, full_stops_fasta, cds_sequences_fasta)
 
-    # # build the coding sequences
-    # sequences_fasta = "{0}/gtf_sequences.fasta".format(output_directory)
-    # build_sequences(features_fasta, sequences_fasta)
+    # filter the coding sequences
+    filtered_cds_sequences_fasta = "{0}/filtered_cds_sequences.fasta".format(output_directory)
+    filter_coding_sequences(cds_sequences_fasta, filtered_cds_sequences_fasta)
 
 
 def extract_features(gtf_file, features, output_file, full_chr_name=None, clean_chrom_only = False):
@@ -203,3 +196,66 @@ def extract_gtf_features(gtf, features, bed):
     with open(bed, "w") as file:
         for feature in gtf_features:
             file.write("{0}\n".format("\t".join([str(i) for i in feature])))
+
+
+def filter_coding_sequences(input_fasta, output_fasta):
+    """
+    Quality filter coding sequences
+
+    Args:
+        input_fasta (str): path to fasta file containing input CDS sequences
+        output_fasta (str): path to output file to put sequences that pass filtering
+    """
+
+    # copile regex searches
+    actg_regex = re.compile("[^ACTG]")
+    codon_regex = re.compile(".{3}")
+
+    stop_codons = ["TAA", "TAG", "TGA"]
+
+    # read the sequences
+    names, seqs = gen.read_fasta(input_fasta)
+
+    print("{0} sequences prior to filtering".format(len(seqs)))
+
+    s = []
+    stop = []
+    le = []
+    non = []
+    inf = []
+
+    with open(output_fasta, "w") as outfile:
+        pass_count = 0
+        for i, name in enumerate(names):
+            seq = seqs[i]
+            passed = True
+            while passed:
+                # check to see if the first codon is ATG
+                if seq[:3] != "ATG":
+                    s.append(name)
+                    passed = False
+                # check to see if the last codon is a stop codon
+                if seq[-3:] not in stop_codons:
+                    stop.append(name)
+                    passed = False
+                # check to see if sequence is a length that is a
+                # multiple of 3
+                if len(seq) % 3 != 0:
+                    le.append(name)
+                    passed = False
+                # check if there are any non ACTG characters in string
+                non_actg = re.subn(actg_regex, '!', seq)[1]
+                if non_actg != 0:
+                    non.append(name)
+                    passed = False
+                # check if there are any in frame stop codons
+                codons = re.findall(codon_regex, seq[3:-3])
+                inframe_stops = [codon for codon in codons if codon in stop_codons]
+                if len(inframe_stops):
+                    inf.append(name)
+                    passed = False
+
+                outfile.write(">{0}\n{1}\n".format(name, seq))
+                pass_count += 1
+
+    print("{0} seqeunces after filtering...".format(pass_count))
