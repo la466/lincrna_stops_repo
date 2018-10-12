@@ -83,11 +83,14 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
     # build the coding sequences
     cds_sequences_fasta = "{0}/cds_sequences.fasta".format(output_directory)
     if not os.path.isfile(cds_sequences_fasta):
+        print("Building coding sequences...")
         build_sequences(full_CDS_fasta, full_stops_fasta, cds_sequences_fasta)
 
     # filter the coding sequences
     filtered_cds_sequences_fasta = "{0}/filtered_cds_sequences.fasta".format(output_directory)
-    filter_coding_sequences(cds_sequences_fasta, filtered_cds_sequences_fasta)
+    if not os.path.isfile(filtered_cds_sequences_fasta):
+        print("Filtering coding sequences...")
+        filter_coding_sequences(cds_sequences_fasta, filtered_cds_sequences_fasta)
 
 
 def extract_features(gtf_file, features, output_file, full_chr_name=None, clean_chrom_only = False):
@@ -216,45 +219,35 @@ def filter_coding_sequences(input_fasta, output_fasta):
     # read the sequences
     names, seqs = gen.read_fasta(input_fasta)
 
-    print("{0} sequences prior to filtering".format(len(seqs)))
+    print("{0} sequences prior to filtering...".format(len(seqs)))
 
-    s = []
-    stop = []
-    le = []
-    non = []
-    inf = []
-
+    # filter the sequences
     with open(output_fasta, "w") as outfile:
         pass_count = 0
         for i, name in enumerate(names):
             seq = seqs[i]
             passed = True
-            while passed:
-                # check to see if the first codon is ATG
-                if seq[:3] != "ATG":
-                    s.append(name)
-                    passed = False
-                # check to see if the last codon is a stop codon
-                if seq[-3:] not in stop_codons:
-                    stop.append(name)
-                    passed = False
-                # check to see if sequence is a length that is a
-                # multiple of 3
-                if len(seq) % 3 != 0:
-                    le.append(name)
-                    passed = False
-                # check if there are any non ACTG characters in string
-                non_actg = re.subn(actg_regex, '!', seq)[1]
-                if non_actg != 0:
-                    non.append(name)
-                    passed = False
-                # check if there are any in frame stop codons
-                codons = re.findall(codon_regex, seq[3:-3])
-                inframe_stops = [codon for codon in codons if codon in stop_codons]
-                if len(inframe_stops):
-                    inf.append(name)
-                    passed = False
-
+            # check to see if the first codon is ATG
+            if passed and seq[:3] != "ATG":
+                passed = False
+            # check to see if the last codon is a stop codon
+            if passed and seq[-3:] not in stop_codons:
+                passed = False
+            # check to see if sequence is a length that is a
+            # multiple of 3
+            if passed and len(seq) % 3 != 0:
+                passed = False
+            # check if there are any non ACTG characters in string
+            non_actg = re.subn(actg_regex, '!', seq)[1]
+            if passed and non_actg != 0:
+                passed = False
+            # check if there are any in frame stop codons
+            codons = re.findall(codon_regex, seq[3:-3])
+            inframe_stops = [codon for codon in codons if codon in stop_codons]
+            if passed and len(inframe_stops):
+                passed = False
+            # only if passed all the filters write to file
+            if passed:
                 outfile.write(">{0}\n{1}\n".format(name, seq))
                 pass_count += 1
 
