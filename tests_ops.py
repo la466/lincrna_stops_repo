@@ -76,6 +76,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_filter_bed_from_fasta(self):
+        input_bed = "test_data/ops/test_filter_bed_from_fasta/input.bed"
+        input_fasta = "test_data/ops/test_filter_bed_from_fasta/input.fasta"
+        expected_file = "test_data/ops/test_filter_bed_from_fasta/expected.bed"
+        observed_file = "test_data/ops/test_filter_bed_from_fasta/observed.bed"
+        gen.remove_file(observed_file)
+        filter_bed_from_filtered_cds(input_bed, input_fasta, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_filter_coding_sequences(self):
         input_file = "test_data/ops/test_filter_coding_sequences/input.fasta"
         expected_file = "test_data/ops/test_filter_coding_sequences/expected.fasta"
@@ -86,4 +97,21 @@ class Test_Ops(unittest.TestCase):
         expected = gen.read_many_fields(expected_file, "#")
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
-        
+
+    def test_link_transcripts_to_genes(self):
+        input_file = "test_data/ops/test_link_transcripts_to_genes/input.bed"
+        expected = {"ENSG1": ["ENST100", "ENST102"], "ENSG2": ["ENST2"], "ENSG3": ["ENST106"]}
+        observed = link_transcripts_to_genes(input_file)
+        self.assertEqual(expected, observed)
+
+    def test_uniquify_transcripts(self):
+        input_file = "test_data/ops/test_uniquify_transcripts/input.fasta"
+        expected_file = "test_data/ops/test_uniquify_transcripts/expected.fasta"
+        observed_file = "test_data/ops/test_uniquify_transcripts/observed.fasta"
+        gen.remove_file(observed_file)
+        input_links = {"ENSG1": ["ENST0001", "ENST0004", "ENST0005"], "ENSG2": ["ENST0003"], "ENSG3": ["ENST0007", "ENST0008"], "ENSG4": ["ENST0002", "ENST0006", "ENST0009", "ENST00010"]}
+        uniquify_transcripts(input_file, input_links, observed_file)
+        # use an arbritary delimiter
+        expected = gen.read_many_fields(expected_file, "#")
+        observed = gen.read_many_fields(observed_file, "#")
+        self.assertEqual(expected, observed)

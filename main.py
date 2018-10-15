@@ -7,8 +7,8 @@ import time
 def main():
 
     description = ""
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "non_coding_exons"], flags = [5,6,7,8], ints=[4])
-    source_exons_path, genome_fasta, gtf, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, non_coding_exons = args.source_exons_path, args.genome_fasta, args.gtf, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.non_coding_exons
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "non_coding_exons", "clean_run"], flags = [5,6,7,8,9], ints=[4])
+    source_exons_path, genome_fasta, gtf, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, non_coding_exons, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.non_coding_exons, args.clean_run
 
     # set a start time
     start = time.time()
@@ -38,7 +38,7 @@ def main():
         simopc.sim_stop_count(seqs_fasta, required_simulations, sim_stop_count_output_file)
 
     if non_coding_exons:
-        opsc.non_coding_exons(genome_fasta, gtf, output_directory)
+        opsc.non_coding_exons(genome_fasta, gtf, output_directory, clean_run)
 
 
 

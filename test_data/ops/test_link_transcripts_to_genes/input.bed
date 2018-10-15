@@ -1,4 +1,5 @@
 chr1	5	30	ENST100.1	exon	+	ENSG1
-chr1	76	100	ENST100.9	exon	+	ENSG1
+chr1	76	100	ENST102.9	exon	+	ENSG1
 chr1	5	30	ENST2.7	exon	-	ENSG2
 chr1	89	105	ENST2.3	exon	-	ENSG2
+chr1	4	12	ENST106.1	exon	+	ENSG3
