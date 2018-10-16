@@ -16,6 +16,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
 
+    def test_check_exon_files_fail(self):
+        input_file1 = "test_data/ops/test_check_exon_files_fail/input1.bed"
+        input_file2 = "test_data/ops/test_check_exon_files_fail/input2.bed"
+        self.assertRaises(Exception, check_exon_files, [input_file1, input_file2])
+
+    def test_check_exon_files_pass(self):
+        input_file1 = "test_data/ops/test_check_exon_files_pass/input1.bed"
+        input_file2 = "test_data/ops/test_check_exon_files_pass/input2.bed"
+        observed = check_exon_files(input_file1, input_file2)
+        self.assertTrue(observed)
+
     def test_extract_features_cds(self):
         input_file = "test_data/ops/test_extract_features_cds/input.gtf"
         expected_file = "test_data/ops/test_extract_features_cds/expected.bed"

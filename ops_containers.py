@@ -113,11 +113,9 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
         ops.filter_bed_transcript_id(full_exons_bed, final_filtered_cds_bed, final_filtered_exons_bed)
         fo.fasta_from_intervals(final_filtered_exons_bed, final_filtered_exons_fasta, genome_fasta, names=True)
 
-    # # # TODO: decide whether the exons are coding / non-coding and output to bed files
     # getting the coding of the exons
     print("Getting coding and non coding exons...")
     ops.get_exon_coding(final_filtered_exons_bed, quality_filtered_cds_bed, final_filtered_cds_bed, non_coding_exons_bed, coding_exons_bed)
-
     # get the sequences for the coding and non coding exons
-    # fo.fasta_from_intervals(non_coding_exons_bed, non_coding_exons_fasta, genome_fasta, names=True)
-    # fo.fasta_from_intervals(coding_exons_bed, coding_exons_fasta, genome_fasta, names=True)
+    fo.fasta_from_intervals(non_coding_exons_bed, non_coding_exons_fasta, genome_fasta, names=True)
+    fo.fasta_from_intervals(coding_exons_bed, coding_exons_fasta, genome_fasta, names=True)

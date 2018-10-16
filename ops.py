@@ -45,6 +45,32 @@ def build_sequences(input_fasta, input_stops_fasta, output_fasta):
         for transcript_id in sorted(sequence_dict):
             outfile.write(">{0}\n{1}\n".format(transcript_id, "".join(sequence_dict[transcript_id])))
 
+def check_exon_files(input_bed1, input_bed2):
+    """
+    Do a sanity check to make sure there are no coding exons in the
+    non coding exons file and vice versa.
+
+    Args:
+        input_bed1 (str): path to the first bed file
+        input_bed2 (str): path to the second bed file
+
+    Returns:
+
+    """
+
+    bed_lines1 = gen.read_many_fields(input_bed1, "\t")
+    bed_lines2 = gen.read_many_fields(input_bed2, "\t")
+    transcripts1 = [line[3] for line in bed_lines1]
+    transcripts2 = [line[3] for line in bed_lines2]
+    # get any overlap
+    overlap = list(set(transcripts1) & set(transcripts2))
+    if len(overlap):
+        print("Something's gone wrong. Coding exons and non coding exons are present in both files...")
+        raise Exception
+    return True
+
+
+
 def get_coding_exons(exons_file, cds_file, output_file, remove_overlapping = False):
     """
     Given a bed file of exon coordinates and a bed file of CDS coordinates,
@@ -113,7 +139,7 @@ def get_exon_coding(exons_bed, quality_filtered_bed, final_cds_bed, non_coding_b
     # get coding exons
     get_coding_exons(quality_filtered_bed, final_cds_bed, coding_bed_output, remove_overlapping=True)
     # do a sanity check and ensure no coding exons are in non coding file and vice versa
-    ## TODO: sanity check
+    check_exon_files(coding_bed_output, non_coding_bed_output)
 
 
 
