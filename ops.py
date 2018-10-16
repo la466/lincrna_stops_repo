@@ -280,31 +280,36 @@ def filter_coding_sequences(input_fasta, output_fasta):
 
 
 def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
-                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
+                             force_strand = False, no_name_check = False, no_dups = True, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
                   write_zero = False, write_bed = False, subtract=None, return_non_overlaps=None):
-    '''Use bedtools/bedops to intersect coordinates from two bed files.
+    """
+    Use bedtools to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
-    OPTIONS
-    output_file: write output to this file
-    use_bedops: use bedops rather than bedtools. Certain options are only valid with one of the two, see below.
-    overlap: minimum overlap required as a fraction of the intervals in bed file 1 (EX: 0.8 means that the
-    overlap has to be at least 80% of the intervals in bed file 1).
-    overlap_rec: require that the overlap as a fraction of the intervals in file 2 be at least as high as
-    the threshold indicated in -f.
-    write_both: if True, return not only the interval from bed file 1 but, tagged onto the end, also the
-    interval from bed file 2 that it overlaps (only
-    valid when using bedtools).
-    sort: sort bed files before taking the intersection
-    force_strand: check that the feature and the bed interval are on the same strand (only valid with bedtools)
-    no_name_check: if set to False, checks whether the chromosome names are the same in the too bed files (only valid with bedtools)
-    no_dups: if True, only returns each interval once. If set to false, intervals in bed file 1 that overlap several intervals in
-    bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
-    chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
-    intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
-    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)
-    intersect_bam: intersect a bam file with a bed file. Requires bam file to be called first
-    write_zero: like write_both but also write A intervals that don't overlap with any B intervals,
-    write_bed: when intersecting a bam file, write output as bed.'''
+    Adapted from RS.
+
+    Args:
+        bed_file1 (str): path to first bed file (could be bam file if intersect_bam=True)
+        bed_file2 (str): path to second bed file
+        overlap (float): minimum overlap required as a fraction of the intervals in bed file 1 (EX: 0.8 means that the overlap has to be at least 80% of the intervals in bed file 1).
+        overlap_rec (bool): if true, require that the overlap as a fraction of the intervals in file 2 be at least as high as the threshold indicated in -f.
+        write_both (bool): if true, return not only the interval from bed file 1 but, tagged onto the end, also the interval from bed file 2 that it overlaps.
+        sort (bool): if true, sort bed files before taking the intersection
+        output_file (str): if exists, path to with which to write output file
+        force_strand (bool): if true, check that the feature and the bed interval are on the same strand
+        no_name_check (bool): if false, checks whether the chromosome names are the same in the too bed files
+        no_dups (bool): if true, only returns each interval once. If false, intervals in bed file 1 that overlap several intervals in bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
+        intersect (bool): if true, rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
+        hit_count (bool): for each element in bed file 1, return the number of elements it overlaps in bed file 2
+        intersect_bam (bool): if true, intersect a bam file with a bed file. Requires bam file to be called first
+        write_zero (bool): like write_both but also write A intervals that don't overlap with any B intervals
+        write_bed (bool): if true, when intersecting a bam file, write output as bed
+        subtract (bool): if true, set argument to subtractBed
+        return_non_overlaps (bool): if true, only return entries in bed file 1 that don't overlap bed file 2
+
+    Returns:
+        bedtools_output (list): list of bed lines from the output file
+    """
+
     gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
@@ -341,6 +346,15 @@ def link_transcripts_to_genes(bed_file):
 
 
 def remove_bed_intersects(bed_file1, bed_file2, output_file):
+    """
+    Keep entries from one bed file that strictly don't overlap a second bed file.
+
+    Args:
+        bed_file1 (str): path to the first bed file
+        bed_file2 (str): path to the second bed file
+        output_file (str): path to the output file
+    """
+    
     intersect_bed(bed_file1, bed_file2, overlap_rec = True, output_file = output_file, force_strand = True, return_non_overlaps = True, no_dups=False)
 
 
