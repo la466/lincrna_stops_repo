@@ -313,7 +313,7 @@ def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, wr
     gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
-    bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed, subtract = subtract, return_non_overlaps = return_non_overlaps)
+    bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed, subtract = subtract, return_non_overlaps = return_non_overlaps)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -354,7 +354,7 @@ def remove_bed_intersects(bed_file1, bed_file2, output_file):
         bed_file2 (str): path to the second bed file
         output_file (str): path to the output file
     """
-    
+
     intersect_bed(bed_file1, bed_file2, overlap_rec = True, output_file = output_file, force_strand = True, return_non_overlaps = True, no_dups=False)
 
 
@@ -389,7 +389,7 @@ def remove_bed_overlaps(input_file, output_file):
                 outfile.write("{0}\n".format(line[:-2]))
 
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False, subtract=False, return_non_overlaps=None):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False, subtract=False, return_non_overlaps=None):
     '''
     See intersect_bed for details.
     '''
@@ -423,9 +423,6 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom
         bedtools_args.append("-u")
     if return_non_overlaps:
         bedtools_args.append("-v")
-    if chrom:
-        print("Bedtools cannot be restricted to a single chromosome. Use bedops!")
-        raise Exception
     if hit_number and no_dups:
         print("When counting hits, each interval in the first bed file is only reported once by default. Set no_dups to False!")
         raise(Exception)
@@ -457,7 +454,7 @@ def sort_bed(input_file, output_file):
     # Do like this so we can sort a file and keep the same name
     gen.create_output_directories("temp_data")
     temp_file_name = "temp_data/temp_sorted_bed{0}.bed".format(random.random())
-    gen.run_process(["sort-bed", input_file], file_for_output = temp_file_name)
+    gen.run_process(["sortBed", "-i", input_file], file_for_output = temp_file_name)
     gen.run_process(["mv", temp_file_name, output_file])
     gen.remove_file(temp_file_name)
 
