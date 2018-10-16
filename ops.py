@@ -276,7 +276,7 @@ def filter_coding_sequences(input_fasta, output_fasta):
                 outfile.write(">{0}\n{1}\n".format(name, seq))
                 pass_count += 1
 
-    print("{0} seqeunces after filtering...".format(pass_count))
+    print("{0} sequences after filtering...".format(pass_count))
 
 
 def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,

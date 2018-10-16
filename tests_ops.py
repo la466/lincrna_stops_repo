@@ -16,17 +16,6 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
 
-    def test_check_coding(self):
-        exon_file = "test_data/ops/test_check_coding/exons.bed"
-        CDS_file = "test_data/ops/test_check_coding/CDSs.bed"
-        expected = "test_data/ops/test_check_coding/expected_check_coding.bed"
-        observed = "test_data/ops/test_check_coding/observed_check_coding.bed"
-        gen.remove_file(observed)
-        check_coding(exon_file, CDS_file, observed)
-        expected = gen.read_many_fields(expected, "\t")
-        observed = gen.read_many_fields(observed, "\t")
-        self.assertEqual(expected, observed)
-
     def test_extract_features_cds(self):
         input_file = "test_data/ops/test_extract_features_cds/input.gtf"
         expected_file = "test_data/ops/test_extract_features_cds/expected.bed"
@@ -93,7 +82,7 @@ class Test_Ops(unittest.TestCase):
         expected_file = "test_data/ops/test_filter_bed_from_fasta/expected.bed"
         observed_file = "test_data/ops/test_filter_bed_from_fasta/observed.bed"
         gen.remove_file(observed_file)
-        filter_bed_from_filtered_cds(input_bed, input_fasta, observed_file)
+        filter_bed_from_fasta(input_bed, input_fasta, observed_file)
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
