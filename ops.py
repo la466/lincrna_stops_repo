@@ -5,7 +5,7 @@ import itertools as it
 import os
 import re
 import collections
-
+import random
 
 def build_sequences(input_fasta, input_stops_fasta, output_fasta):
     """
@@ -45,87 +45,76 @@ def build_sequences(input_fasta, input_stops_fasta, output_fasta):
         for transcript_id in sorted(sequence_dict):
             outfile.write(">{0}\n{1}\n".format(transcript_id, "".join(sequence_dict[transcript_id])))
 
+#
+#
+# def check_excoding(exon_bed, cds_bed, non_coding_bed_output, remove_overlaps=None):
+#     """
+#     Check whether exons are coding or not and remove overlaps if required.
+#
+#     Args:
+#
+#
+#     """
+#
+#     gen.create_output_directories("temp_data")
+#
+#     if remove_overlaps:
+#         # sort the bed file
+#         sort_bed(exon_bed, exon_bed)
+#         # remove the overlaps
+#         remove_bed_overlaps(exon_bed, cds_bed)
+#
+#     remove_bed_intersects(exon_bed, cds_bed, non_coding_bed_output)
+#
+#     #filter out anything that isn't fully coding
+#     #you have to write_both because you want to make sure that they
+#     #haven't been kept because of an overlap to a transcript that doesn't appear in the exons file
+#     # temp_file = "temp_data/temp{0}.txt".format(random.random())
+#     # print(temp_file)
+#     # intersect_bed(exon_bed, cds_bed, overlap = 1, overlap_rec = True, output_file = temp_file, force_strand = True, write_both = True, no_dups = False, no_name_check = False)
+#     # #filter out terminal exons
+#     # #in theory, there shouldn't be any left after the previous step
+#     # #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
+#     # #whereas in reality, the exon is only partially coding
+#     # temp_file2 = "temp_data/temp{0}.txt".format(random.random())
+#     # with open(temp_file2, "w") as o_file:
+#     #     #figure out the rank of the last exon for each transcript
+#     #     filt_exons = gen.read_many_fields(exon_bed, "\t")
+#     #     filt_exons = [i for i in filt_exons if len(i) > 3]
+#     #     names = [i[3].split(".") for i in filt_exons]
+#     #     names = gen.list_to_dict(names, 0, 1, as_list = True)
+#     #     names = {i: max([int(j) for j in names[i]]) for i in names}
+#     #     coding_exons = gen.read_many_fields(temp_file, "\t")
+#     #     for exon in coding_exons:
+#     #         overlap_name = exon[9].split(".")
+#     #         if overlap_name[0] in names:
+#     #             name = exon[3].split(".")
+#     #             if name[-1] != "1":
+#     #                 last_exon = names[name[0]]
+#     #                 if int(name[-1]) != last_exon:
+#     #                     exon = [str(i) for i in exon[:6]]
+#     #                     o_file.write("\t".join(exon))
+#     #                     o_file.write("\n")
+#     # sort_bed(temp_file2, temp_file2)
+#     # gen.run_process(["mergeBed", "-i", temp_file2, "-c", "4,5,6", "-o", "distinct,distinct,distinct"], file_for_output = output_file)
+#     # gen.remove_file(temp_file)
+#     # gen.remove_file(temp_file2)
+#     with open(output_file, "w") as outfile:
+#         outfile.write("test")
 
-def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, output_directory, clean_run=None):
+
+def get_exon_coding(exon_bed, cds_bed, non_coding_bed_output):
     """
-    Extract the coding and non coding exons.
+    Check whether exons are coding or not.
 
     Args:
-        genome_fasta (str): path to genome fasta
-        gtf (str): path to genome gtf
-        coding_exons_bed (str): path to coding exons bed output file
-        non_coding_exons_bed (str): path to non coding exons bed output file
-        coding_exons_fasta (str): path to coding exons fasta output file
-        non_coding_exons_fasta (str): path to non coding exons fasta output file
-        output_directory (str): path to the output directory
-        clean_run (bool): if true, run all the steps
+        exon_bed (str): path to the full exon bed file
+        cds_bed (str): path to the more limited bed file
+        non_coding_bed_output (str): path to the non coding bed output file
     """
 
-    # get the required features
-    full_exons_bed = "{0}/full_exons.bed".format(output_directory)
-    full_cds_bed = "{0}/full_cds.bed".format(output_directory)
-    full_stops_bed = "{0}/full_stop_codons.bed".format(output_directory)
-    if clean_run or not os.path.isfile(full_exons_bed) or not os.path.isfile(full_cds_bed) or not os.path.isfile(full_stops_bed):
-        print("Extracting features from .gtf file...")
-        extract_gtf_features(gtf, ["exon"], full_exons_bed)
-        extract_gtf_features(gtf, ["CDS"], full_cds_bed)
-        extract_gtf_features(gtf, ["stop_codon"], full_stops_bed)
-
-    # get the fasta sequences of the features
-    full_exons_fasta = "{0}/full_exons.fasta".format(output_directory)
-    full_cds_fasta = "{0}/full_cds.fasta".format(output_directory)
-    full_stops_fasta = "{0}/full_stops.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(full_exons_fasta) or not os.path.isfile(full_cds_fasta) or not os.path.isfile(full_stops_fasta):
-        print("Converting bed to fasta...")
-        fo.fasta_from_intervals(full_exons_bed, full_exons_fasta, genome_fasta, names=True)
-        fo.fasta_from_intervals(full_cds_bed, full_cds_fasta, genome_fasta, names=True)
-        fo.fasta_from_intervals(full_stops_bed, full_stops_fasta, genome_fasta, names=True)
-
-    # build the coding sequences
-    cds_sequences_fasta = "{0}/cds_sequences.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(cds_sequences_fasta):
-        print("Building coding sequences...")
-        build_sequences(full_cds_fasta, full_stops_fasta, cds_sequences_fasta)
-
-    # filter the coding sequences
-    filtered_cds_sequences_fasta = "{0}/quality_filtered_cds.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(filtered_cds_sequences_fasta):
-        print("Filtering coding sequences...")
-        filter_coding_sequences(cds_sequences_fasta, filtered_cds_sequences_fasta)
-
-    # filter original cds bed file to get filtered bed entries
-    filtered_full_cds_bed = "{0}/quality_filtered_cds.bed".format(output_directory)
-    if clean_run or not os.path.isfile(filtered_full_cds_bed):
-        print("Filtering bed file to only contain entries from filtered coding sequences...")
-        filter_bed_from_fasta(full_cds_bed, filtered_cds_sequences_fasta, filtered_full_cds_bed)
-
-    # get one transcript per gene
-    unique_filtered_transcripts_fasta = "{0}/filtered_cds_sequences.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(unique_filtered_transcripts_fasta):
-        print("Getting unique transcripts...")
-        get_unique_transcripts(filtered_full_cds_bed, filtered_cds_sequences_fasta, unique_filtered_transcripts_fasta)
-
-    # ***
-    # do I want to filter to one per gene family here ?
-    # ***
-
-    # filter the bed file to only include entries in the unique transcripts
-    fully_filtered_cds_bed = "{0}/filtered_cds.bed".format(output_directory)
-    fully_filtered_cds_exons_fasta = "{0}/filtered_cds.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(fully_filtered_cds_bed) or not os.path.isfile(fully_filtered_cds_exons_fasta):
-        print("Filtering the cds bed to remove cases where there are more than 1 transcript per gene...")
-        filter_bed_from_fasta(filtered_full_cds_bed, unique_filtered_transcripts_fasta, fully_filtered_cds_bed)
-        fo.fasta_from_intervals(fully_filtered_cds_bed, fully_filtered_cds_exons_fasta, genome_fasta, names=True)
-
-    filtered_exons_bed = "{0}/filtered_exons.bed".format(output_directory)
-    filtered_exons_fasta = "{0}/filtered_exons.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(filtered_exons_bed) or not os.path.isfile(filtered_exons_fasta):
-        print("Filtering exons bed to only include filtered cases from cds files...")
-        filter_bed_from_fasta(full_exons_bed, unique_filtered_transcripts_fasta, filtered_exons_bed)
-        fo.fasta_from_intervals(filtered_exons_bed, filtered_exons_fasta, genome_fasta, names=True)
-
-    # TODO: decide whether the exons are coding / non-coding and output to bed files
-    # TODO: get the fasta sequences of both coding / non-coding files
+    # get the non coding exons
+    remove_bed_intersects(exon_bed, cds_bed, non_coding_bed_output)
 
 
 def extract_features(gtf_file, features, output_file, full_chr_name=None, clean_chrom_only = False):
@@ -269,11 +258,29 @@ def filter_bed_from_fasta(input_bed, input_fasta, output_file):
 
     bed_lines = gen.read_many_fields(input_bed, "\t")
     names, seqs = gen.read_fasta(input_fasta)
-
     with open(output_file, "w") as outfile:
         for line in bed_lines:
-            if line[3].split('.')[0] in names:
+            transcript = line[3].split(".")[0]
+            if transcript in names:
                 outfile.write("{0}\n".format("\t".join(line)))
+
+
+def filter_bed_transcript_id(input_bed1, input_bed2, output_file):
+    """
+    Filter bed file 1 based on the trancript ids found in bed file 2.
+
+    Args:
+        input_bed1 (str): path to the first bed file to be filtered
+        input_bed2 (str): path to the second bed file that will be used for filtering
+        output_file (str): path to the output file
+    """
+
+    bed_lines1 = gen.read_many_fields(input_bed1, "\t")
+    bed_lines2 = gen.read_many_fields(input_bed2, "\t")
+    # get the transcript ids from the second bed file
+    transcript_ids = [line[3].split('.')[0] for line in bed_lines2]
+    with open(output_file, "w") as outfile:
+        [outfile.write("{0}\n".format("\t".join(line))) for line in bed_lines1 if line[3].split(".")[0] in transcript_ids]
 
 
 def filter_coding_sequences(input_fasta, output_fasta):
@@ -329,6 +336,45 @@ def filter_coding_sequences(input_fasta, output_fasta):
     print("{0} seqeunces after filtering...".format(pass_count))
 
 
+def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
+                             force_strand = False, no_name_check = False, no_dups = True, chrom = None, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
+                  write_zero = False, write_bed = False, subtract=None, return_non_overlaps=None):
+    '''Use bedtools/bedops to intersect coordinates from two bed files.
+    Return those lines in bed file 1 that overlap with intervals in bed file 2.
+    OPTIONS
+    output_file: write output to this file
+    use_bedops: use bedops rather than bedtools. Certain options are only valid with one of the two, see below.
+    overlap: minimum overlap required as a fraction of the intervals in bed file 1 (EX: 0.8 means that the
+    overlap has to be at least 80% of the intervals in bed file 1).
+    overlap_rec: require that the overlap as a fraction of the intervals in file 2 be at least as high as
+    the threshold indicated in -f.
+    write_both: if True, return not only the interval from bed file 1 but, tagged onto the end, also the
+    interval from bed file 2 that it overlaps (only
+    valid when using bedtools).
+    sort: sort bed files before taking the intersection
+    force_strand: check that the feature and the bed interval are on the same strand (only valid with bedtools)
+    no_name_check: if set to False, checks whether the chromosome names are the same in the too bed files (only valid with bedtools)
+    no_dups: if True, only returns each interval once. If set to false, intervals in bed file 1 that overlap several intervals in
+    bed file 2 will be returned several times (as many times as there are overlaps with different elements in bed file 2)
+    chrom: limit search to a specific chromosome (only valid with bedops, can help in terms of efficiency)
+    intersect: rather than returning the entire interval, only return the part of the interval that overlaps an interval in bed file 2.
+    hit_count: for each element in bed file 1, return the number of elements it overlaps in bed file 2 (only valid with bedtools)
+    intersect_bam: intersect a bam file with a bed file. Requires bam file to be called first
+    write_zero: like write_both but also write A intervals that don't overlap with any B intervals,
+    write_bed: when intersecting a bam file, write output as bed.'''
+    gen.create_directory("temp_data/")
+    temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
+    #have it write the output to a temporary file
+    bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, chrom, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed, subtract = subtract, return_non_overlaps = return_non_overlaps)
+    #move it to a permanent location only if you want to keep it
+    if output_file:
+        gen.run_process(["mv", temp_file_name, output_file])
+    else:
+        bedtools_output = gen.read_many_fields(temp_file_name, "\t")
+    gen.remove_file(temp_file_name)
+    return(bedtools_output)
+
+
 def link_transcripts_to_genes(bed_file):
     """
     Take a bed file and link the transcript ids to gene ids
@@ -349,6 +395,115 @@ def link_transcripts_to_genes(bed_file):
             transcript_gene_links[transcript[1]].append(transcript[0])
 
     return transcript_gene_links
+
+
+def remove_bed_intersects(bed_file1, bed_file2, output_file):
+    intersect_bed(bed_file1, bed_file2, overlap_rec = True, output_file = output_file, force_strand = True, return_non_overlaps = True, no_dups=False)
+
+
+def remove_bed_overlaps(input_file, output_file):
+    '''
+    Given a bed file, only leave non-overlapping elements, regardless of the strand of the overlap.
+    Adapted from function written by RS
+
+    Args:
+        input_file (str): path to the input file to remove overlaps
+        output_file (str): path to the output file
+    '''
+    #check how many columns there are in the bedfile
+    with open(input_file) as file:
+        line = file.readline()
+        column_number = line.count("\t") + 1
+    # merge overlapping intervals and have it count how many of the elements from the original file contribute to each
+    # interval in the new file
+    # note that bedops takes the column numbers in base 1
+    if column_number > 3:
+        columns = ",".join([str(i) for i in range(4, column_number + 1)] + ["1"])
+        operations = ",".join(["distinct" for i in range(4, column_number + 1)] + ["count"])
+    else:
+        columns = "1"
+        operations = "count"
+    merge_result = gen.run_process(["bedtools", "merge", "-i", input_file, "-c", columns, "-o", operations])
+    #only leave those intervals that do not result from a merge and delete counts column
+    merge_result = merge_result.split("\n")
+    with open(output_file, "w") as outfile:
+        for line in merge_result:
+            if line[-2:] == "\t1":
+                outfile.write("{0}\n".format(line[:-2]))
+
+
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, chrom = None, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False, subtract=False, return_non_overlaps=None):
+    '''
+    See intersect_bed for details.
+    '''
+    if write_both:
+        write_option = "-wo"
+    elif hit_number:
+        write_option = "-c"
+    elif write_zero:
+        write_option = "-wao"
+    else:
+        write_option = "-wa"
+    if sort:
+        sort_bed(A_file, A_file)
+        sort_bed(B_file, B_file)
+    if subtract:
+        arg = "subtractBed"
+    else:
+        arg = "intersectBed"
+    bedtools_args = [arg, "-a", A_file,"-b", B_file, write_option]
+    if intersect:
+        del bedtools_args[-1]
+    if overlap:
+        bedtools_args.extend(["-f", str(overlap)])
+    if overlap_rec:
+        bedtools_args.append("-r")
+    if force_strand:
+        bedtools_args.append("-s")
+    if no_name_check:
+        bedtools_args.append("-nonamecheck")
+    if no_dups:
+        bedtools_args.append("-u")
+    if return_non_overlaps:
+        bedtools_args.append("-v")
+    if chrom:
+        print("Bedtools cannot be restricted to a single chromosome. Use bedops!")
+        raise Exception
+    if hit_number and no_dups:
+        print("When counting hits, each interval in the first bed file is only reported once by default. Set no_dups to False!")
+        raise(Exception)
+    if bed_path:
+        bedtools_args[0] = "{0}{1}".format(bed_path, bedtools_args[0])
+    if intersect_bam:
+        if A_file[-4:] != ".bam":
+            print("Bam file must be called first")
+            raise Exception
+        if B_file[-4:] != ".bed":
+            print("Bed file must be called second")
+            raise Exception
+        bedtools_args = ["intersectBed", write_option, "-abam", A_file, "-b", B_file]
+        if write_bed:
+            bedtools_args.append("-bed")
+    bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
+    return(bedtools_output)
+
+
+def sort_bed(input_file, output_file):
+    """
+    Sort a bed file.
+
+    Args:
+        input_file (str): path to the input file
+        output_file (str): path to the output file
+    """
+
+    # Do like this so we can sort a file and keep the same name
+    gen.create_output_directories("temp_data")
+    temp_file_name = "temp_data/temp_sorted_bed{0}.bed".format(random.random())
+    gen.run_process(["sort-bed", input_file], file_for_output = temp_file_name)
+    gen.run_process(["mv", temp_file_name, output_file])
+    gen.remove_file(temp_file_name)
+
 
 def uniquify_transcripts(input_fasta, transcript_gene_links, output_fasta):
     """

@@ -16,6 +16,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
 
+    def test_check_coding(self):
+        exon_file = "test_data/ops/test_check_coding/exons.bed"
+        CDS_file = "test_data/ops/test_check_coding/CDSs.bed"
+        expected = "test_data/ops/test_check_coding/expected_check_coding.bed"
+        observed = "test_data/ops/test_check_coding/observed_check_coding.bed"
+        gen.remove_file(observed)
+        check_coding(exon_file, CDS_file, observed)
+        expected = gen.read_many_fields(expected, "\t")
+        observed = gen.read_many_fields(observed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_extract_features_cds(self):
         input_file = "test_data/ops/test_extract_features_cds/input.gtf"
         expected_file = "test_data/ops/test_extract_features_cds/expected.bed"
@@ -87,6 +98,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_filter_bed_transcript_id(self):
+        input_bed1 = "test_data/ops/test_filter_bed_transcript_id/input1.bed"
+        input_bed2 = "test_data/ops/test_filter_bed_transcript_id/input2.bed"
+        expected_file = "test_data/ops/test_filter_bed_transcript_id/expected.bed"
+        observed_file = "test_data/ops/test_filter_bed_transcript_id/observed.bed"
+        gen.remove_file(observed_file)
+        filter_bed_transcript_id(input_bed1, input_bed2, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_filter_coding_sequences(self):
         input_file = "test_data/ops/test_filter_coding_sequences/input.fasta"
         expected_file = "test_data/ops/test_filter_coding_sequences/expected.fasta"
@@ -102,6 +124,47 @@ class Test_Ops(unittest.TestCase):
         input_file = "test_data/ops/test_link_transcripts_to_genes/input.bed"
         expected = {"ENSG1": ["ENST100", "ENST102"], "ENSG2": ["ENST2"], "ENSG3": ["ENST106"]}
         observed = link_transcripts_to_genes(input_file)
+        self.assertEqual(expected, observed)
+
+    def test_remove_bed_intersects(self):
+        input1 = "test_data/ops/test_remove_bed_intersects/input1.bed"
+        input2 = "test_data/ops/test_remove_bed_intersects/input2.bed"
+        expected_file = "test_data/ops/test_remove_bed_intersects/expected.bed"
+        observed_file = "test_data/ops/test_remove_bed_intersects/observed.bed"
+        gen.remove_file(observed_file)
+        remove_bed_intersects(input1, input2, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_remove_bed_overlaps(self):
+        input_file = "test_data/ops/test_remove_bed_overlaps/input.bed"
+        expected_file = "test_data/ops/test_remove_bed_overlaps/expected.bed"
+        observed_file = "test_data/ops/test_remove_bed_overlaps/observed.bed"
+        gen.remove_file(observed_file)
+        remove_bed_overlaps(input_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_remove_bed_overlaps_2(self):
+        input_file = "test_data/ops/test_remove_bed_overlaps_2/input.bed"
+        expected_file = "test_data/ops/test_remove_bed_overlaps_2/expected.bed"
+        observed_file = "test_data/ops/test_remove_bed_overlaps_2/observed.bed"
+        gen.remove_file(observed_file)
+        remove_bed_overlaps(input_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_sort_bed(self):
+        input_file = "test_data/ops/test_sort_bed/input.bed"
+        expected_file = "test_data/ops/test_sort_bed/expected.bed"
+        observed_file = "test_data/ops/test_sort_bed/observed.bed"
+        gen.remove_file(observed_file)
+        sort_bed(input_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
     def test_uniquify_transcripts(self):
