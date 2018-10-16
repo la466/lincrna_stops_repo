@@ -45,19 +45,76 @@ def build_sequences(input_fasta, input_stops_fasta, output_fasta):
         for transcript_id in sorted(sequence_dict):
             outfile.write(">{0}\n{1}\n".format(transcript_id, "".join(sequence_dict[transcript_id])))
 
+def get_coding_exons(exons_file, cds_file, output_file, remove_overlapping = False):
+    """
+    Given a bed file of exon coordinates and a bed file of CDS coordinates,
+    write a new bed file that only contains those exon coordinates form the former file that are
+    1) fully coding 2) internal
+    NB! Assumes that all the coordinates are from non-overlapping transcripts. If this is not the case,
+    set remove_overlaps to True and it'll remove overlapping intervals.
+    Modified from LA and RS.
 
-def get_exon_coding(exon_bed, cds_bed, non_coding_bed_output):
+    Args:
+        exons_file (str): path to the bed file containing exon coordinates
+        cds_file (str): path to bed file containing the cds coordinates
+        output_file (str): path to output file
+        remove_overlapping (bool): if true, remove overlapping intervals
+    """
+
+    if remove_overlapping:
+        sort_bed(exons_file, exons_file)
+        remove_bed_overlaps(exons_file, exons_file)
+    #filter out anything that isn't fully coding
+    #you have to write_both because you want to make sure that they
+    #haven't been kept because of an overlap to a transcript that doesn't appear in the exons file
+    gen.create_output_directories("temp_data")
+    temp_file = "temp_data/temp{0}.txt".format(random.random())
+    intersect_bed(exons_file, cds_file, overlap = 1, overlap_rec = True, output_file = temp_file, force_strand = True, write_both = True, no_dups = False, no_name_check = False)
+    #filter out terminal exons
+    #in theory, there shouldn't be any left after the previous step
+    #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
+    #whereas in reality, the exon is only partially coding
+    temp_file2 = "temp_data/temp{0}.txt".format(random.random())
+    with open(temp_file2, "w") as outfile:
+        #figure out the rank of the last exon for each transcript
+        filt_exons = gen.read_many_fields(exons_file, "\t")
+        filt_exons = [i for i in filt_exons if len(i) > 3]
+        names = [i[3].split(".") for i in filt_exons]
+        names = gen.list_to_dict(names, 0, 1, as_list = True)
+        names = {i: max([int(j) for j in names[i]]) for i in names}
+        coding_exons = gen.read_many_fields(temp_file, "\t")
+        for exon in coding_exons:
+            overlap_name = exon[10].split(".")
+            if overlap_name[0] in names:
+                name = exon[3].split(".")
+                if name[-1] != "1":
+                    last_exon = names[name[0]]
+                    if int(name[-1]) != last_exon:
+                        exon = [str(i) for i in exon[:7]]
+                        outfile.write("{0}\n".format("\t".join(exon)))
+    sort_bed(temp_file2, temp_file2)
+    gen.run_process(["mergeBed", "-i", temp_file2, "-c", "4,5,6,7", "-o", "distinct,distinct,distinct,distinct"], file_for_output = output_file)
+    gen.remove_file(temp_file)
+    gen.remove_file(temp_file2)
+
+
+def get_exon_coding(exons_bed, quality_filtered_bed, final_cds_bed, non_coding_bed_output, coding_bed_output):
     """
     Check whether exons are coding or not.
 
     Args:
-        exon_bed (str): path to the full exon bed file
+        exons_bed (str): path to the full exon bed file
         cds_bed (str): path to the more limited bed file
         non_coding_bed_output (str): path to the non coding bed output file
     """
 
     # get the non coding exons
-    remove_bed_intersects(exon_bed, cds_bed, non_coding_bed_output)
+    remove_bed_intersects(exons_bed, final_cds_bed, non_coding_bed_output)
+    # get coding exons
+    get_coding_exons(quality_filtered_bed, final_cds_bed, coding_bed_output, remove_overlapping=True)
+    # do a sanity check and ensure no coding exons are in non coding file and vice versa
+    ## TODO: sanity check
+
 
 
 def extract_features(gtf_file, features, output_file, full_chr_name=None, clean_chrom_only = False):

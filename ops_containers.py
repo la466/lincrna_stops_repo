@@ -30,8 +30,8 @@ def non_coding_exons(genome_fasta, gtf, output_directory, clean_run=None):
     non_coding_exons_bed = "{0}/non_coding_exons.bed".format(output_directory)
     coding_exons_fasta = "{0}/coding_exons.fasta".format(output_directory)
     non_coding_exons_fasta = "{0}/non_coding_exons.fasta".format(output_directory)
-    if clean_run or not os.path.isfile(non_coding_exons_fasta):
-        get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
+    # if clean_run or not os.path.isfile(non_coding_exons_fasta):
+    get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
 
 
 def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, output_directory, clean_run=None):
@@ -115,8 +115,9 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
 
     # # # TODO: decide whether the exons are coding / non-coding and output to bed files
     # getting the coding of the exons
-    ops.get_exon_coding(final_filtered_exons_bed, final_filtered_cds_bed, non_coding_exons_bed)
+    print("Getting coding and non coding exons...")
+    ops.get_exon_coding(final_filtered_exons_bed, quality_filtered_cds_bed, final_filtered_cds_bed, non_coding_exons_bed, coding_exons_bed)
 
-    # # # TODO: get the fasta sequences of both coding / non-coding files
     # get the sequences for the coding and non coding exons
-    fo.fasta_from_intervals(non_coding_exons_bed, non_coding_exons_fasta, genome_fasta, names=True)
+    # fo.fasta_from_intervals(non_coding_exons_bed, non_coding_exons_fasta, genome_fasta, names=True)
+    # fo.fasta_from_intervals(coding_exons_bed, coding_exons_fasta, genome_fasta, names=True)

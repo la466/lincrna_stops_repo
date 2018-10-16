@@ -109,6 +109,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
 
+    def test_get_coding_exons(self):
+        exon_file = "test_data/ops/test_get_coding_exons/exons.bed"
+        CDS_file = "test_data/ops/test_get_coding_exons/CDSs.bed"
+        expected_file = "test_data/ops/test_get_coding_exons/expected.bed"
+        observed_file = "test_data/ops/test_get_coding_exons/observed.bed"
+        gen.remove_file(observed_file)
+        get_coding_exons(exon_file, CDS_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_link_transcripts_to_genes(self):
         input_file = "test_data/ops/test_link_transcripts_to_genes/input.bed"
         expected = {"ENSG1": ["ENST100", "ENST102"], "ENSG2": ["ENST2"], "ENSG3": ["ENST106"]}
