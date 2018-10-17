@@ -1,13 +1,14 @@
 import generic as gen
 import ops as ops
 import file_ops as fo
+import sim_ops_containers as simoc
 import numpy as np
 import itertools as it
 import os
 import re
 import collections
 
-def non_coding_exons(genome_fasta, gtf, output_directory, clean_run=None):
+def non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_output_file, required_simulations, clean_run=None):
     """
     Wrapper for looking at non coding exons
 
@@ -15,7 +16,9 @@ def non_coding_exons(genome_fasta, gtf, output_directory, clean_run=None):
         genome_fasta (str): path to the genome fasta file
         gtf (str): path to the genome gtf file
         output_directory (str): path to the output directory
-        clean_run(bool): if true, remove the processing sequence files and start fresh
+        sim_stop_count_output_file (str): path to the output file for the stop count simulation
+        required_simulations (int): number of simulations to run
+        clean_run (bool): if true, remove the processing sequence files and start fresh
     """
 
     sequence_output_directory = "{0}/sequence_files".format(output_directory)
@@ -30,8 +33,13 @@ def non_coding_exons(genome_fasta, gtf, output_directory, clean_run=None):
     non_coding_exons_bed = "{0}/non_coding_exons.bed".format(output_directory)
     coding_exons_fasta = "{0}/coding_exons.fasta".format(output_directory)
     non_coding_exons_fasta = "{0}/non_coding_exons.fasta".format(output_directory)
-    # if clean_run or not os.path.isfile(non_coding_exons_fasta):
-    get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
+    # get the coding and non coding exons
+    if clean_run or not os.path.isfile(non_coding_exons_fasta) or not os.path.isfile(coding_exons_fasta):
+        print("Getting the coding and non coding exons...")
+        get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
+
+    # run the simulation
+    simoc.sim_stop_count(non_coding_exons_fasta, required_simulations, sim_stop_count_output_file)
 
 
 def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, output_directory, clean_run=None):
