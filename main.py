@@ -38,8 +38,9 @@ def main():
         simopc.sim_stop_count(seqs_fasta, required_simulations, sim_stop_count_output_file)
 
     sim_stop_count_non_coding_exons_file = "{0}/sim_stop_count_non_coding_exons.csv".format(output_directory)
+    sim_stop_count_coding_exons_file = "{0}/sim_stop_count_coding_exons.csv".format(output_directory)
     if non_coding_exons:
-        opsc.non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_coding_exons_file, required_simulations, clean_run)
+        opsc.non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_coding_exons_file, sim_stop_count_coding_exons_file, required_simulations, clean_run)
 
 
 
