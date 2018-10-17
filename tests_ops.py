@@ -178,6 +178,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_uniquify_lincRNA_transcripts(self):
+        input_file = "test_data/ops/test_uniquify_lincRNA_transcripts/input.fasta"
+        map_file = "test_data/ops/test_uniquify_lincRNA_transcripts/map.txt"
+        expected_file = "test_data/ops/test_uniquify_lincRNA_transcripts/expected.fasta"
+        observed_file = "test_data/ops/test_uniquify_lincRNA_transcripts/observed.fasta"
+        gen.remove_file(observed_file)
+        uniquify_lincRNA_transcripts(input_file, map_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_uniquify_transcripts(self):
         input_file = "test_data/ops/test_uniquify_transcripts/input.fasta"
         expected_file = "test_data/ops/test_uniquify_transcripts/expected.fasta"

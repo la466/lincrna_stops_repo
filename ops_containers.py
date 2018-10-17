@@ -8,44 +8,6 @@ import os
 import re
 import collections
 
-def non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_coding_output_file, sim_stop_count_coding_output_file, required_simulations, clean_run=None):
-    """
-    Wrapper for looking at non coding exons
-
-    Args:
-        genome_fasta (str): path to the genome fasta file
-        gtf (str): path to the genome gtf file
-        output_directory (str): path to the output directory
-        sim_stop_count_non_coding_output_file (str): path to the output file for the non coding exons stop count simulation
-        sim_stop_count_coding_output_file (str): path to the output file for the coding exons stop count simulation
-        required_simulations (int): number of simulations to run
-        clean_run (bool): if true, remove the processing sequence files and start fresh
-    """
-
-    sequence_output_directory = "{0}/sequence_files".format(output_directory)
-    if clean_run:
-        gen.remove_directory(sequence_output_directory)
-
-    # create the output directory if it doesnt exist
-    gen.create_output_directories(sequence_output_directory)
-
-    # get the coding and non coding exons
-    coding_exons_bed = "{0}/coding_exons.bed".format(output_directory)
-    non_coding_exons_bed = "{0}/non_coding_exons.bed".format(output_directory)
-    coding_exons_fasta = "{0}/coding_exons.fasta".format(output_directory)
-    non_coding_exons_fasta = "{0}/non_coding_exons.fasta".format(output_directory)
-    # get the coding and non coding exons
-    if clean_run or not os.path.isfile(non_coding_exons_fasta) or not os.path.isfile(coding_exons_fasta):
-        print("Getting the coding and non coding exons...")
-        get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
-
-    # run the simulations
-    print("Simulating the stop counts in non coding exons...")
-    simoc.sim_stop_count(non_coding_exons_fasta, required_simulations, sim_stop_count_non_coding_output_file)
-    print("Simulating the stop counts in coding exons...")
-    simoc.sim_stop_count(coding_exons_fasta, required_simulations, sim_stop_count_coding_output_file)
-
-
 def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, output_directory, clean_run=None):
     """
     Extract the coding and non coding exons.
@@ -131,3 +93,71 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
     # get the sequences for the coding and non coding exons
     fo.fasta_from_intervals(non_coding_exons_bed, non_coding_exons_fasta, genome_fasta, names=True)
     fo.fasta_from_intervals(coding_exons_bed, coding_exons_fasta, genome_fasta, names=True)
+
+
+def lincRNA_expression(fasta_file, link_file, expression_file, output_file):
+    """
+    Wrapper to look at expression of lincRNA
+
+    Args:
+        fasta_file (str): path to the fasta file containing exon sequences
+        link_file (str): path to link file matching transcripts to genes
+        expression_file (str): path to file containing expression data
+        output_file (str): path to output file
+    """
+
+    links = gen.read_many_fields(link_file, "\t")
+    links = {link[0]: link[1] for link in links}
+
+    names, seqs = gen.read_fasta(fasta_file)
+    expression = gen.read_many_fields(expression_file, "\t")
+
+    tissues = expression[2][2:]
+    expression_lines = {line[0]: line[2:] for line in expression if "XLOC" in line[0]}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("exon,{0}\n".format(",".join(tissues)))
+        for exon in names:
+            transcript = exon.split(".")[0]
+            if transcript in links:
+                xloc = links[transcript]
+                if xloc in expression_lines:
+                    outfile.write("{0},{1}\n".format(exon, ",".join(expression_lines[xloc])))
+
+
+def non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_coding_output_file, sim_stop_count_coding_output_file, required_simulations, clean_run=None):
+    """
+    Wrapper for looking at non coding exons
+
+    Args:
+        genome_fasta (str): path to the genome fasta file
+        gtf (str): path to the genome gtf file
+        output_directory (str): path to the output directory
+        sim_stop_count_non_coding_output_file (str): path to the output file for the non coding exons stop count simulation
+        sim_stop_count_coding_output_file (str): path to the output file for the coding exons stop count simulation
+        required_simulations (int): number of simulations to run
+        clean_run (bool): if true, remove the processing sequence files and start fresh
+    """
+
+    sequence_output_directory = "{0}/sequence_files".format(output_directory)
+    if clean_run:
+        gen.remove_directory(sequence_output_directory)
+
+    # create the output directory if it doesnt exist
+    gen.create_output_directories(sequence_output_directory)
+
+    # get the coding and non coding exons
+    coding_exons_bed = "{0}/coding_exons.bed".format(output_directory)
+    non_coding_exons_bed = "{0}/non_coding_exons.bed".format(output_directory)
+    coding_exons_fasta = "{0}/coding_exons.fasta".format(output_directory)
+    non_coding_exons_fasta = "{0}/non_coding_exons.fasta".format(output_directory)
+    # get the coding and non coding exons
+    if clean_run or not os.path.isfile(non_coding_exons_fasta) or not os.path.isfile(coding_exons_fasta):
+        print("Getting the coding and non coding exons...")
+        get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
+
+    # run the simulations
+    print("Simulating the stop counts in non coding exons...")
+    simoc.sim_stop_count(non_coding_exons_fasta, required_simulations, sim_stop_count_non_coding_output_file)
+    print("Simulating the stop counts in coding exons...")
+    simoc.sim_stop_count(coding_exons_fasta, required_simulations, sim_stop_count_coding_output_file)

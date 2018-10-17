@@ -7,8 +7,8 @@ import time
 def main():
 
     description = ""
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "non_coding_exons", "clean_run"], flags = [5,6,7,8,9], ints=[4])
-    source_exons_path, genome_fasta, gtf, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, non_coding_exons, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.non_coding_exons, args.clean_run
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "expression_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "clean_run"], flags = [7,8,9,10,11,12], ints=[6])
+    source_exons_path, genome_fasta, gtf, mapping_file, expression_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.expression_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.clean_run
 
     # set a start time
     start = time.time()
@@ -23,7 +23,7 @@ def main():
 
     # extract sequences from source file
     if extract_seqs:
-        fo.extract_seqs(source_exons_path, genome_fasta, exons_bed, exons_fasta, seqs_fasta, exclude_XY=True)
+        fo.extract_seqs(source_exons_path, genome_fasta, exons_bed, exons_fasta, seqs_fasta, mapping_file, exclude_XY=True)
 
     # *****
     # might need to do some filtering of sequences in here
@@ -36,6 +36,10 @@ def main():
     sim_stop_count_output_file = "{0}/sim_stop_count.csv".format(output_directory)
     if sim_stop_count:
         simopc.sim_stop_count(seqs_fasta, required_simulations, sim_stop_count_output_file)
+
+    lincRNA_expression_output_file = "{0}/lincRNA_expression_links.csv".format(output_directory)
+    if lincRNA_expression:
+        opsc.lincRNA_expression(seqs_fasta, link_file, expression_file, lincRNA_expression_output_file)
 
     sim_stop_count_non_coding_exons_file = "{0}/sim_stop_count_non_coding_exons.csv".format(output_directory)
     sim_stop_count_coding_exons_file = "{0}/sim_stop_count_coding_exons.csv".format(output_directory)

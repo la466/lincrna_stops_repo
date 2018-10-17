@@ -542,6 +542,41 @@ def sort_bed(input_file, output_file):
     gen.remove_file(temp_file_name)
 
 
+def uniquify_lincRNA_transcripts(input_fasta, mapping_file, output_fasta):
+    """
+    Given the set of lincRNA and the transcript-gene mapping, filter to only
+    leave one per gene, keeping the longest.
+
+    Args:
+        input_fasta (str): path to fasta file containing the transcripts
+        mapping_file (str): file containing the transcript gene mappings
+        output_fasta (str): path to output fasta
+    """
+
+    # get the mappings
+    mappings = {line[0]: line[1] for line in gen.read_many_fields(mapping_file, "\t")}
+    # get the sequences
+    names, seq_list = gen.read_fasta(input_fasta)
+    seqs = {name: seq_list[names.index(name)] for name in names}
+
+    mapped_names = collections.defaultdict(lambda: [])
+    mapped_seq_lengths = collections.defaultdict(lambda: [])
+
+    # add the mappings to dicts
+    for transcript in seqs:
+        if transcript in mappings:
+            mapped_names[mappings[transcript]].append(transcript)
+            mapped_seq_lengths[mappings[transcript]].append(len(seqs[transcript]))
+
+    # get the longest transcript for each case
+    max_lengths = {loc: mapped_names[loc][mapped_seq_lengths[loc].index(max(mapped_seq_lengths[loc]))] for loc in mapped_seq_lengths}
+
+    # now write sequence to file
+    with open(output_fasta, "w") as outfile:
+        for loc in max_lengths:
+            outfile.write(">{0}\n{1}\n".format(max_lengths[loc], seqs[max_lengths[loc]]))
+
+
 def uniquify_transcripts(input_fasta, transcript_gene_links, output_fasta):
     """
     Given a fasta and the links between genes and transcripts, filter to only

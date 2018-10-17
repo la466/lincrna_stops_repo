@@ -1,4 +1,5 @@
 import generic as gen
+import ops
 import collections
 import os
 import path
@@ -82,7 +83,7 @@ def entries_to_bed(source_path, output_file, exclude_XY=None):
                 print('Error in the number of features')
 
 
-def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, exclude_XY=None):
+def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, mapping_file, exclude_XY=None):
     """
     Generate a file containing the exon sequences for a given .bed file
 
@@ -94,11 +95,20 @@ def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq
         exclude_XY (bool): if true, exclude cases on the X and Y chr
     """
     # create the exon bed file
-    entries_to_bed(source_path, output_bed, exclude_XY)
+    full_bed = "{0}/full_{1}".format("/".join(output_bed.split('/')[:-1]), output_bed.split("/")[-1])
+    entries_to_bed(source_path, full_bed, exclude_XY)
     # generate the fasta from the file
-    fasta_from_intervals(output_bed, output_fasta, genome_fasta, names=True)
+    full_exon_fasta = "{0}/full_{1}".format("/".join(output_fasta.split('/')[:-1]), output_fasta.split("/")[-1])
+    fasta_from_intervals(full_bed, full_exon_fasta, genome_fasta, names=True)
     # build the sequences from the exons
-    build_seqs_from_exons_fasta(output_fasta, output_seq_fasta)
+    full_seq_fasta = "{0}/full_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
+    build_seqs_from_exons_fasta(full_exon_fasta, full_seq_fasta)
+    # filter to only keep one transcript per gene
+    ops.uniquify_lincRNA_transcripts(full_seq_fasta, mapping_file, output_seq_fasta)
+    # filter bed file from fasta
+    ops.filter_bed_from_fasta(full_bed, output_seq_fasta, output_bed)
+    # now just get the exon seqs from these entries
+    fasta_from_intervals(output_bed, output_fasta, genome_fasta, names=True)
 
 
 def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True, names = False):
