@@ -1,4 +1,5 @@
 .DS_Store
+.Rhistory
 __pycache__
 temp_files/
 temp_data/

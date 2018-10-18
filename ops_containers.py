@@ -106,23 +106,23 @@ def lincRNA_expression(fasta_file, link_file, expression_file, output_file):
         output_file (str): path to output file
     """
 
-    links = gen.read_many_fields(link_file, "\t")
-    links = {link[0]: link[1] for link in links}
+    # links = gen.read_many_fields(link_file, "\t")
+    # links = {link[0]: link[1] for link in links}
 
     names, seqs = gen.read_fasta(fasta_file)
     expression = gen.read_many_fields(expression_file, "\t")
 
     tissues = expression[2][2:]
-    expression_lines = {line[0]: line[2:] for line in expression if "XLOC" in line[0]}
+    expression_lines = {line[0]: line[2:] for line in expression if "TCONS" in line[0]}
 
     with open(output_file, "w") as outfile:
         outfile.write("exon,{0}\n".format(",".join(tissues)))
         for exon in names:
             transcript = exon.split(".")[0]
-            if transcript in links:
-                xloc = links[transcript]
-                if xloc in expression_lines:
-                    outfile.write("{0},{1}\n".format(exon, ",".join(expression_lines[xloc])))
+            # if transcript in links:
+                # loc = links[transcript]
+            if transcript in expression_lines:
+                outfile.write("{0},{1}\n".format(exon, ",".join(expression_lines[transcript])))
 
 
 def non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_coding_output_file, sim_stop_count_coding_output_file, required_simulations, clean_run=None):
