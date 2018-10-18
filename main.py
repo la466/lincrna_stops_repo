@@ -7,8 +7,8 @@ import time
 def main():
 
     description = ""
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "expression_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "clean_run"], flags = [7,8,9,10,11,12], ints=[6])
-    source_exons_path, genome_fasta, gtf, mapping_file, expression_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.expression_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.clean_run
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "expression_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "clean_run"], flags = [7,8,9,10,11,12,13], ints=[6])
+    source_exons_path, genome_fasta, gtf, mapping_file, expression_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, stop_counts_regions, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.expression_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.clean_run
 
     # set a start time
     start = time.time()
@@ -47,6 +47,9 @@ def main():
     if non_coding_exons:
         opsc.non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_coding_exons_file, sim_stop_count_coding_exons_file, required_simulations, clean_run)
 
+    output_file = "{0}/sim_coding_exons_stop_count_regions.csv".format(output_directory)
+    if stop_counts_regions:
+        simopc.sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, output_file, clean_run=None)
 
 
 if __name__ == "__main__":

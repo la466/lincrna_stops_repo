@@ -137,7 +137,7 @@ def get_exon_coding(exons_bed, quality_filtered_bed, final_cds_bed, non_coding_b
     # get the non coding exons
     remove_bed_intersects(exons_bed, final_cds_bed, non_coding_bed_output)
     # get coding exons
-    get_coding_exons(quality_filtered_bed, final_cds_bed, coding_bed_output, remove_overlapping=True)
+    get_coding_exons(exons_bed, final_cds_bed, coding_bed_output, remove_overlapping=True)
     # do a sanity check and ensure no coding exons are in non coding file and vice versa
     check_exon_files(coding_bed_output, non_coding_bed_output)
 
@@ -252,6 +252,43 @@ def extract_gtf_features(gtf, features, bed):
     with open(bed, "w") as file:
         for feature in gtf_features:
             file.write("{0}\n".format("\t".join([str(i) for i in feature])))
+
+
+def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
+    """
+    Get the reading frame an exon starts in.
+
+    Args:
+        coding_exons_fasta (str): path to file containing coding exon sequences
+        full_exons_fasta (str): path to file containing all exon sequences
+        output_file (str): path to the output file
+    """
+
+    # read in the coding exons and all exons
+    full_names, full_seqs = gen.read_fasta(full_exons_fasta)
+    full_coding_names = gen.read_fasta(coding_exons_fasta)[0]
+
+    # create a dictionary that hold each of the full sequences
+    full_exon_seqs = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    for i, name in enumerate(full_names):
+        id = name.split(".")[0]
+        exon_id = int(name.split(".")[1].split("(")[0])
+        full_exon_seqs[id][exon_id] = full_seqs[i]
+
+    # now get the reading frame that they start in
+    full_reading_frames = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    for id in full_exon_seqs:
+        seq_length = 0
+        for exon_id, seq in sorted(full_exon_seqs[id].items()):
+            full_reading_frames[id][exon_id] = seq_length % 3
+            seq_length += len(seq)
+
+    # now output the reading frames for just the coding exons
+    with open(output_file, "w") as outfile:
+        for name in full_coding_names:
+            id = name.split(".")[0]
+            exon_id = int(name.split(".")[1].split("(")[0])
+            outfile.write(">{0}\n{1}\n".format(name, full_reading_frames[id][exon_id]))
 
 
 def get_unique_transcripts(input_bed, input_fasta, output_fasta):

@@ -2,7 +2,38 @@ import generic as gen
 import sim_ops as simo
 import seq_ops as seqo
 import file_ops as fo
+import ops_containers as opsc
+import ops
 import os
+
+
+def sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, output_file, clean_run=None):
+    """
+    """
+
+    sequence_output_directory = "{0}/sequence_files".format(output_directory)
+    if clean_run:
+        gen.remove_directory(sequence_output_directory)
+
+    # create the output directory if it doesnt exist
+    gen.create_output_directories(sequence_output_directory)
+
+    # get the coding and non coding exons
+    coding_exons_bed = "{0}/coding_exons.bed".format(output_directory)
+    non_coding_exons_bed = "{0}/non_coding_exons.bed".format(output_directory)
+    coding_exons_fasta = "{0}/coding_exons.fasta".format(output_directory)
+    non_coding_exons_fasta = "{0}/non_coding_exons.fasta".format(output_directory)
+    # get the coding and non coding exons
+    if clean_run or not os.path.isfile(non_coding_exons_fasta) or not os.path.isfile(coding_exons_fasta):
+        print("Getting the coding and non coding exons...")
+        opsc.get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
+
+    # # get which frame each of the exons resides
+    full_exons_fasta = "{0}/full_exons.fasta".format(sequence_output_directory)
+    coding_exons_frames_file = "{0}/coding_exons_reading_frames.fasta".format(output_directory)
+    ops.get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, coding_exons_frames_file)
+
+
 
 def sim_orf_length(seq_fasta, required_simulations, output_file, parallel=True, seeds=None, seq_seeds=None):
     """
