@@ -23,6 +23,7 @@ def main():
 
     # extract sequences from source file
     if extract_seqs:
+        print("Extracting lincRNA seqs...")
         fo.extract_seqs(source_exons_path, genome_fasta, exons_bed, exons_fasta, seqs_fasta, mapping_file, exclude_XY=True)
 
     # *****
@@ -39,7 +40,7 @@ def main():
 
     lincRNA_expression_output_file = "{0}/lincRNA_expression_links.csv".format(output_directory)
     if lincRNA_expression:
-        opsc.lincRNA_expression(seqs_fasta, link_file, expression_file, lincRNA_expression_output_file)
+        opsc.lincRNA_expression(seqs_fasta, mapping_file, expression_file, lincRNA_expression_output_file)
 
     sim_stop_count_non_coding_exons_file = "{0}/sim_stop_count_non_coding_exons.csv".format(output_directory)
     sim_stop_count_coding_exons_file = "{0}/sim_stop_count_coding_exons.csv".format(output_directory)
