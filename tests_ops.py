@@ -27,6 +27,13 @@ class Test_Ops(unittest.TestCase):
         observed = check_exon_files(input_file1, input_file2)
         self.assertTrue(observed)
 
+    def test_count_stop_codons(self):
+        input_file = "test_data/ops/test_count_stop_codons/input.fasta"
+        seqs = gen.read_fasta(input_file)[1]
+        expected = [0,1,4]
+        observed = [count_stop_codons(seq) for seq in seqs]
+        self.assertEqual(expected, observed)
+
     def test_extract_features_cds(self):
         input_file = "test_data/ops/test_extract_features_cds/input.gtf"
         expected_file = "test_data/ops/test_extract_features_cds/expected.bed"
@@ -142,6 +149,14 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_get_region_stop_counts(self):
+        input_file = "test_data/ops/test_get_region_stop_counts/input.fasta"
+        input_names, input_seqs = gen.read_fasta(input_file)
+        region_start, region_end = 3, 69
+        input_list = {name: input_seqs[i] for i, name in enumerate(input_names) if len(input_seqs[i]) > region_end}
+        expected = [33,7]
+        observed = get_region_stop_counts(input_list, region_start, region_end)
+        self.assertEqual(expected, observed)
 
     def test_link_transcripts_to_genes(self):
         input_file = "test_data/ops/test_link_transcripts_to_genes/input.bed"

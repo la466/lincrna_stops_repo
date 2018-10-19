@@ -32,6 +32,23 @@ class Test_Seq_Ops(unittest.TestCase):
             observed.append(generate_nt_matched_seq(seq, dinucleotides, dinucleotide_probabilities, nucleotides, nucleotide_probabilities, seed=seed))
         self.assertEqual(expected, observed)
 
+    def test_generate_nt_matched_seq_match_frame(self):
+        input_file = "test_data/seq_ops/test_generate_nt_matched_seq/input.fasta"
+        expected_file = "test_data/seq_ops/test_generate_nt_matched_seq/expected.fasta"
+        input_names, input_seqs = gen.read_fasta(input_file)
+        expected_names, expected = gen.read_fasta(expected_file)
+        dinucleotides = ["AA", "AC", "AG", "AT", "CA", "CC", "CG", "CT", "GA", "GC", "GG", "GT", "TA", "TC", "TG", "TT"]
+        dinucleotide_probabilities = [0.01, 0.08, 0.06, 0.1, 0.02, 0.15, 0.03, 0.05, 0.2, 0.02, 0.015, 0.015, 0.0625, 0.0625, 0.0825, 0.0425]
+        nucleotides = ["A", "C", "G", "T"]
+        nucleotide_probabilities = [0.1,0.4,0.25,0.25]
+        seq_frames = {"seq1": 0, "seq2": 1, "seq3": 2}
+        seed = 5
+        observed = []
+        for i, name in enumerate(input_names):
+            seq = input_seqs[i]
+            observed.append(generate_nt_matched_seq(seq, dinucleotides, dinucleotide_probabilities, nucleotides, nucleotide_probabilities, seq_frames[name], seed=seed))
+        self.assertEqual(expected, observed)
+
     def test_get_dinucleotide_content(self):
         input_file = "test_data/seq_ops/test_get_dinucleotide_content/input.fasta"
         names, seqs = gen.read_fasta(input_file)

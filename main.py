@@ -49,7 +49,7 @@ def main():
 
     output_file = "{0}/sim_coding_exons_stop_count_regions.csv".format(output_directory)
     if stop_counts_regions:
-        simopc.sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, output_file, clean_run=None)
+        simopc.sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, output_file, required_simulations, clean_run=None)
 
 
 if __name__ == "__main__":

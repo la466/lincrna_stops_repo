@@ -1,4 +1,5 @@
 import generic as gen
+import seq_ops as seqo
 import file_ops as fo
 import numpy as np
 import itertools as it
@@ -68,7 +69,6 @@ def check_exon_files(input_bed1, input_bed2):
         print("Something's gone wrong. Coding exons and non coding exons are present in both files...")
         raise Exception
     return True
-
 
 
 def get_coding_exons(exons_file, cds_file, output_file, remove_overlapping = False):
@@ -256,7 +256,8 @@ def extract_gtf_features(gtf, features, bed):
 
 def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
     """
-    Get the reading frame an exon starts in.
+    Get the reading frame an exon starts in. If the first position of the codon
+    this is 0, second is 1 and last is 2.
 
     Args:
         coding_exons_fasta (str): path to file containing coding exon sequences
@@ -289,6 +290,40 @@ def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
             id = name.split(".")[0]
             exon_id = int(name.split(".")[1].split("(")[0])
             outfile.write(">{0}\n{1}\n".format(name, full_reading_frames[id][exon_id]))
+
+
+def get_region_stop_counts(input_list, window_start, window_end):
+    """
+    Get the number of stop coding in the defined regions for a dictionary
+    containing sequences
+
+    Args:
+        input_list (dict): dictionary containing sequences dict[name] = sequence
+        window_start (int): the nucleotide to start the flank region (base 1)
+        window_end (int): the nucleotide to end the flank region (base 1)
+
+    Returns:
+        region_stop_counts (list): list containing [flank_count, core_count]
+    """
+
+    region_stop_counts = [0,0]
+    for name, seq in input_list.items():
+        five_prime_start = window_start - 1
+        five_prime_end = window_end
+        three_prime_start = len(seq) - window_end
+        three_prime_end = len(seq) - window_start + 1
+
+        # get the region sequences
+        five_prime_flank = seq[five_prime_start:five_prime_end]
+        three_prime_flank = seq[three_prime_start:three_prime_end]
+        core = seq[five_prime_end:three_prime_start]
+
+        # get the stop codon counts
+        region_stop_counts[0] += seqo.get_stop_count(five_prime_flank)
+        region_stop_counts[0] += seqo.get_stop_count(three_prime_flank)
+        region_stop_counts[1] += seqo.get_stop_count(core)
+
+    return region_stop_counts
 
 
 def get_unique_transcripts(input_bed, input_fasta, output_fasta):

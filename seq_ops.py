@@ -18,7 +18,7 @@ def calc_seq_gc(seq):
     return gc
 
 
-def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=None):
+def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=None, seed=None):
     """
     Generate a sequence based on dinucleotide and nucleotide frequencies.
 
@@ -34,15 +34,27 @@ def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabiliti
         sim_sequence (str): the simulated sequence
     """
 
+    codon_regex = re.compile(".{3}")
+
     # optionally set seed
     if seed:
         np.random.seed(seed)
 
-    required_dints = int(len(seq)/2)
-    sim_content = list(np.random.choice(dinucleotide_choices, required_dints, p=dicnucleotide_probabilities))
-    if len(seq) % 2 != 0:
-        sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
-    sim_sequence = "".join(sim_content)
+    generated = False
+    while not generated:
+        required_dints = int(len(seq)/2)
+        sim_content = list(np.random.choice(dinucleotide_choices, required_dints, p=dicnucleotide_probabilities))
+        if len(seq) % 2 != 0:
+            sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
+        sim_sequence = "".join(sim_content)
+
+        if seq_frame:
+            codons = re.findall(codon_regex, sim_sequence[seq_frame:])
+            stops_present = list(set(codons) & set(["TAA", "TAG", "TGA"]))
+            if not len(stops_present):
+                generated = True
+        else:
+            generated = True
 
     return sim_sequence
 
