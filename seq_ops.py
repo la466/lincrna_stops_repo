@@ -18,7 +18,34 @@ def calc_seq_gc(seq):
     return gc
 
 
-def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=None, seed=None):
+def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=None):
+    """
+    Generate a sequence based on dinucleotide and nucleotide frequencies.
+    Args:
+        seq (str): the sequence to simulate
+        dinucleotide_choices (list): a list of sorted dinucleotides
+        dicnucleotide_probabilities (list): a list of associated dinucleotide probablities
+        nucleotide_choices (list): a list of sorted nucleotides
+        nucleotide_probabilities (list): a list of associated nucleotide probabilities
+        seed (bool): optionally set the randomisation seed
+    Returns:
+        sim_sequence (str): the simulated sequence
+    """
+
+    # optionally set seed
+    if seed:
+        np.random.seed(seed)
+
+    required_dints = int(len(seq)/2)
+    sim_content = list(np.random.choice(dinucleotide_choices, required_dints, p=dicnucleotide_probabilities))
+    if len(seq) % 2 != 0:
+        sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
+    sim_sequence = "".join(sim_content)
+
+    return sim_sequence
+
+
+def generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=None, seed=None):
     """
     Generate a sequence based on dinucleotide and nucleotide frequencies.
 
@@ -28,6 +55,7 @@ def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabiliti
         dicnucleotide_probabilities (list): a list of associated dinucleotide probablities
         nucleotide_choices (list): a list of sorted nucleotides
         nucleotide_probabilities (list): a list of associated nucleotide probabilities
+        seq_frame (int): frame which the exon starts
         seed (bool): optionally set the randomisation seed
 
     Returns:
@@ -40,7 +68,20 @@ def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabiliti
     if seed:
         np.random.seed(seed)
 
+    # get the index with which to query the sequences
+    # if the frame is 0, keep the same frame
+    # if the frame is  1, this means there are 2 nts until the next codon
+    # if the frame is 2, this means there is 1 nt until the next codon
+    if seq_frame == 0:
+        start = 0
+    elif seq_frame == 1:
+        start = 2
+    elif seq_frame == 2:
+        start = 1
+
     generated = False
+    failed = False
+    attempts = 0
     while not generated:
         required_dints = int(len(seq)/2)
         sim_content = list(np.random.choice(dinucleotide_choices, required_dints, p=dicnucleotide_probabilities))
@@ -48,15 +89,19 @@ def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabiliti
             sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
         sim_sequence = "".join(sim_content)
 
-        if seq_frame:
-            codons = re.findall(codon_regex, sim_sequence[seq_frame:])
-            stops_present = list(set(codons) & set(["TAA", "TAG", "TGA"]))
-            if not len(stops_present):
-                generated = True
-        else:
+        codons = re.findall(codon_regex, sim_sequence[start:])
+        stops_present = list(set(codons) & set(["TAA", "TAG", "TGA"]))
+        if not len(stops_present):
             generated = True
+        else:
+            attempts += 1
+            if attempts >= 200:
+                failed = True
+                generated = True
 
-    return sim_sequence
+
+
+    return sim_sequence, failed
 
 
 def get_dinucleotide_content(seqs, as_string=None):

@@ -289,6 +289,7 @@ def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
         for name in full_coding_names:
             id = name.split(".")[0]
             exon_id = int(name.split(".")[1].split("(")[0])
+            # print(name, full_reading_frames[id][exon_id])
             outfile.write(">{0}\n{1}\n".format(name, full_reading_frames[id][exon_id]))
 
 

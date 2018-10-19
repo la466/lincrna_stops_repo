@@ -33,7 +33,7 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, par
         for process in processes:
             outputs.extend(process.get())
     else:
-        outputs = simo.sim_orf_lengths(simulations, *sim_args)
+        outputs = simo.function_to_run(simulations, *sim_args)
 
     return outputs
 
@@ -76,10 +76,14 @@ def simulate_coding_exon_regions(exons_fasta, exons_frames_file, output_file, re
 
     # get the dinucleotide content
     names, seqs_list = gen.read_fasta(exons_fasta)
-    exon_frame_names, exon_frames = gen.read_fasta(exons_frames_file)
+    exon_frame_names, exon_frame_starts = gen.read_fasta(exons_frames_file)
 
     # get the frames of the exons
-    exon_frames_list = {name: int(exon_frames[i]) for i, name in enumerate(exon_frame_names)}
+    exon_frames_list = {}
+    for i, name in enumerate(exon_frame_names):
+        # print(name, exon_frame_starts[i])
+        exon_frames_list[name] = int(exon_frame_starts[i])
+    # exon_frames = {name: int(exon_frame_starts[i]) for i, name in enumerate(exon_frame_names)}
 
     # return a dictionary and list of unique sequences
     seqs = {name: seqs_list[i] for i, name in enumerate(names) if len(seqs_list[i]) > window_end*2 }
@@ -89,7 +93,6 @@ def simulate_coding_exon_regions(exons_fasta, exons_frames_file, output_file, re
     dinucleotide_content = seqo.get_dinucleotide_content(unique_seqs)
     nucleotide_content = seqo.get_nucleotide_content(unique_seqs)
 
-    real_regions_stop_counts = ops.get_region_stop_counts(seqs, window_start, window_end)
 
     # create a temporary output directory
     temp_dir = "temp_data_regions"
@@ -100,19 +103,36 @@ def simulate_coding_exon_regions(exons_fasta, exons_frames_file, output_file, re
     outputs = run_simulation_function(required_simulations, sim_args, simo.sim_exon_region_counts, parallel=parallel)
 
     # get temp filelist so we can order simulants for tests
-    temp_filelist = fo.order_temp_files(outputs)
+    filelist = []
+    exons_to_exclude = []
+    for i, output in enumerate(outputs):
+        if len(output) and i % 2 == 0:
+            filelist.extend(output)
+        elif len(output):
+            exons_to_exclude.extend(output)
+
+
+    temp_filelist = fo.order_temp_files(filelist)
+    exons_to_exclude = list(set(exons_to_exclude))
+
+    # get a list of sequences that doesnt include the exons to avoid
+    restricted_real_seqs = {name: seqs[name] for name in seqs if name not in exons_to_exclude}
+    real_regions_stop_counts = ops.get_region_stop_counts(restricted_real_seqs, window_start, window_end)
 
     # write to file
     with open(output_file, "w") as outfile:
         # write the header
-        outfile.write("sim_no,flank_count,core_count\n")
+        outfile.write("sim_no,flank_count,core_count,exons_counted\n")
         # write the real line
-        outfile.write("real,{0},{1}\n".format(real_regions_stop_counts[0], real_regions_stop_counts[1]))
+        outfile.write("real,{0},{1},{2}\n".format(real_regions_stop_counts[0], real_regions_stop_counts[1], len(restricted_real_seqs)))
         # write the simulants
         for sim in sorted(temp_filelist):
             # get the simulation number
-            data = gen.read_many_fields(temp_filelist[sim], "\t")[0]
-            outfile.write("{0},{1},{2}\n".format("sim_{0}".format(sim), data[0], data[1]))
+            names, counts = gen.read_fasta(temp_filelist[sim])
+            required = {name: counts[i] for i, name in enumerate(names) if name not in exons_to_exclude}
+            flank_count = sum([int(required[name].split(",")[0]) for name in required])
+            core_count = sum([int(required[name].split(",")[1]) for name in required])
+            outfile.write("{0},{1},{2},{3}\n".format("sim_{0}".format(sim), flank_count, core_count, len(required)))
 
     # remove the temp files
     gen.remove_directory(temp_dir)

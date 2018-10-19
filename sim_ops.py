@@ -1,5 +1,6 @@
 import generic as gen
 import seq_ops as seqo
+import ops
 import numpy as np
 import random
 
@@ -48,6 +49,8 @@ def sim_exon_region_counts(simulations, seqs, seq_frames, dinucleotide_content, 
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
+    exons_to_exclude = []
+
     for sim_no, simulation in enumerate(simulations):
 
         # set the seed
@@ -56,29 +59,32 @@ def sim_exon_region_counts(simulations, seqs, seq_frames, dinucleotide_content, 
         # print the simulation number out
         gen.print_simulation(sim_no+1, simulations)
 
-        simulated_seqs = {}
-        # Generate a list of nucleotide matched sequences
-        for i, name in enumerate(seqs):
-            seq = seqs[name]
-            frame = seq_frames[name]
-            generated = False
-
-            seq_seed = get_seq_seed(seq_seeds, sim_no, i)
-
-            while not generated:
-                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
-                if sim_seq not in simulated_seqs:
-                    generated = True
-                    simulated_seqs[name] = sim_seq
-
-        region_stop_counts = get_region_stop_counts(simulated_seqs, window_start, window_end)
         temp_file = "{0}/{1}.{2}.txt".format(temp_dir, random.random(), simulation+1)
         temp_files.append(temp_file)
-        with open(temp_file, "w") as temp:
-            for name in longest_orfs:
-                temp.write("{0},{1}\n".format(region_stop_counts[0], region_stop_counts[1]))
 
-    return temp_files
+        with open(temp_file, "w") as outfile:
+            # Generate a list of nucleotide matched sequences
+            for i, name in enumerate(seqs):
+                # this will prevent simulating sequences that have already been excluded
+                if name not in exons_to_exclude:
+                    seq = seqs[name]
+                    frame = seq_frames[name]
+                    generated = False
+
+                    seq_seed = get_seq_seed(seq_seeds, sim_no, i)
+
+                    while not generated:
+                        sim_seq, failed = seqo.generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
+                        if failed:
+                            generated = True
+                            exons_to_exclude.append(name)
+                        else:
+                            generated = True
+                            sim_seqs = {name: sim_seq}
+                            counts = ops.get_region_stop_counts(sim_seqs, window_start, window_end)
+                            outfile.write(">{0}\n{1},{2}\n".format(name, counts[0],counts[1]))
+
+    return temp_files, exons_to_exclude
 
 
 def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content, temp_dir, seeds=None, seq_seeds=None):
