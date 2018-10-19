@@ -86,7 +86,7 @@ def simulate_coding_exon_regions(exons_fasta, exons_frames_file, output_file, re
     # exon_frames = {name: int(exon_frame_starts[i]) for i, name in enumerate(exon_frame_names)}
 
     # return a dictionary and list of unique sequences
-    seqs = {name: seqs_list[i] for i, name in enumerate(names) if len(seqs_list[i]) > window_end*2 }
+    seqs = {name: seqs_list[i] for i, name in enumerate(names) if len(seqs_list[i]) > window_end*2}
     unique_seqs = [seqs[i] for i in seqs]
 
     # get the dicnucleotide and nucleotide content of the sequences

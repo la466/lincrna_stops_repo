@@ -68,17 +68,6 @@ def generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_proba
     if seed:
         np.random.seed(seed)
 
-    # get the index with which to query the sequences
-    # if the frame is 0, keep the same frame
-    # if the frame is  1, this means there are 2 nts until the next codon
-    # if the frame is 2, this means there is 1 nt until the next codon
-    if seq_frame == 0:
-        start = 0
-    elif seq_frame == 1:
-        start = 2
-    elif seq_frame == 2:
-        start = 1
-
     generated = False
     failed = False
     attempts = 0
@@ -89,7 +78,11 @@ def generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_proba
             sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
         sim_sequence = "".join(sim_content)
 
-        codons = re.findall(codon_regex, sim_sequence[start:])
+        codons = []
+        codons.append(sim_sequence[:3-seq_frame])
+        for i in range(0, len(sim_sequence), 3):
+            codons.append(sim_sequence[i+3-seq_frame:i+6-seq_frame])
+
         stops_present = list(set(codons) & set(["TAA", "TAG", "TGA"]))
         if not len(stops_present):
             generated = True
