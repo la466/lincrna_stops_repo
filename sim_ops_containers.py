@@ -421,3 +421,65 @@ def sim_stop_count(seq_fasta, required_simulations, output_file, parallel=True, 
 
     # remove the temp files
     gen.remove_directory(temp_dir)
+
+
+def sim_stop_count_mm(seq_fasta, required_simulations, output_file, parallel=True, seeds=None, seq_seeds=None):
+    """
+    Simulation asking whether sequences have fewer stop codons than
+    nucleotide matched controls.
+
+    Args:
+        seq_fasta (str): path to fasta file containing sequences
+        required_simulations (int): number of simulations to do
+        output_file (str): path to output file
+        parallel (bool): opt whether to use multiprocessing
+        seeds (list): seed numbers for the simulations
+        seq_seeds (list): a list of lists containing seeds for testing
+    """
+
+    names, seqs_list = gen.read_fasta(seq_fasta)
+
+    # names, seqs_list = names[:100], seqs_list[:100]
+
+    # return a dictionary and list of unique sequences
+    seqs = seqo.get_unique_seqs(names, seqs_list)
+
+
+
+    # get the gc contents of the sequences
+    gc_contents = {}
+    for seq in seqs:
+        gc_contents[seq] = seqo.calc_seq_gc(seqs[seq])
+
+    # get the stop codon counts for the real sequences
+    stop_counts = seqo.get_stop_counts(seqs)
+
+    # create a temporary output directory
+    temp_dir = "temp_data_stop_count_sim"
+    gen.create_output_directories(temp_dir)
+
+    # run the simulations
+    sim_args = [seqs, temp_dir, seeds, seq_seeds]
+    # run the simulation
+    outputs = run_simulation_function(required_simulations, sim_args, simo.sim_stop_counts_mm, parallel=parallel)
+
+
+    # get temp filelist so we can order simulants for tests
+    temp_filelist = fo.order_temp_files(outputs)
+
+    # write to file
+    with open(output_file, "w") as outfile:
+        # write the header
+        outfile.write("sim_no,{0}\n".format(",".join(name for name in sorted(seqs))))
+        # write the gc content
+        outfile.write("gc,{0}\n".format(",".join(gen.stringify([gc_contents[id] for id in sorted(gc_contents)]))))
+        # write the real line
+        outfile.write("real,{0}\n".format(",".join(gen.stringify([stop_counts[id] for id in sorted(stop_counts)]))))
+        # write the simulants
+        for sim in sorted(temp_filelist):
+            # get the simulation number
+            data = seqo.fasta_to_dict(temp_filelist[sim])
+            outfile.write("{0},{1}\n".format("sim_{0}".format(sim), ",".join([data[id] for id in sorted(data)])))
+
+    # remove the temp files
+    gen.remove_directory(temp_dir)

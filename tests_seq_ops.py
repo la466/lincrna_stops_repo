@@ -73,6 +73,31 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = get_dinucleotide_content(seqs, as_string=True)
         self.assertEqual(expected, observed)
 
+    def test_get_dinucleotide_probabilities_markov(self):
+        input_file = "test_data/seq_ops/test_get_dinucleotide_probabilities_markov/input.fasta"
+        names, seqs = gen.read_fasta(input_file)
+        expected = {
+            "AA": [np.divide(3,9), np.divide(2,9), np.divide(2,9), np.divide(2,9)],
+            "AC": [np.divide(2,5), np.divide(1,5), np.divide(1,5), np.divide(1,5)],
+            "AG": [np.divide(2,5), np.divide(1,5), np.divide(1,5), np.divide(1,5)],
+            "AT": [np.divide(2,6), np.divide(1,6), np.divide(1,6), np.divide(2,6)],
+            "CA": [np.divide(2,5), np.divide(1,5), np.divide(1,5), np.divide(1,5)],
+            "CC": [np.divide(1,5), np.divide(1,5), np.divide(2,5), np.divide(1,5)],
+            "CG": [np.divide(1,5), np.divide(1,5), np.divide(2,5), np.divide(1,5)],
+            "CT": [np.divide(1,4), np.divide(1,4), np.divide(1,4), np.divide(1,4)],
+            "GA": [np.divide(2,5), np.divide(1,5), np.divide(1,5), np.divide(1,5)],
+            "GC": [np.divide(1,4), np.divide(1,4), np.divide(1,4), np.divide(1,4)],
+            "GG": [np.divide(1,5), np.divide(1,5), np.divide(1,5), np.divide(2,5)],
+            "GT": [np.divide(1,6), np.divide(1,6), np.divide(1,6), np.divide(3,6)],
+            "TA": [np.divide(1,5), np.divide(1,5), np.divide(1,5), np.divide(2,5)],
+            "TC": [np.divide(1,4), np.divide(1,4), np.divide(1,4), np.divide(1,4)],
+            "TG": [np.divide(1,5), np.divide(1,5), np.divide(1,5), np.divide(2,5)],
+            "TT": [np.divide(1,5), np.divide(1,5), np.divide(2,5), np.divide(1,5)],
+        }
+        observed = get_dinucleotide_probabilities_markov(seqs)
+        self.assertEqual(expected, observed)
+
+
     def test_get_longest_orf(self):
         input_file = "test_data/seq_ops/test_get_longest_orf/input.fasta"
         names, seqs = gen.read_fasta(input_file)
@@ -110,6 +135,18 @@ class Test_Seq_Ops(unittest.TestCase):
         names, seqs = gen.read_fasta(input_file)
         expected = {"A": np.divide(7,18), "C": np.divide(3,18), "G": np.divide(5,18), "T": np.divide(3,18)}
         observed = get_nucleotide_content(seqs)
+        self.assertEqual(expected, observed)
+
+    def test_get_nucleotide_probabilities_markov(self):
+        input_file = "test_data/seq_ops/test_get_nucleotide_probabilities_markov/input.fasta"
+        names, seqs = gen.read_fasta(input_file)
+        expected = {
+            "A": [np.divide(1,10), np.divide(5,10), np.divide(3,10), np.divide(1,10)],
+            "C": [np.divide(1,11), np.divide(2,11), np.divide(3,11), np.divide(5,11)],
+            "G": [np.divide(3,7), np.divide(2,7), np.divide(1,7), np.divide(1,7)],
+            "T": [np.divide(4,8), np.divide(2,8), np.divide(1,8), np.divide(1,8)],
+        }
+        observed = get_nucleotide_probabilities_markov(seqs)
         self.assertEqual(expected, observed)
 
     def test_get_stop_count(self):

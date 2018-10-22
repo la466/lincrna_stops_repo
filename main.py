@@ -7,8 +7,8 @@ import time
 def main():
 
     description = "Main file to ask questions about the prevelance of stop codons in sequences."
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "expression_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "stop_counts_exon_ends", "clean_run"], flags = [7,8,9,10,11,12,13,14], ints=[6])
-    source_exons_path, genome_fasta, gtf, mapping_file, expression_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, stop_counts_regions, stop_counts_exon_ends, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.expression_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.stop_counts_exon_ends, args.clean_run
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "expression_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "sim_stop_count_mm", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "stop_counts_exon_ends", "clean_run"], flags = [7,8,9,10,11,12,13,14,15], ints=[6])
+    source_exons_path, genome_fasta, gtf, mapping_file, expression_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, sim_stop_count_mm, lincRNA_expression, non_coding_exons, stop_counts_regions, stop_counts_exon_ends, clean_run = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.expression_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.sim_stop_count_mm, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.stop_counts_exon_ends, args.clean_run
 
     # set a start time
     start = time.time()
@@ -37,6 +37,9 @@ def main():
     sim_stop_count_output_file = "{0}/sim_stop_count.csv".format(output_directory)
     if sim_stop_count:
         simopc.sim_stop_count(seqs_fasta, required_simulations, sim_stop_count_output_file)
+    sim_stop_count_mm_output_file = "{0}/sim_stop_count_mm.csv".format(output_directory)
+    if sim_stop_count_mm:
+        simopc.sim_stop_count_mm(seqs_fasta, required_simulations, sim_stop_count_mm_output_file)
 
     lincRNA_expression_output_file = "{0}/lincRNA_expression_links.csv".format(output_directory)
     if lincRNA_expression:

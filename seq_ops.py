@@ -45,6 +45,31 @@ def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabiliti
     return sim_sequence
 
 
+def generate_nt_matched_seq_mm(seq, nts, dinucleotide_probs, seed=None):
+    """
+    Generate a sequence based on dinucleotide and nucleotide frequencies.
+    Args:
+        seq (str): the sequence to simulate
+        dinucleotide_choices (list): a list of sorted dinucleotides
+        dicnucleotide_probabilities (list): a list of associated dinucleotide probablities
+        nucleotide_choices (list): a list of sorted nucleotides
+        nucleotide_probabilities (list): a list of associated nucleotide probabilities
+        seed (bool): optionally set the randomisation seed
+    Returns:
+        sim_sequence (str): the simulated sequence
+    """
+
+    # optionally set seed
+    if seed:
+        np.random.seed(seed)
+
+    sequence = seq[:2]
+    while len(sequence) < len(seq):
+        choice = np.random.choice(nts, p=dinucleotide_probs[seq[-2:]])
+        sequence += choice
+    return sequence
+
+
 def generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=None, seed=None):
     """
     Generate a sequence based on dinucleotide and nucleotide frequencies.
@@ -153,6 +178,33 @@ def get_nucleotide_content(seqs):
     for nt in nts:
         nucleotide_content[nt] = np.divide(seqs_nts.count(nt), len(seqs_nts))
     return nucleotide_content
+
+
+def get_dinucleotide_probabilities_markov(seqs):
+
+    counts = collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
+    probabilities = collections.defaultdict(lambda: [])
+    for seq in seqs:
+        for i in range(len(seq)-2):
+            counts[seq[i:i+2]][seq[i+2]] += 1
+    for dint in counts:
+        dint_counts = sum(counts[dint].values())
+        for nt, count in sorted(counts[dint].items()):
+            probabilities[dint].append(np.divide(count, dint_counts))
+    return probabilities
+
+
+def get_nucleotide_probabilities_markov(seqs):
+    counts = collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
+    probabilities = collections.defaultdict(lambda: [])
+    for seq in seqs:
+        for i in range(len(seq)-1):
+            counts[seq[i]][seq[i+1]] += 1
+    for nt in counts:
+        nt_counts = sum(counts[nt].values())
+        for second_nt, count in sorted(counts[nt].items()):
+            probabilities[nt].append(np.divide(count, nt_counts))
+    return probabilities
 
 
 def get_longest_orf(seq, strict_stop=None):
