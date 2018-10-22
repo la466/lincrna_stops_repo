@@ -40,6 +40,62 @@ def set_seed(seeds, simulation_number):
     np.random.seed(seed)
 
 
+def sim_exon_flank_counts(simulations, seqs, seq_frames, dinucleotide_content, nucleotide_content, window_start, window_end, temp_dir, seeds=None, seq_seeds=None):
+
+    temp_files = []
+
+    dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
+    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    nucleotide_choices = [n for n in sorted(nucleotide_content)]
+    nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
+
+    exons_to_exclude = []
+
+    for sim_no, simulation in enumerate(simulations):
+
+        # set the seed
+        set_seed(seeds, simulation)
+
+        # print the simulation number out
+        gen.print_simulation(sim_no+1, simulations)
+
+        temp_file = "{0}/{1}.{2}.txt".format(temp_dir, random.random(), simulation+1)
+        temp_files.append(temp_file)
+
+
+        with open(temp_file, "w") as outfile:
+            # Generate a list of nucleotide matched sequences
+            for i, name in enumerate(seqs):
+                # this will prevent simulating sequences that have already been excluded
+                seqs_list = seqs[name]
+                seq_count = []
+                for index, seq in enumerate(seqs_list):
+                    query_name = "{0}.{1}".format(name, index)
+                    if query_name not in exons_to_exclude:
+                        seq = seqs_list[index]
+                        frame = seq_frames[name][index]
+                        generated = False
+                        seq_seed = get_seq_seed(seq_seeds, sim_no, i)
+
+                        while not generated:
+                            sim_seq, failed = seqo.generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
+                            if failed:
+                                generated = True
+                                exons_to_exclude.append(query_name)
+                                seq_count.append(np.nan)
+                            else:
+                                generated = True
+                                sim_seqs = [sim_seq]
+                                counts = seqo.get_stop_counts(sim_seqs)
+                                seq_count.append(counts[0])
+                    else:
+                        seq_count.append(np.nan)
+
+                outfile.write(">{0}\n{1},{2}\n".format(name,seq_count[0],seq_count[1]))
+
+    return temp_files, exons_to_exclude
+
+
 def sim_exon_region_counts(simulations, seqs, seq_frames, dinucleotide_content, nucleotide_content, window_start, window_end, temp_dir, seeds=None, seq_seeds=None):
 
     temp_files = []

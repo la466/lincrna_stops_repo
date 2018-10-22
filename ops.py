@@ -254,6 +254,50 @@ def extract_gtf_features(gtf, features, bed):
             file.write("{0}\n".format("\t".join([str(i) for i in feature])))
 
 
+def get_exon_flank_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
+    """
+    Get the reading frames that the flanks of an exon starts in. If the first position of the codon
+    this is 0, second is 1 and last is 2.
+
+    Args:
+        coding_exons_fasta (str): path to file containing coding exon sequences
+        full_exons_fasta (str): path to file containing all exon sequences
+        output_file (str): path to the output file
+    """
+
+    # read in the coding exons and all exons
+    full_names, full_seqs = gen.read_fasta(full_exons_fasta)
+    full_coding_names = gen.read_fasta(coding_exons_fasta)[0]
+
+    # create a dictionary that hold each of the full sequences
+    full_exon_seqs = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict()))
+    for i, name in enumerate(full_names):
+        id = name.split(".")[0]
+        exon_id = int(name.split(".")[1].split("(")[0])
+        full_exon_seqs[id][exon_id] = full_seqs[i]
+
+    # now get the reading frame that each flank starts in
+    flanks_reading_frames = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
+    for id in full_exon_seqs:
+        seq_length = 0
+        for exon_id, seq in sorted(full_exon_seqs[id].items()):
+            # sequence needs to be longer than 138 nts to have two flanks
+            if len(seq) > 138:
+                five_prime_start = seq_length + 2
+                three_prime_start = seq_length + len(seq) - 69
+                flanks_reading_frames[id][exon_id] = [five_prime_start % 3, three_prime_start % 3]
+
+            seq_length += len(seq)
+
+    # now output the reading frames for just the coding exons
+    with open(output_file, "w") as outfile:
+        for name in full_coding_names:
+            id = name.split(".")[0]
+            exon_id = int(name.split(".")[1].split("(")[0])
+            if exon_id in flanks_reading_frames[id]:
+                outfile.write(">{0}\n{1},{2}\n".format(name, flanks_reading_frames[id][exon_id][0], flanks_reading_frames[id][exon_id][1]))
+
+
 def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
     """
     Get the reading frame an exon starts in. If the first position of the codon

@@ -5,7 +5,8 @@ import file_ops as fo
 import ops_containers as opsc
 import ops
 import os
-
+import collections
+import numpy as np
 
 def run_simulation_function(required_simulations, sim_args, function_to_run, parallel = True):
     """
@@ -33,13 +34,22 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, par
         for process in processes:
             outputs.extend(process.get())
     else:
-        outputs = simo.function_to_run(simulations, *sim_args)
+        outputs = function_to_run(simulations, *sim_args)
 
     return outputs
 
 
 def sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, output_file, simulations, clean_run=None):
     """
+    Simulate the number of stop codons found in regions of coding exons.
+
+    Args:
+        genome_fasta (str): path to genome fasta file
+        gtf (str): path to gtf file
+        output_directory (str): path to output directory
+        output_file (str): path to output file
+        simulations (int): number of simulations to do
+        clean_run (bool): if true, delete the sequence files compiled and start again
     """
 
     sequence_output_directory = "{0}/sequence_files".format(output_directory)
@@ -68,6 +78,136 @@ def sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, out
 
     # simulate the coding exons
     simulate_coding_exon_regions(coding_exons_fasta, coding_exons_frames_file, output_file, simulations)
+
+
+def sim_coding_exon_flanks_stop_counts(genome_fasta, gtf, output_directory, output_file, simulations, clean_run=None):
+    """
+    Simulate the number of stop codons found in coding exons flanks.
+
+    Args:
+        genome_fasta (str): path to genome fasta file
+        gtf (str): path to gtf file
+        output_directory (str): path to output directory
+        output_file (str): path to output file
+        simulations (int): number of simulations to do
+        clean_run (bool): if true, delete the sequence files compiled and start again
+    """
+
+    sequence_output_directory = "{0}/sequence_files".format(output_directory)
+    if clean_run:
+        gen.remove_directory(sequence_output_directory)
+
+    # create the output directory if it doesnt exist
+    gen.create_output_directories(sequence_output_directory)
+
+    # get the coding and non coding exons
+    coding_exons_bed = "{0}/coding_exons.bed".format(output_directory)
+    non_coding_exons_bed = "{0}/non_coding_exons.bed".format(output_directory)
+    coding_exons_fasta = "{0}/coding_exons.fasta".format(output_directory)
+    non_coding_exons_fasta = "{0}/non_coding_exons.fasta".format(output_directory)
+    # get the coding and non coding exons
+    if clean_run or not os.path.isfile(non_coding_exons_fasta) or not os.path.isfile(coding_exons_fasta):
+        print("Getting the coding and non coding exons...")
+        opsc.get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_bed, coding_exons_fasta, non_coding_exons_fasta, sequence_output_directory)
+
+    # # get which frame each of the exons resides
+    final_filtered_cds_file = "{0}/final_filtered_cds.fasta".format(sequence_output_directory)
+    coding_exons_flanks_frames_file = "{0}/coding_exons_flanks_reading_frames.fasta".format(output_directory)
+    if clean_run or not os.path.isfile(coding_exons_flanks_frames_file):
+        print("Getting the reading frame each exon starts in...")
+        ops.get_exon_flank_reading_frame(coding_exons_fasta, final_filtered_cds_file, coding_exons_flanks_frames_file)
+
+    # simulate the coding exons
+    simulate_coding_exon_flanks(coding_exons_fasta, coding_exons_flanks_frames_file, output_file, simulations)
+
+
+def simulate_coding_exon_flanks(exons_fasta, exons_frames_file, output_file, required_simulations, parallel=True, seeds=None, seq_seeds=None):
+
+    window_start, window_end = 3, 69
+
+    # get the dinucleotide content
+    names, seqs_list = gen.read_fasta(exons_fasta)
+    exon_frame_names, exon_frame_starts = gen.read_fasta(exons_frames_file)
+
+    # get the frames of the exons
+    exon_frames_list = {}
+    for i, name in enumerate(exon_frame_names):
+        exon_frames_list[name] = [int(i) for i in exon_frame_starts[i].split(",")]
+
+    # return a dictionary and list of unique sequences
+    full_seqs = {name: seqs_list[i] for i, name in enumerate(names) if name in exon_frames_list}
+    seqs = {name: [full_seqs[name][2:69], full_seqs[name][-69:-2]] for name in full_seqs}
+    unique_seqs = []
+    for name in seqs:
+        unique_seqs.extend(seqs[name])
+
+    # get the dicnucleotide and nucleotide content of the sequences
+    dinucleotide_content = seqo.get_dinucleotide_content(unique_seqs)
+    nucleotide_content = seqo.get_nucleotide_content(unique_seqs)
+
+
+    # create a temporary output directory
+    temp_dir = "temp_data_flanks"
+    gen.create_output_directories(temp_dir)
+
+    sim_args = [seqs, exon_frames_list, dinucleotide_content, nucleotide_content, window_start, window_end, temp_dir, seeds, seq_seeds]
+    # run the simulation
+    outputs = run_simulation_function(required_simulations, sim_args, simo.sim_exon_flank_counts, parallel=parallel)
+
+    # get temp filelist so we can order simulants for tests
+    filelist = []
+    exons_to_exclude = []
+    for i, output in enumerate(outputs):
+        if len(output) and i % 2 == 0:
+            filelist.extend(output)
+        elif len(output):
+            exons_to_exclude.extend(output)
+
+
+    temp_filelist = fo.order_temp_files(filelist)
+    exons_to_exclude = list(set(exons_to_exclude))
+
+
+    # get a list of sequences that doesnt include the exons to avoid
+    restricted_list_counts = collections.defaultdict(lambda: [])
+    for name in seqs:
+        for index, seq in enumerate(seqs[name]):
+            query = "{0}.{1}".format(name, index)
+            if query not in exons_to_exclude:
+                restricted_list_counts[name].append(seqo.get_stop_counts([seqs[name][index]])[0])
+            else:
+                restricted_list_counts[name].append(np.nan)
+
+    real_counts = [np.nansum([restricted_list_counts[name][0] for name in restricted_list_counts]),np.nansum([restricted_list_counts[name][1] for name in restricted_list_counts])]
+    real_na_counts = np.nansum([len([restricted_list_counts[name][0] for name in restricted_list_counts if np.isnan(restricted_list_counts[name][0])]),len([restricted_list_counts[name][1] for name in restricted_list_counts if np.isnan(restricted_list_counts[name][1])])])
+
+    # write to file
+    with open(output_file, "w") as outfile:
+        # write the header
+        outfile.write("sim_no,five_prime_count,three_prime_count,flanks_not_counted\n")
+        # write the real line
+        outfile.write("real,{0},{1},{2}\n".format(real_counts[0], real_counts[1], real_na_counts))
+        # write the simulants
+        for sim in sorted(temp_filelist):
+            # get the simulation number
+            names, counts = gen.read_fasta(temp_filelist[sim])
+            sim_counts = [[],[]]
+            sim_na = 0
+            for i, name in enumerate(names):
+                exon_counts = counts[i].split(',')
+                for index, count in enumerate(exon_counts):
+                    query = "{0}.{1}".format(name, index)
+                    if query not in exons_to_exclude:
+                        if count != "nan":
+                            sim_counts[index].append(int(count))
+                        else:
+                            sim_counts[index].append(np.nan)
+                    else:
+                        sim_na += 1
+            outfile.write("{0},{1},{2},{3}\n".format("sim_{0}".format(sim), np.nansum(sim_counts[0]), np.nansum(sim_counts[1]), sim_na))
+
+    # remove the temp files
+    gen.remove_directory(temp_dir)
 
 
 def simulate_coding_exon_regions(exons_fasta, exons_frames_file, output_file, required_simulations, parallel=True, seeds=None, seq_seeds=None):
