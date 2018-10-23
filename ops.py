@@ -561,7 +561,7 @@ def filter_coding_sequences(input_fasta, output_fasta):
 
 def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
                              force_strand = False, no_name_check = False, no_dups = True, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
-                  write_zero = False, write_bed = False, subtract=None, return_non_overlaps=None):
+                  write_zero = False, write_bed = False, subtract=None, return_non_overlaps=None, write_none=False):
     """
     Use bedtools to intersect coordinates from two bed files.
     Return those lines in bed file 1 that overlap with intervals in bed file 2.
@@ -593,7 +593,7 @@ def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, wr
     gen.create_directory("temp_data/")
     temp_file_name = "temp_data/temp_bed_file{0}.bed".format(random.random())
     #have it write the output to a temporary file
-    bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed, subtract = subtract, return_non_overlaps = return_non_overlaps)
+    bedtools_output = run_bedtools(bed_file1, bed_file2, force_strand, write_both, overlap, sort, no_name_check, no_dups, output_file = temp_file_name, intersect = intersect, hit_number = hit_count, bed_path = bed_path, intersect_bam = intersect_bam, write_zero = write_zero, overlap_rec = overlap_rec, write_bed = write_bed, subtract = subtract, return_non_overlaps = return_non_overlaps, write_none = write_none)
     #move it to a permanent location only if you want to keep it
     if output_file:
         gen.run_process(["mv", temp_file_name, output_file])
@@ -669,7 +669,7 @@ def remove_bed_overlaps(input_file, output_file):
                 outfile.write("{0}\n".format(line[:-2]))
 
 
-def run_bedtools(A_file, B_file, force_strand = False, write_both = False, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False, subtract=False, return_non_overlaps=None):
+def run_bedtools(A_file, B_file, force_strand = False, write_both = False, overlap = None, sort = False, no_name_check = False, no_dups = True, hit_number = False, output_file = None, intersect = False, bed_path = None, overlap_rec = None, intersect_bam = None, write_zero = None, write_bed = False, subtract=False, return_non_overlaps=None, write_none = None):
     '''
     See intersect_bed for details.
     '''
@@ -688,7 +688,9 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, overl
         arg = "subtractBed"
     else:
         arg = "intersectBed"
-    bedtools_args = [arg, "-a", A_file,"-b", B_file, write_option]
+    bedtools_args = [arg, "-a", A_file,"-b", B_file]
+    if not write_none:
+        bedtools_args.append(write_option)
     if intersect:
         del bedtools_args[-1]
     if overlap:
@@ -718,6 +720,7 @@ def run_bedtools(A_file, B_file, force_strand = False, write_both = False, overl
         bedtools_args = ["intersectBed", write_option, "-abam", A_file, "-b", B_file]
         if write_bed:
             bedtools_args.append("-bed")
+
     bedtools_output = gen.run_process(bedtools_args, file_for_output = output_file)
     return(bedtools_output)
 

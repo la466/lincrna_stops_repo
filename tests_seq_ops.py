@@ -172,6 +172,21 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = get_stop_counts(seqs)
         self.assertEqual(expected, observed)
 
+    def test_get_non_transcribed_regions(self):
+        input_gtf = "test_data/seq_ops/test_get_non_transcribed_regions/input.gtf"
+        input_fasta_file = "test_data/seq_ops/test_get_non_transcribed_regions/input.fa"
+        observed_features_file = "test_data/seq_ops/test_get_non_transcribed_regions/observed_features.bed"
+        expected_bed = "test_data/seq_ops/test_get_non_transcribed_regions/expected.bed"
+        observed_bed = "test_data/seq_ops/test_get_non_transcribed_regions/observed.bed"
+        observed_fasta = "test_data/seq_ops/test_get_non_transcribed_regions/observed.fasta"
+        output_directory = "test_data/seq_ops/test_get_non_transcribed_regions"
+        gen.remove_file(observed_features_file)
+        gen.remove_file(observed_bed)
+        get_non_transcribed_regions(input_gtf, input_fasta_file, observed_features_file, observed_bed, observed_fasta, output_directory)
+        expected = gen.read_many_fields(expected_bed, "\t")
+        observed = gen.read_many_fields(observed_bed, "\t")
+        self.assertEqual(expected, observed)
+
     def test_get_unique_seqs(self):
         input_file = "test_data/seq_ops/test_get_unique_seqs/input.fasta"
         expected_file = "test_data/seq_ops/test_get_unique_seqs/expected.fasta"

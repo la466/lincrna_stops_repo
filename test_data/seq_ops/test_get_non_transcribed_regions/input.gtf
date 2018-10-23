@@ -1,0 +1,12 @@
+#!genome-build GRCh37.p13
+#!genome-version GRCh37
+#!genome-date 2009-02
+#!genome-build-accession NCBI:GCA_000001405.14
+#!genebuild-last-updated 2013-09
+1	ensembl_havana	gene	10	20	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; gene_name "SAMPLE0001"; gene_source "ensembl_havana"; gene_biotype "pseudogene";
+1	havana	transcript	40	60	.	+	.	gene_id "ENSG00000223973"; gene_version "4"; transcript_id "ENST00000456328"; gene_biotype "pseudogene";
+1	havana	exon	56	75	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000456328"; gene_biotype "protein_coding";
+1	havana	CDS	80	100	.	-	.	gene_id "ENSG000003"; gene_version "4"; transcript_id "ENST0003246"; gene_biotype "protein_coding"; exon_number "1";
+2	havana	exon	20	30	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000456328"; exon_number "2"; gene_biotype "protein_coding";
+2	ensembl	CDS	40	50	.	-	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00032323"; exon_number "3"; gene_biotype "protein_coding";
+2	ensembl	CDS	55	80	.	+	.	gene_id "ENSG000003"; gene_version "4"; transcript_id "ENST0003246"; gene_biotype "protein_coding";  exon_number "2";

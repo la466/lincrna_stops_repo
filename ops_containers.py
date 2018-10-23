@@ -1,6 +1,7 @@
 import generic as gen
 import ops as ops
 import file_ops as fo
+import seq_ops as seqo
 import sim_ops_containers as simoc
 import numpy as np
 import itertools as it
@@ -161,3 +162,15 @@ def non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_cod
     simoc.sim_stop_count(non_coding_exons_fasta, required_simulations, sim_stop_count_non_coding_output_file)
     print("Simulating the stop counts in coding exons...")
     simoc.sim_stop_count(coding_exons_fasta, required_simulations, sim_stop_count_coding_output_file)
+
+
+def stop_density_test(gtf_file, genome_fasta, output_directory):
+
+    genome_seq_outputs = "{0}/genome_sequence_files".format(output_directory)
+    gen.create_output_directories(genome_seq_outputs)
+
+    # get the sequences for non features
+    features_bed = "{0}/genome_features.bed".format(genome_seq_outputs)
+    non_features_bed = "{0}/non_genome_features.bed".format(genome_seq_outputs)
+    non_features_fasta = "{0}/non_genome_features.fasta".format(genome_seq_outputs)
+    seqo.get_non_transcribed_regions(gtf_file, genome_fasta, features_bed, non_features_bed, non_features_fasta, genome_seq_outputs)
