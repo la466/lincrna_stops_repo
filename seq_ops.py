@@ -1,4 +1,5 @@
 import generic as gen
+import ops
 import numpy as np
 import itertools as it
 import re
@@ -16,6 +17,21 @@ def calc_seq_gc(seq):
     """
     gc = np.divide(sum([1 for i in list(seq) if i in ["G", "C"]]), len(seq))
     return gc
+
+
+def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, output_bed, output_fasta, output_directory):
+
+    # get all features in a bed file
+    ops.extract_gtf_features_all(input_gtf, output_features_bed, exclude_XY=True)
+    # create genome bed from fasta
+    genome_bed = "{0}/genome.bed".format(output_directory)
+    genome_index = "{0}.fai".format(input_fasta)
+    ops.get_genome_bed_from_fasta_index(output_features_bed, genome_index, input_fasta)
+    # subtract the features from a bed file that simpy contains the whole genome coordinates
+    # intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
+    #                              force_strand = False, no_name_check = False, no_dups = True, intersect = False, hit_count = False, bed_path = None, intersect_bam=None,
+    #                   write_zero = False, write_bed = False, subtract=None, return_non_overlaps=None):
+    pass
 
 
 def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=None):

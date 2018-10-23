@@ -88,7 +88,7 @@ def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq
     Generate a file containing the exon sequences for a given .bed file
 
     Args:
-        source_path (str): the source path for the origin .bed file
+        source_path (str): the source path for the origin .gtf file
         genome_fasta (str): the source path for the genome fasta
         output_bed (str): output .bed file to contain the exon info
         output_fasta (str): output fasta containing sequences

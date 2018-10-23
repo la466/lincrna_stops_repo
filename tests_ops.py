@@ -64,6 +64,16 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_extract_gtf_features_all(self):
+        gtf_file = "test_data/ops/test_extract_gtf_features_all/input.gtf"
+        expected_file = "test_data/ops/test_extract_gtf_features_all/expected.bed"
+        observed_file = "test_data/ops/test_extract_gtf_features_all/observed.bed"
+        gen.remove_file(observed_file)
+        extract_gtf_features_all(gtf_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_extract_gtf_features_exon(self):
         gtf_file = "test_data/ops/test_extract_gtf_features_exon/input.gtf"
         expected_file = "test_data/ops/test_extract_gtf_features_exon/expected.bed"
@@ -159,6 +169,18 @@ class Test_Ops(unittest.TestCase):
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
+
+    def test_get_genome_bed_from_fasta_index(self):
+        input_features_bed = "test_data/ops/test_get_genome_bed_from_fasta_index/input_features.bed"
+        input_index = "test_data/ops/test_get_genome_bed_from_fasta_index/input.fai"
+        expected_file = "test_data/ops/test_get_genome_bed_from_fasta_index/expected.bed"
+        observed_file = "test_data/ops/test_get_genome_bed_from_fasta_index/observed.bed"
+        gen.remove_file(observed_file)
+        get_genome_bed_from_fasta_index(input_features_bed, input_index, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
 
     def test_get_region_stop_counts(self):
         input_file = "test_data/ops/test_get_region_stop_counts/input.fasta"

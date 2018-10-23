@@ -254,6 +254,63 @@ def extract_gtf_features(gtf, features, bed):
             file.write("{0}\n".format("\t".join([str(i) for i in feature])))
 
 
+def extract_gtf_features_all(gtf, bed, exclude_XY=None):
+    """
+    Get all the features in a gtf file in bed format.
+
+    Args:
+        gtf (str): path to gtf file
+        bed (str): path to output bed file
+        exclude_XY (bool): if true, do not include X and Y chromosomes
+    """
+
+    # get all feature lines
+    lines = [line for line in gen.read_many_fields(gtf, "\t") if "#" not in line[0]]
+    # format as .bed and switch to base 0
+    gtf_features = [["chr{0}".format(i[0]), int(i[3]) - 1, i[4], ".", i[2], i[6], i[8]] for i in lines if len(i) >= 3]
+    trans_regex = re.compile("(?<=transcript_id \")ENST[0-9]*")
+    exon_no_regex = re.compile("(?<=exon_number \")[0-9]*")
+    gene_regex = re.compile("(?<=gene_id \")ENSG[0-9]*")
+    biotype_regex = re.compile("(?<=gene_biotype \").*?(?=\";)")
+    for pos, feature in enumerate(gtf_features):
+        to_parse = feature[-1]
+        trans = re.search(trans_regex, to_parse)
+        exon_no = re.search(exon_no_regex, to_parse)
+        gene_id = re.search(gene_regex, to_parse)
+        biotype = re.search(biotype_regex, to_parse)
+        if not trans:
+            trans = "nan"
+        else:
+            trans = trans.group(0)
+        if not exon_no:
+            exon_no = "nan"
+        else:
+            exon_no = exon_no.group(0)
+        if not gene_id:
+            gene_id = "nan"
+        else:
+            gene_id = gene_id.group(0)
+        if not biotype:
+            biotype = "nan"
+        else:
+            biotype = biotype.group(0)
+        gtf_features[pos][3] = "{0}.{1}.{2}".format(trans, exon_no, gene_id)
+        gtf_features[pos] = gtf_features[pos][:-1]
+        gtf_features[pos].append(biotype)
+
+    # exclude X and Y chrs if required
+    required_chrs = ["chr{0}".format(i) for i in range(1, 24)]
+    if not exclude_XY:
+        required_chrs.extend(["chrX", "chrY"])
+
+    #write to bed
+    with open(bed, "w") as outfile:
+        for feature in gtf_features:
+            if feature[0] in required_chrs:
+                outfile.write("{0}\n".format("\t".join([str(i) for i in feature])))
+
+
+
 def get_exon_flank_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
     """
     Get the reading frames that the flanks of an exon starts in. If the first position of the codon
@@ -296,6 +353,29 @@ def get_exon_flank_reading_frame(coding_exons_fasta, full_exons_fasta, output_fi
             exon_id = int(name.split(".")[1].split("(")[0])
             if exon_id in flanks_reading_frames[id]:
                 outfile.write(">{0}\n{1},{2}\n".format(name, flanks_reading_frames[id][exon_id][0], flanks_reading_frames[id][exon_id][1]))
+
+
+def get_genome_bed_from_fasta_index(features_bed, fasta_index, output_file):
+    """
+    Given a list of features, get the genome coordinates as a bed file.
+
+    Args:
+        features_bed (str): path to bed file containing features
+        fasta_index (str): path to fasta index file
+        output_file (str): path to output file
+    """
+
+    # get all the chromosomes required
+    first_column = [i for i in list(set(gen.run_process(["awk", "{print $1}"], file_for_input=features_bed).split('\n'))) if len(i)]
+    # get index lines
+    index = gen.read_many_fields(fasta_index, "\t")
+    with open(output_file, "w") as outfile:
+        for i in index:
+            if i[0] in first_column:
+                start = int(i[2])
+                length = int(i[1])
+                out_info = [i[0], start, start+length, ".", "."]
+                outfile.write("{0}\t+\n{0}\t-\n".format("\t".join(gen.stringify(out_info))))
 
 
 def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
