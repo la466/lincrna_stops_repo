@@ -253,7 +253,7 @@ def sim_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_content,
     return temp_files
 
 
-def sim_stop_counts_mm(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
+def sim_motif_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_content, temp_dir, seeds=None, seq_seeds=None):
     """
     Simulation to count the number of stop codons in any reading frame
     compared with simulated null sequences
@@ -271,12 +271,10 @@ def sim_stop_counts_mm(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
 
     temp_files = []
 
-    nts = ["A", "C", "G", "T"]
-    # get the dicnucleotide and nucleotide content of the sequences
-    # have to get here because multiprocessing cant pickle beforehand
-    unique_seqs = [seqs[i] for i in seqs]
-    dinucleotide_probs = seqo.get_dinucleotide_probabilities_markov(unique_seqs)
-    # nucleotide_probs = seqo.get_nucleotide_probabilities_markov(unique_seqs)
+    dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
+    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    nucleotide_choices = [n for n in sorted(nucleotide_content)]
+    nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
     for sim_no, simulation in enumerate(simulations):
 
@@ -286,25 +284,22 @@ def sim_stop_counts_mm(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
         # print the simulation number out
         gen.print_simulation(sim_no+1, simulations)
 
-        simulated_seqs = {}
+        simulated_seqs = []
         # Generate a list of nucleotide matched sequences
-        for i, name in enumerate(seqs):
-            seq = seqs[name]
+        for i, seq in enumerate(seqs):
             generated = False
-
             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
             while not generated:
-                sim_seq = seqo.generate_nt_matched_seq_mm(seq, nts, dinucleotide_probs, seed=seq_seed)
+                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
-                    simulated_seqs[name] = sim_seq
+                    simulated_seqs.append(sim_seq)
 
         stop_counts = seqo.get_stop_counts(simulated_seqs)
         temp_file = "{0}/{1}.{2}.txt".format(temp_dir, random.random(), simulation+1)
         temp_files.append(temp_file)
         with open(temp_file, "w") as temp:
-            for name in stop_counts:
-                temp.write(">{0}\n{1}\n".format(name, stop_counts[name]))
+            temp.write(">{0}\n{1}\n".format(simulation+1, sum(stop_counts)))
 
     return temp_files
