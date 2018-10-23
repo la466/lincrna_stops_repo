@@ -421,3 +421,40 @@ def sim_stop_count(seq_fasta, required_simulations, output_file, parallel=True, 
 
     # remove the temp files
     gen.remove_directory(temp_dir)
+
+
+def sim_motifs(motifs_file, output_file, required_simulations, seeds=None, seq_seeds=None, parallel=True):
+
+    # get a list of motifs
+    motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t")]
+    # get the dicnucleotide and nucleotide content of the sequences
+    dinucleotide_content = seqo.get_dinucleotide_content(motifs)
+    nucleotide_content = seqo.get_nucleotide_content(motifs)
+
+    # get the stop codon counts for the real sequences
+    real_stop_counts = sum(seqo.get_stop_counts(motifs))
+
+    # create a temporary output directory
+    temp_dir = "temp_data_motif_sim"
+    gen.create_output_directories(temp_dir)
+
+    # run the simulations
+    simulations = list(range(required_simulations))
+    sim_args = [motifs, dinucleotide_content, nucleotide_content, temp_dir, seeds, seq_seeds]
+
+    outputs = run_simulation_function(required_simulations, sim_args, simo.sim_motif_stop_counts, parallel=parallel)
+
+    # get temp filelist so we can order simulants for tests
+    filelist = []
+    for output in outputs:
+        filelist.extend(output)
+    temp_filelist = fo.order_temp_files(outputs)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("sim_no,stop_count\n")
+        outfile.write("real,{0}\n".format(real_stop_counts))
+        for file in temp_filelist:
+            data = gen.read_fasta(temp_filelist[file])[1]
+            outfile.write("{0},{1}\n".format(file, data[0]))
+
+    gen.remove_directory(temp_dir)
