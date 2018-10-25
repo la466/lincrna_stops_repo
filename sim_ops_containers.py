@@ -516,3 +516,36 @@ def sim_motifs(motifs_file, output_file, required_simulations, seeds=None, seq_s
             data = gen.read_fasta(temp_filelist[file])[1]
             outfile.write("{0},{1}\n".format(file, data[0]))
     gen.remove_directory(temp_dir)
+
+
+
+def sim_stop_density(seqs_fasta, non_features_fasta, threshold, required_simulations, output_directory, output_file, parallel=True):
+
+    matched_seqs_directory = "temp_matched_gc_dir"
+    gen.create_output_directories(matched_seqs_directory)
+
+    simulations = list(range(required_simulations))
+    sim_args = [seqs_fasta, non_features_fasta, 0.5, matched_seqs_directory]
+    outputs = run_simulation_function(required_simulations, sim_args, simo.generate_matched_gc_seqs, parallel=parallel)
+
+    # get temp filelist so we can order simulants for tests
+    filelist = []
+    for output in outputs:
+        filelist.extend(output)
+    temp_filelist = fo.order_temp_files(outputs)
+
+    seqs = {name: gen.read_fasta(seqs_fasta)[1][i] for i, name in enumerate(gen.read_fasta(seqs_fasta)[0])}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,gc,real,{0}\n".format(",".join(["sim_{0}".format(i) for i in sorted(temp_filelist)])))
+        real_gc = seqo.calc_seqs_gc(seqs)
+        real_stop_densities = {name: seqo.calc_stop_density(seqs[name]) for name in seqs}
+
+        sim_densities_list = collections.defaultdict(lambda: [])
+        for file in sorted(temp_filelist):
+            sim_densities = {name: seqo.calc_stop_density(gen.read_fasta(temp_filelist[file])[1][i]) for i, name in enumerate(gen.read_fasta(temp_filelist[file])[0])}
+            for name in sim_densities:
+                sim_densities_list[name].append(sim_densities[name])
+
+        for name in sorted(real_gc):
+            outfile.write("{0},{1},{2},{3}\n".format(name, real_gc[name], real_stop_densities[name], ",".join(gen.stringify(sim_densities_list[name]))))

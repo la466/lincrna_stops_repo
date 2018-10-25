@@ -36,7 +36,7 @@ def main():
 
     sim_stop_count_output_file = "{0}/sim_stop_count.csv".format(output_directory)
     if sim_stop_count:
-        simopc.sim_stop_count(seqs_fasta, required_simulations, sim_stop_count_output_file)
+        simopc.sim_stop_count(exons_fasta, required_simulations, sim_stop_count_output_file)
 
     # sim_stop_count_mm_output_file = "{0}/sim_stop_count_mm.csv".format(output_directory)
     # if sim_stop_count_mm:
@@ -63,8 +63,9 @@ def main():
     if sim_motifs:
         simopc.sim_motifs(motif_file, motifs_sim_file, required_simulations)
 
+    stop_density_file = "{0}/lincRNA_gc_matched_stop_density.csv".format(output_directory)
     if stop_density_test:
-        opsc.stop_density_test(gtf, genome_fasta, output_directory)
+        opsc.stop_density_test(gtf, genome_fasta, seqs_fasta, required_simulations, output_directory, stop_density_file)
 
 
 

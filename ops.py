@@ -142,7 +142,6 @@ def get_exon_coding(exons_bed, quality_filtered_bed, final_cds_bed, non_coding_b
     check_exon_files(coding_bed_output, non_coding_bed_output)
 
 
-
 def extract_features(gtf_file, features, output_file, full_chr_name=None, clean_chrom_only = False):
     """
     Given a GTF file, extract coordinates for specific features and write to .bed.
@@ -372,7 +371,7 @@ def get_genome_bed_from_fasta_index(features_bed, fasta_index, output_file):
     with open(output_file, "w") as outfile:
         for i in index:
             if i[0] in first_column:
-                start = int(i[2])
+                start = 0
                 length = int(i[1])
                 out_info = [i[0], start, start+length, ".", "."]
                 outfile.write("{0}\t+\n{0}\t-\n".format("\t".join(gen.stringify(out_info))))

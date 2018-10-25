@@ -303,3 +303,27 @@ def sim_motif_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_co
             temp.write(">{0}\n{1}\n".format(simulation+1, sum(stop_counts)))
 
     return temp_files
+
+
+def generate_matched_gc_seqs(simulations, seqs_fasta, non_features_fasta, threshold, output_dir, seeds=None):
+
+    temp_files = []
+
+    if len(simulations):
+        # get the sequences
+        input_names, input_seqs = gen.read_fasta(seqs_fasta)
+        input_seqs_list = {name: input_seqs[i] for i, name in enumerate(input_names)}
+        genome_seqs = gen.read_fasta(non_features_fasta)[1]
+        # get the non-transcribed region of the genome as a string to query
+        genome_query_string = "".join(genome_seqs)
+
+        for sim_no, simulation in enumerate(simulations):
+            # set the seed
+            set_seed(seeds, simulation)
+            # print the simulation number out
+            gen.print_simulation(sim_no+1, simulations)
+            temp_file = "{0}/{1}.{2}.txt".format(output_dir, random.random(), simulation+1)
+            seqo.get_gc_matched_seqs(input_seqs_list, genome_query_string, threshold, temp_file)
+            temp_files.append(temp_file)
+
+    return temp_files

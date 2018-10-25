@@ -164,7 +164,7 @@ def non_coding_exons(genome_fasta, gtf, output_directory, sim_stop_count_non_cod
     simoc.sim_stop_count(coding_exons_fasta, required_simulations, sim_stop_count_coding_output_file)
 
 
-def stop_density_test(gtf_file, genome_fasta, output_directory):
+def stop_density_test(gtf_file, genome_fasta, seqs_fasta, simulations, output_directory, output_file):
 
     genome_seq_outputs = "{0}/genome_sequence_files".format(output_directory)
     gen.create_output_directories(genome_seq_outputs)
@@ -174,3 +174,6 @@ def stop_density_test(gtf_file, genome_fasta, output_directory):
     non_features_bed = "{0}/non_genome_features.bed".format(genome_seq_outputs)
     non_features_fasta = "{0}/non_genome_features.fasta".format(genome_seq_outputs)
     seqo.get_non_transcribed_regions(gtf_file, genome_fasta, features_bed, non_features_bed, non_features_fasta, genome_seq_outputs)
+
+    threshold = 0.5
+    simoc.sim_stop_density(seqs_fasta, non_features_fasta, threshold, simulations, output_directory, output_file)

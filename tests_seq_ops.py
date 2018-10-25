@@ -11,6 +11,13 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = [calc_seq_gc(seq) for seq in seqs]
         self.assertEqual(expected, observed)
 
+    def test_calc_stop_density(self):
+        input_file = "test_data/seq_ops/test_calc_stop_density/input.fasta"
+        seqs = gen.read_fasta(input_file)[1]
+        expected = [np.divide(6,55), np.divide(3,55), np.divide(0,51), np.divide(6,104), np.divide(15,112)]
+        observed = [calc_stop_density(seq) for seq in seqs]
+        self.assertEqual(expected, observed)
+
     def test_fasta_to_dict(self):
         input_file = "test_data/seq_ops/test_fasta_to_dict/input.fasta"
         expected = {"seq1": "ACGGACGAAGCGAGATTTAAAA", "seq2": "ACGCGAGGAAGCGTACGTCGATAACGAGA", "seq3": "GAGTTGTGACGAG"}
@@ -97,6 +104,23 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = get_dinucleotide_probabilities_markov(seqs)
         self.assertEqual(expected, observed)
 
+    def test_get_gc_matched_seqs(self):
+        input_seqs_file = "test_data/seq_ops/test_get_gc_matched_seqs/input_seqs.fasta"
+        input_genome_seqs_file = "test_data/seq_ops/test_get_gc_matched_seqs/input_genome_seqs.fasta"
+        # get the sequences
+        input_names, input_seqs = gen.read_fasta(input_seqs_file)
+        input_seqs_list = {name: input_seqs[i] for i, name in enumerate(input_names)}
+        genome_seqs = gen.read_fasta(input_genome_seqs_file)[1]
+        genome_seq = "".join(genome_seqs)
+        expected_file = "test_data/seq_ops/test_get_gc_matched_seqs/expected.fasta"
+        observed_file = "test_data/seq_ops/test_get_gc_matched_seqs/observed.fasta"
+        gen.remove_file(observed_file)
+        threshold = 0.05
+        seed = 1
+        get_gc_matched_seqs(input_seqs_list, genome_seq, threshold, observed_file, seed=seed)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
 
     def test_get_longest_orf(self):
         input_file = "test_data/seq_ops/test_get_longest_orf/input.fasta"

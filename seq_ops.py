@@ -5,6 +5,7 @@ import numpy as np
 import itertools as it
 import re
 import collections
+import os
 
 def calc_seq_gc(seq):
     """
@@ -18,6 +19,29 @@ def calc_seq_gc(seq):
     """
     gc = np.divide(sum([1 for i in list(seq) if i in ["G", "C"]]), len(seq))
     return gc
+
+def calc_seqs_gc(seqs):
+    if isinstance(seqs, list):
+        return [calc_seq_gc(seq) for seq in seqs]
+    if isinstance(seqs, dict):
+        return {name: calc_seq_gc(seqs[name]) for name in seqs}
+
+def calc_stop_density(seq):
+    """
+    Calculate the stop codon density in all frames per nucleotide. How many
+    nucleotides of the sequence form the stop codons.
+
+    Args:
+        seq (str): sequence to query
+
+    Returns:
+        density (float): stop codon count*3 / length of sequence
+    """
+    stop_count = re.findall("(TAA|TAG|TGA)", seq)
+    # multiplied by 3 here because a nucleotide can only be part of a
+    # maximum of 1 stop codon, so is simply number of stops * 3
+    density = np.divide(len(stop_count)*3, len(seq))
+    return density
 
 
 def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, output_bed, output_fasta, output_directory):
@@ -34,18 +58,57 @@ def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, out
     """
 
     # get all features in a bed file
-    if not os.path.isfile(output_featured_bed):
+    if not os.path.isfile(output_features_bed):
+        print("Getting all genome features...")
         ops.extract_gtf_features_all(input_gtf, output_features_bed, exclude_XY=True)
     # create genome bed from fasta
     genome_bed = "{0}/genome.bed".format(output_directory)
     genome_index = "{0}.fai".format(input_fasta)
     if not os.path.isfile(genome_bed):
+        print("Getting genome coordinates...")
         ops.get_genome_bed_from_fasta_index(output_features_bed, genome_index, genome_bed)
-    # # subtract the features from a bed file that simpy contains the whole genome coordinates
-    # ops.intersect_bed(genome_bed, output_features_bed, output_file=output_bed, force_strand=True, subtract=True, no_dups=False, write_none=True)
-    # # now get the fasta sequences of the remaining regions
-    # fo.fasta_from_intervals(output_bed, output_fasta, input_fasta)
-    #
+    # subtract the features from a bed file that simpy contains the whole genome coordinates
+    if not os.path.isfile(output_bed):
+        print("Getting genome regions where there are no features...")
+        ops.intersect_bed(genome_bed, output_features_bed, output_file=output_bed, force_strand=True, subtract=True, no_dups=False, write_none=True)
+    # now get the fasta sequences of the remaining regions
+    if not os.path.isfile(output_fasta):
+        print("Getting sequences where there are no features...")
+        fo.fasta_from_intervals(output_bed, output_fasta, input_fasta)
+
+
+def get_gc_matched_seqs(input_seqs, genome_seq, threshold, output_file, seed=None):
+
+    # set the gc treshold limits
+    upper_limit = 1+(np.divide(threshold, 2))
+    lower_limit = 1-(np.divide(threshold, 2))
+
+    with open(output_file, "w") as outfile:
+        for i, name in enumerate(input_seqs):
+            # set the randomisation seed
+            np.random.seed(seed)
+
+            seq = input_seqs[name]
+            # get the real gc content
+            gc = calc_seq_gc(seq)
+            # and the length of the sequences
+            length = len(seq)
+
+            matched = False
+            while not matched:
+                # pick a random start site from the genome strings
+                start = np.random.randint(0, len(genome_seq)-length)
+                end = start + length
+                # get the sequences
+                query = genome_seq[start:end]
+                # check if the sequence has a GC content within the threshold
+                query_gc = calc_seq_gc(query)
+                if query_gc >= gc*lower_limit and query_gc <= gc*upper_limit:
+                    matched_seq = query
+                    matched = True
+                    outfile.write(">{0}\n{1}\n".format(name, matched_seq))
+
+
 
 def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=None):
     """
