@@ -137,6 +137,18 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
 
+    def test_filter_seq_lengths(self):
+        input_file = "test_data/ops/test_filter_seq_lengths/input.fasta"
+        expected_file = "test_data/ops/test_filter_seq_lengths/expected.fasta"
+        observed_file = "test_data/ops/test_filter_seq_lengths/observed.fasta"
+        gen.remove_file(observed_file)
+        length = 20
+        filter_seq_lengths(input_file, observed_file, length)
+        # use an arbritary delimiter
+        expected = gen.read_many_fields(expected_file, "#")
+        observed = gen.read_many_fields(observed_file, "#")
+        self.assertEqual(expected, observed)
+
     def test_get_coding_exons(self):
         exon_file = "test_data/ops/test_get_coding_exons/exons.bed"
         CDS_file = "test_data/ops/test_get_coding_exons/CDSs.bed"
@@ -181,6 +193,17 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_get_passed_NONCODE_codes(self):
+        input_fasta = "test_data/ops/test_get_passed_NONCODE_codes/input.fasta"
+        input_codes = "test_data/ops/test_get_passed_NONCODE_codes/input_codes.bed"
+        input_mapping = "test_data/ops/test_get_passed_NONCODE_codes/input_mapping.bed"
+        expected_file = "test_data/ops/test_get_passed_NONCODE_codes/expected.fasta"
+        observed_file = "test_data/ops/test_get_passed_NONCODE_codes/observed.fasta"
+        gen.remove_file(observed_file)
+        get_passed_NONCODE_codes(input_fasta, input_codes, input_mapping, observed_file, "0001")
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
 
     def test_get_region_stop_counts(self):
         input_file = "test_data/ops/test_get_region_stop_counts/input.fasta"

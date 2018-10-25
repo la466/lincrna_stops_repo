@@ -5,6 +5,6 @@ temp_files/
 temp_data/
 temp*
 source_data/
-results/
+results*/
 _*
 observed*

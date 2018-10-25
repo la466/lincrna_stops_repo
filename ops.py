@@ -377,6 +377,30 @@ def get_genome_bed_from_fasta_index(features_bed, fasta_index, output_file):
                 outfile.write("{0}\t+\n{0}\t-\n".format("\t".join(gen.stringify(out_info))))
 
 
+def get_passed_NONCODE_codes(input_fasta, codes_file, mapping_file, output_fasta, code):
+    """
+    Only keep sequences that have particular NONCODE code
+
+    Args:
+        input_fasta (str): path to input fasta file
+        codes_file (str): path to file containing code
+        mapping_file (str): path to transcript-gene mapping file
+        output_fasta (str): path to output fasta
+        code (str): code to look for. As string because cant pass 0001 through
+    """
+
+    codes = {code[0]: code[1] for code in gen.read_many_fields(codes_file, "\t")}
+    mappings = {name[0].split(".")[0]: name[1] for name in gen.read_many_fields(mapping_file, "\t")}
+
+    names, seqs = gen.read_fasta(input_fasta)
+    with open(output_fasta, "w") as outfile:
+        for i,name in enumerate(names):
+            gene = mappings[name]
+            seq_code = codes[gene]
+            if seq_code == code:
+                outfile.write(">{0}\n{1}\n".format(name, seqs[i]))
+
+
 def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
     """
     Get the reading frame an exon starts in. If the first position of the codon
@@ -556,6 +580,23 @@ def filter_coding_sequences(input_fasta, output_fasta):
                 pass_count += 1
 
     print("{0} sequences after filtering...".format(pass_count))
+
+
+def filter_seq_lengths(input_file, output_file, length):
+    """
+    Given a fasta filter, filter and keep only sequences longer than the given length
+
+    Args:
+        input_file (str): path to input fasta
+        output_file (str): path to output fasta
+        length (int): length threshold to retain sequences longer than
+    """
+
+    names, seqs = gen.read_fasta(input_file)
+    with open(output_file, "w") as outfile:
+        for i, name in enumerate(names):
+            if len(seqs[i]) >= length:
+                outfile.write(">{0}\n{1}\n".format(name, seqs[i]))
 
 
 def intersect_bed(bed_file1, bed_file2, overlap = False, overlap_rec = False, write_both = False, sort = False, output_file = None,
@@ -753,10 +794,10 @@ def uniquify_lincRNA_transcripts(input_fasta, mapping_file, output_fasta):
     """
 
     # get the mappings
-    mappings = {line[0]: line[1] for line in gen.read_many_fields(mapping_file, "\t")}
+    mappings = {line[0].split(".")[0]: line[1] for line in gen.read_many_fields(mapping_file, "\t")}
     # get the sequences
     names, seq_list = gen.read_fasta(input_fasta)
-    seqs = {name: seq_list[names.index(name)] for name in names}
+    seqs = {name: seq_list[i] for i, name in enumerate(names)}
 
     mapped_names = collections.defaultdict(lambda: [])
     mapped_seq_lengths = collections.defaultdict(lambda: [])

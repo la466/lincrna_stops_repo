@@ -46,7 +46,7 @@ def build_seqs_from_exons_fasta(input_fasta, output_fasta):
     gen.write_to_fasta(names, seqs, output_fasta)
 
 
-def entries_to_bed(source_path, output_file, exclude_XY=None):
+def entries_to_bed(source_path, output_file, exclude_XY=None, hg38=None, NONCODE=None):
     """
     Generate a file containing the exon info from a bed file
 
@@ -54,6 +54,7 @@ def entries_to_bed(source_path, output_file, exclude_XY=None):
         source_path (str): the source path for the origin .bed file
         output_file (str): output .bed file to contain the exon info
         exclude_XY (bool): if true, exclude cases on X and Y chr
+        hg38 (bool): if true, using hg38
     """
     # read the file in
     lines = gen.read_many_fields(source_path, "\t")
@@ -70,20 +71,29 @@ def entries_to_bed(source_path, output_file, exclude_XY=None):
                     start_pos = features.start + start_pos
                     end_pos = start_pos + sizes[i]
                     # create a list of the new bed line
+                    write=True
+                    if hg38:
+                        features.chr = features.chr.strip("chr")
+                    if NONCODE:
+                        features.name = features.name.split(".")[0]
+                        if "NONHSAT" not in features.name:
+                            write=False
                     output_list = [features.chr, start_pos, end_pos, "{0}.{1}".format(features.name, i+1), ".", features.strand, features.thickStart, features.thickEnd, ".", features.featureCount, ".", "."]
-                    # add the info if exists
-                    if hasattr(features, "info"):
-                        output_list.extend(features.info)
-                    if exclude_XY:
-                        if features.chr not in ["chrX", "chrY"]:
+                    # only add if a transcript, used for NONCODE sequences
+                    if write:
+                        # add the info if exists
+                        if hasattr(features, "info"):
+                            output_list.extend(features.info)
+                        if exclude_XY:
+                            if features.chr not in ["chrX", "chrY"]:
+                                outfile.write("{0}\n".format("\t".join(gen.stringify(output_list))))
+                        else:
                             outfile.write("{0}\n".format("\t".join(gen.stringify(output_list))))
-                    else:
-                        outfile.write("{0}\n".format("\t".join(gen.stringify(output_list))))
             else:
                 print('Error in the number of features')
 
 
-def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, mapping_file, exclude_XY=None):
+def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq_fasta, mapping_file, codes_file, exclude_XY=None, hg38=None, NONCODE=None):
     """
     Generate a file containing the exon sequences for a given .bed file
 
@@ -92,19 +102,35 @@ def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq
         genome_fasta (str): the source path for the genome fasta
         output_bed (str): output .bed file to contain the exon info
         output_fasta (str): output fasta containing sequences
+        output_seq_fasta (str):
+        mapping_file (str):
+        codes_file (str): used for NONCODE sequences to get the lincRNA
         exclude_XY (bool): if true, exclude cases on the X and Y chr
+        hg38 (bool): if true, use hg38
+        NONCODE (bool): if true, using NONCODE sequences
     """
+
     # create the exon bed file
     full_bed = "{0}/full_{1}".format("/".join(output_bed.split('/')[:-1]), output_bed.split("/")[-1])
-    entries_to_bed(source_path, full_bed, exclude_XY)
+    # entries_to_bed(source_path, full_bed, exclude_XY, hg38=hg38, NONCODE=NONCODE)
     # generate the fasta from the file
     full_exon_fasta = "{0}/full_{1}".format("/".join(output_fasta.split('/')[:-1]), output_fasta.split("/")[-1])
-    fasta_from_intervals(full_bed, full_exon_fasta, genome_fasta, names=True)
+    # fasta_from_intervals(full_bed, full_exon_fasta, genome_fasta, names=True)
     # build the sequences from the exons
     full_seq_fasta = "{0}/full_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
-    build_seqs_from_exons_fasta(full_exon_fasta, full_seq_fasta)
+    # build_seqs_from_exons_fasta(full_exon_fasta, full_seq_fasta)
+    length_filter_fasta = "{0}/length_filtered_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
+    # ops.filter_seq_lengths(full_seq_fasta, length_filter_fasta, 200)
     # filter to only keep one transcript per gene
-    ops.uniquify_lincRNA_transcripts(full_seq_fasta, mapping_file, output_seq_fasta)
+    unique_transcripts_fasta = "{0}/unique_gene_filtered_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
+    ops.uniquify_lincRNA_transcripts(length_filter_fasta, mapping_file, unique_transcripts_fasta)
+
+    if NONCODE:
+        # get only those that are lincRNA
+        ops.get_passed_NONCODE_codes(unique_transcripts_fasta, codes_file, mapping_file, output_seq_fasta, "0001")
+    else:
+        # otherwise dont need the step above so copy to file
+        gen.run_process(["cp", unique_transcripts_fasta, output_seq_fasta])
     # filter bed file from fasta
     ops.filter_bed_from_fasta(full_bed, output_seq_fasta, output_bed)
     # now just get the exon seqs from these entries
