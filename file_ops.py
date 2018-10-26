@@ -112,15 +112,15 @@ def extract_seqs(source_path, genome_fasta, output_bed, output_fasta, output_seq
 
     # create the exon bed file
     full_bed = "{0}/full_{1}".format("/".join(output_bed.split('/')[:-1]), output_bed.split("/")[-1])
-    # entries_to_bed(source_path, full_bed, exclude_XY, hg38=hg38, NONCODE=NONCODE)
+    entries_to_bed(source_path, full_bed, exclude_XY, hg38=hg38, NONCODE=NONCODE)
     # generate the fasta from the file
     full_exon_fasta = "{0}/full_{1}".format("/".join(output_fasta.split('/')[:-1]), output_fasta.split("/")[-1])
-    # fasta_from_intervals(full_bed, full_exon_fasta, genome_fasta, names=True)
+    fasta_from_intervals(full_bed, full_exon_fasta, genome_fasta, names=True)
     # build the sequences from the exons
     full_seq_fasta = "{0}/full_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
-    # build_seqs_from_exons_fasta(full_exon_fasta, full_seq_fasta)
+    build_seqs_from_exons_fasta(full_exon_fasta, full_seq_fasta)
     length_filter_fasta = "{0}/length_filtered_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
-    # ops.filter_seq_lengths(full_seq_fasta, length_filter_fasta, 200)
+    ops.filter_seq_lengths(full_seq_fasta, length_filter_fasta, 200)
     # filter to only keep one transcript per gene
     unique_transcripts_fasta = "{0}/unique_gene_filtered_{1}".format("/".join(output_seq_fasta.split('/')[:-1]), output_seq_fasta.split("/")[-1])
     ops.uniquify_lincRNA_transcripts(length_filter_fasta, mapping_file, unique_transcripts_fasta)

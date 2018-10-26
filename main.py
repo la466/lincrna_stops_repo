@@ -59,7 +59,9 @@ def main():
     if stop_counts_exon_ends:
         simopc.sim_coding_exon_flanks_stop_counts(genome_fasta, gtf, output_directory, stop_count_coding_exons_ends_file, required_simulations, clean_run=None)
 
-    motifs_sim_file = "{0}/sim_rbp_motifs_stop_count.csv".format(output_directory)
+    motif_sim_output_dir = "{0}/motif_simulations".format(output_directory)
+    gen.create_output_directories(motif_sim_output_dir)
+    motifs_sim_file = "{0}/sim_{1}_stop_count.csv".format(motif_sim_output_dir, motif_file.split("/")[-1].split(".")[0])
     if sim_motifs:
         simopc.sim_motifs(motif_file, motifs_sim_file, required_simulations)
 

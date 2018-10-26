@@ -485,7 +485,7 @@ def sim_stop_count_mm(seq_fasta, required_simulations, output_file, parallel=Tru
 def sim_motifs(motifs_file, output_file, required_simulations, seeds=None, seq_seeds=None, parallel=True):
 
     # get a list of motifs
-    motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t")]
+    motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t") if "#" not in i[0]]
     # get the dicnucleotide and nucleotide content of the sequences
     dinucleotide_content = seqo.get_dinucleotide_content(motifs)
     nucleotide_content = seqo.get_nucleotide_content(motifs)

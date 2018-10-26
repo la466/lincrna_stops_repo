@@ -224,7 +224,7 @@ def get_dinucleotide_content(seqs, as_string=None):
     Returns:
         dinucleotide_content (dict): dict[dinucleotide] = dinucleotide proportion
     """
-
+    dinucleotide_regex = re.compile('.{2}')
     dinucleotide_list = ["".join(i) for i in it.product("ACGT", repeat=2)]
     dinucleotide_count = collections.defaultdict(lambda: 0)
 
@@ -233,7 +233,6 @@ def get_dinucleotide_content(seqs, as_string=None):
 
     total_dints = 0
     for seq in seqs:
-        dinucleotide_regex = re.compile('.{2}')
         dinucleotides1 = re.findall(dinucleotide_regex, seq)
         dinucleotides2 = re.findall(dinucleotide_regex, seq[1:])
 
