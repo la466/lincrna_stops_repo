@@ -356,6 +356,7 @@ def get_time(start_time):
     Print out how many minutes have passed since start_time.
     '''
     current = time.time()
+    print("{0} seconds.".format(current-start_time))
     spent = round((current - start_time)/60, 2)
     print("{0} minutes.\n".format(spent))
 

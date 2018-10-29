@@ -7,8 +7,8 @@ import time
 def main():
 
     description = "Main file to ask questions about the prevelance of stop codons in sequences."
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "codes_file", "expression_file", "motif_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "stop_counts_exon_ends", "sim_motifs", "stop_density_test", "clean_run", "hg38", "NONCODE"], flags = [9,10,11,12,13,14,15,16,17,18,19,20], ints=[8])
-    source_exons_path, genome_fasta, gtf, mapping_file, codes_file, expression_file, motif_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, stop_counts_regions, stop_counts_exon_ends, sim_motifs, stop_density_test, clean_run, hg38, NONCODE = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.codes_file, args.expression_file, args.motif_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.stop_counts_exon_ends, args.sim_motifs, args.stop_density_test, args.clean_run, args.hg38, args.NONCODE
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "codes_file", "expression_file", "motif_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "stop_counts_exon_ends", "sim_motifs", "stop_density_test", "clean_run", "hg38", "NONCODE", "sim_cds_density"], flags = [9,10,11,12,13,14,15,16,17,18,19,20,21], ints=[8])
+    source_exons_path, genome_fasta, gtf, mapping_file, codes_file, expression_file, motif_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, stop_counts_regions, stop_counts_exon_ends, sim_motifs, stop_density_test, clean_run, hg38, NONCODE, sim_cds_density = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.codes_file, args.expression_file, args.motif_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.stop_counts_exon_ends, args.sim_motifs, args.stop_density_test, args.clean_run, args.hg38, args.NONCODE, args.sim_cds_density
 
     # set a start time
     start = time.time()
@@ -69,6 +69,10 @@ def main():
     if stop_density_test:
         opsc.stop_density_test(gtf, genome_fasta, seqs_fasta, required_simulations, output_directory, stop_density_file)
 
+    sim_cds_output_file = "{0}/sim_cds_stop_density.csv".format(output_directory)
+    if sim_cds_density:
+        # dont actually use the source exons, just use this to pass in fasta file
+        simopc.sim_cds_stop_density(source_exons_path, required_simulations, sim_cds_output_file)
 
 
 if __name__ == "__main__":

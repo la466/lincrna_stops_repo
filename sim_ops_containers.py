@@ -4,11 +4,21 @@ import seq_ops as seqo
 import file_ops as fo
 import ops_containers as opsc
 import ops
+import numpy as np
 import os
 import collections
-import numpy as np
+import time
 
-def run_simulation_function(required_simulations, sim_args, function_to_run, parallel = True):
+
+
+def get_temp_filelist(outputs):
+    filelist = []
+    for output in outputs:
+        filelist.extend(output)
+    temp_filelist = fo.order_temp_files(outputs)
+    return temp_filelist
+
+def run_simulation_function(required_simulations, sim_args, function_to_run, parallel = True, workers=None):
     """
     Wrapper to run simulation function
 
@@ -28,7 +38,8 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, par
     if parallel:
         # add foo to argument list for parallelisation
         sim_args.insert(0, "foo")
-        workers = os.cpu_count() - 2
+        if not workers:
+            workers = os.cpu_count() - 2
         processes = gen.run_in_parallel(simulations, sim_args, function_to_run, workers = workers)
         outputs = []
         for process in processes:
@@ -549,3 +560,47 @@ def sim_stop_density(seqs_fasta, non_features_fasta, threshold, required_simulat
 
         for name in sorted(real_gc):
             outfile.write("{0},{1},{2},{3}\n".format(name, real_gc[name], real_stop_densities[name], ",".join(gen.stringify(sim_densities_list[name]))))
+
+
+def sim_cds_stop_density(source_file, required_simulations, output_file, parallel=True):
+    """
+    Given a file containing sequences, simulate them by shuffling codons and calculate
+    stop codon densitiesself.
+
+    Args:
+        source_file (str): path to fasta file containing sequences
+        required_simulations (int): number of simulations to run
+        output_file (str): path to output file
+        parallel (bool): if true, run in parallel
+    """
+
+    start_time = time.time()
+
+    temp_output_directory = "temp_cds_dir"
+    gen.create_output_directories(temp_output_directory)
+
+    cds_names, cds_seqs = gen.read_fasta(source_file)
+
+    # cds_seqs = cds_seqs[:15000]
+
+    simulations = list(range(required_simulations))
+    sim_args = [cds_seqs, temp_output_directory]
+    outputs = run_simulation_function(required_simulations, sim_args, simo.sim_cds_seqs_stop_counts, parallel=parallel)
+
+    real_stop_counts = seqo.get_stop_counts([seq[:-3] for seq in cds_seqs])
+    real_densities = [np.divide(count, len(cds_seqs[i])) for i, count in enumerate(real_stop_counts)]
+    # get temp filelist so we can order simulants for tests
+    temp_filelist = get_temp_filelist(outputs)
+
+    real_gc = [seqo.calc_seq_gc(seq[:-3]) for seq in cds_seqs]
+
+    with open(output_file, "w") as outfile:
+        outfile.write("sim_no,{0}\n".format(",".join([name for name in cds_names[:len(cds_seqs)]])))
+        outfile.write("gc,{0}\n".format(",".join([gc for gc in gen.stringify(real_gc[:len(cds_seqs)])])))
+        outfile.write("real,{0}\n".format(",".join(gen.stringify(real_densities))))
+        for file in temp_filelist:
+            data = gen.read_many_fields(temp_filelist[file], ",")
+            outfile.write("{0},{1}\n".format(file, ",".join(data[0])))
+
+    gen.remove_directory(temp_output_directory)
+    gen.get_time(start_time)
