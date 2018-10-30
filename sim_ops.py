@@ -505,28 +505,28 @@ def get_exon_stop_densities(seqs, exon_info):
                         codon = three_prime_seq[i:i+3]
                         if codon in stops:
                             three_prime_count += 3
-                    # now get the counts at the 5' end of the region
-                    five_prime_region_five_prime_end = exon_seq[region-2:region+2]
-                    three_prime_region_five_prime_end = exon_seq[length-region-2:length-region+2]
-                    if five_prime_region_five_prime_end[:3] in stops:
-                        five_prime_count += 1
-                    if five_prime_region_five_prime_end[1:] in stops:
-                        five_prime_count += 2
-                    if three_prime_region_five_prime_end[:3] in stops:
-                        three_prime_count += 1
-                    if three_prime_region_five_prime_end[1:] in stops:
-                        three_prime_count += 2
-                    # now get the counts at the 3' end of the region
-                    five_prime_region_three_prime_end = exon_seq[region+region_size-2:region+region_size+2]
-                    three_prime_region_three_prime_end = exon_seq[length-region+region_size-2:length-region+region_size+2]
-                    if five_prime_region_three_prime_end[:3] in stops:
-                        five_prime_count += 2
-                    if five_prime_region_five_prime_end[1:] in stops:
-                        five_prime_count += 1
-                    if three_prime_region_five_prime_end[:3] in stops:
-                        three_prime_count += 2
-                    if three_prime_region_five_prime_end[1:] in stops:
-                        three_prime_count += 1
+                    # # now get the counts at the 5' end of the region
+                    # five_prime_region_five_prime_end = exon_seq[region-2:region+2]
+                    # three_prime_region_five_prime_end = exon_seq[length-region-2:length-region+2]
+                    # if five_prime_region_five_prime_end[:3] in stops:
+                    #     five_prime_count += 1
+                    # if five_prime_region_five_prime_end[1:] in stops:
+                    #     five_prime_count += 2
+                    # if three_prime_region_five_prime_end[:3] in stops:
+                    #     three_prime_count += 1
+                    # if three_prime_region_five_prime_end[1:] in stops:
+                    #     three_prime_count += 2
+                    # # now get the counts at the 3' end of the region
+                    # five_prime_region_three_prime_end = exon_seq[region+region_size-2:region+region_size+2]
+                    # three_prime_region_three_prime_end = exon_seq[length-region+region_size-2:length-region+region_size+2]
+                    # if five_prime_region_three_prime_end[:3] in stops:
+                    #     five_prime_count += 2
+                    # if five_prime_region_five_prime_end[1:] in stops:
+                    #     five_prime_count += 1
+                    # if three_prime_region_five_prime_end[:3] in stops:
+                    #     three_prime_count += 2
+                    # if three_prime_region_five_prime_end[1:] in stops:
+                    #     three_prime_count += 1
 
                     five_prime_density = np.divide(five_prime_count, region_size)
                     three_prime_density = np.divide(three_prime_count, region_size)
@@ -541,16 +541,16 @@ def get_exon_stop_densities(seqs, exon_info):
                         codon = core_seq[i:i+3]
                         if codon in stops:
                             core_count += 3
-                    five_prime_core = exon_seq[region-2:region+2]
-                    if five_prime_core[:3] in stops:
-                        core_count += 1
-                    if five_prime_core[1:] in stops:
-                        core_count += 2
-                    three_prime_core = exon_seq[length-region-2:length-region+2]
-                    if three_prime_core[:3] in stops:
-                        core_count += 2
-                    if three_prime_core[1:] in stops:
-                        core_count += 1
+                    # five_prime_core = exon_seq[region-2:region+2]
+                    # if five_prime_core[:3] in stops:
+                    #     core_count += 1
+                    # if five_prime_core[1:] in stops:
+                    #     core_count += 2
+                    # three_prime_core = exon_seq[length-region-2:length-region+2]
+                    # if three_prime_core[:3] in stops:
+                    #     core_count += 2
+                    # if three_prime_core[1:] in stops:
+                    #     core_count += 1
                     core_density = np.divide(core_count, len(core_seq))
                     exon_core_densities.append(core_density)
 
@@ -561,16 +561,16 @@ def get_exon_stop_densities(seqs, exon_info):
                     codon = five_prime_end[i:i+3]
                     if codon in stops:
                         five_prime_end_count += 3
-                five_prime_start = cds_seq[start-2:start+2]
-                if five_prime_start[:3] in stops:
-                    five_prime_end_count += 1
-                if five_prime_start[1:] in stops:
-                    five_prime_end_count += 2
-                five_prime_end = exon_seq[region_size-2:region_size+2]
-                if five_prime_end[:3] in stops:
-                    five_prime_end_count += 2
-                if five_prime_end[1:] in stops:
-                    five_prime_end_count += 1
+                # five_prime_start = cds_seq[start-2:start+2]
+                # if five_prime_start[:3] in stops:
+                #     five_prime_end_count += 1
+                # if five_prime_start[1:] in stops:
+                #     five_prime_end_count += 2
+                # five_prime_end = exon_seq[region_size-2:region_size+2]
+                # if five_prime_end[:3] in stops:
+                #     five_prime_end_count += 2
+                # if five_prime_end[1:] in stops:
+                #     five_prime_end_count += 1
                 five_prime_end_density = np.divide(five_prime_end_count, region_size)
                 exon_densities[5][0].append(five_prime_end_density)
 
@@ -581,16 +581,16 @@ def get_exon_stop_densities(seqs, exon_info):
                     codon = three_prime_end[i:i+3]
                     if codon in stops:
                         three_prime_end_count += 3
-                three_prime_end_start = exon_seq[start+length-region_size-2:start+length-region_size+2]
-                if three_prime_end_start[:3] in stops:
-                    three_prime_end_count += 1
-                if three_prime_end_start[1:] in stops:
-                    three_prime_end_count += 2
-                three_prime_end_end = cds_seq[start+length-2:start+length+2]
-                if three_prime_end_end[:3] in stops:
-                    three_prime_end_count += 2
-                if three_prime_end_end[1:] in stops:
-                    three_prime_end_count += 1
+                # three_prime_end_start = exon_seq[start+length-region_size-2:start+length-region_size+2]
+                # if three_prime_end_start[:3] in stops:
+                #     three_prime_end_count += 1
+                # if three_prime_end_start[1:] in stops:
+                #     three_prime_end_count += 2
+                # three_prime_end_end = cds_seq[start+length-2:start+length+2]
+                # if three_prime_end_end[:3] in stops:
+                #     three_prime_end_count += 2
+                # if three_prime_end_end[1:] in stops:
+                #     three_prime_end_count += 1
                 three_prime_end_density = np.divide(three_prime_end_count, region_size)
                 exon_densities[3][0].append(three_prime_end_density)
 
@@ -645,5 +645,49 @@ def sim_exon_stop_density(simulations, seqs, exon_positions_bed, temp_dir, seeds
                     for region in sim_densities[end]:
                         outfile.write("{0},{1},{2}\n".format(end, region, ",".join(gen.stringify(sim_densities[end][region]))))
                 outfile.write("core,{0}\n".format(",".join(gen.stringify(sim_core_densities))))
+
+    return temp_files
+
+
+def sim_introns(seqs):
+
+    randomised_seqs = []
+    for seq in seqs:
+        np.random.shuffle(seq)
+        randomised_seqs.append("".join(seq))
+    return randomised_seqs
+
+
+def sim_intron_seqs_stop_density(simulations, seqs, temp_dir, seeds=None):
+    """
+    Shuffle intron sequences and count the number of stop codons present.
+
+    Args:
+        simulations (list): list of simluations to iterate over
+        seqs (dict): a dictionary of sequences
+        temp_dir (str): a temporary directory to hold the outputs of the simulations
+        seeds (list): list of seeds to be used for the randomisations
+
+    Returns:
+        temp_files (list): list containing file paths to simulation outputs
+    """
+
+    temp_files = []
+    if len(simulations):
+
+        nt_list = [list(seq) for seq in seqs]
+
+        for sim_no, simulation in enumerate(simulations):
+            # set the seed
+            set_seed(seeds, simulation)
+            # print the simulation number out
+            gen.print_simulation(sim_no+1, simulations)
+            # get the randomised seqs
+            randomised_seqs = sim_introns(nt_list)
+            sim_stop_counts = seqo.get_stop_counts(randomised_seqs)
+            temp_file = "{0}/{1}.{2}.txt".format(temp_dir, random.random(), simulation+1)
+            temp_files.append(temp_file)
+            with open(temp_file, "w") as outfile:
+                outfile.write("{0}".format(",".join(gen.stringify([np.divide(count, len(randomised_seqs[i])) for i, count in enumerate(sim_stop_counts)]))))
 
     return temp_files

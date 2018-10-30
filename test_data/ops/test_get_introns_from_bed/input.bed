@@ -1,0 +1,12 @@
+chr1	10	20	seq1.2	.	+
+chr1	30	40	seq1.3	.	+
+chr1	50	70	seq1.4	.	+
+chr1	80	100	seq1.5	.	+
+chr1	120	140	seq1.6	.	+
+chr1	20	30	seq2.5	.	-
+chr1	40	50	seq2.4	.	-
+chr1	60	80	seq2.3	.	-
+chr1	200	220	seq2.2	.	-
+chr2	50	100	seq3.2	.	+
+chr2	180	200	seq3.3	.	+
+chr2	250	280	seq3.5	.	+

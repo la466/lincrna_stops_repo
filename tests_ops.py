@@ -193,6 +193,16 @@ class Test_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_get_introns_from_bed(self):
+        input_file = "test_data/ops/test_get_introns_from_bed/input.bed"
+        expected_file = "test_data/ops/test_get_introns_from_bed/expected.bed"
+        observed_file = "test_data/ops/test_get_introns_from_bed/observed.bed"
+        gen.remove_file(observed_file)
+        get_introns_from_bed(input_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_get_passed_NONCODE_codes(self):
         input_fasta = "test_data/ops/test_get_passed_NONCODE_codes/input.fasta"
         input_codes = "test_data/ops/test_get_passed_NONCODE_codes/input_codes.bed"

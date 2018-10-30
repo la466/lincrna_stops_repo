@@ -19,7 +19,7 @@ def get_temp_filelist(outputs):
     temp_filelist = fo.order_temp_files(outputs)
     return temp_filelist
 
-def run_simulation_function(required_simulations, sim_args, function_to_run, parallel = True, workers=None):
+def run_simulation_function(required_simulations, sim_args, function_to_run, parallel = True, workers=None, sim_run=True):
     """
     Wrapper to run simulation function
 
@@ -28,13 +28,17 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, par
         sim_args (list): list of arguments for the simulation function
         function_to_run (func): simulation_function
         parallel (bool): if true, run in parallel
+        sim_run (bool): if true, running a simulation, else running over another list
 
     Returns:
         outputs (list): list containing the result of the simulation
     """
 
-    # get a list of simulations to iterate over
-    simulations = list(range(required_simulations))
+    if sim_run:
+        # get a list of simulations to iterate over
+        simulations = list(range(required_simulations))
+    else:
+        simulations = required_simulations
     # run the simulations
     if parallel:
         # add foo to argument list for parallelisation
@@ -631,7 +635,7 @@ def sim_exon_stop_density(source_cds_fasta, source_cds_bed, source_coding_exons_
         seqo.get_exon_positions_bed(source_cds_bed, source_coding_exons_bed, exon_positions_bed)
 
     cds_names, cds_seqs = gen.read_fasta(source_cds_fasta)
-    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names)}
+    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names[:1500])}
 
     exon_info = simo.get_exon_info(exon_positions_bed)
     real_densities, real_core_densities = simo.get_exon_stop_densities(cds_list, exon_info)
@@ -678,6 +682,48 @@ def sim_exon_stop_density(source_cds_fasta, source_cds_bed, source_coding_exons_
         for item in outrows:
             item = [i for i in item]
             outfile.write("{0}\n".format(",".join(gen.stringify(item))))
+
+    gen.remove_directory(temp_output_directory)
+    gen.get_time(start_time)
+
+
+def sim_intron_density(coding_exons_bed, genome_fasta, required_simulations, output_directory, output_file, parallel=True):
+
+    start_time = time.time()
+
+    intron_bed = "{0}/internal_introns.bed".format(output_directory)
+    intron_fasta = "{0}/internal_introns.fasta".format(output_directory)
+    if not os.path.isfile(intron_bed):
+        print("Getting intron coordinates...")
+        ops.get_introns_from_bed(coding_exons_bed, intron_bed)
+        fo.fasta_from_intervals(intron_bed, intron_fasta, genome_fasta, names = True)
+
+
+    temp_output_directory = "temp_intron_dir"
+    gen.create_output_directories(temp_output_directory)
+
+    intron_seq_names, intron_seqs = gen.read_fasta(intron_fasta)
+    intron_seqs = intron_seqs[:10000]
+
+    simulations = list(range(required_simulations))
+    sim_args = [intron_seqs, temp_output_directory]
+    outputs = run_simulation_function(required_simulations, sim_args, simo.sim_intron_seqs_stop_density, parallel=parallel)
+
+
+    temp_filelist = get_temp_filelist(outputs)
+
+    real_stop_counts = seqo.get_stop_counts(intron_seqs)
+    real_densities = [np.divide(count, len(intron_seqs[i])) for i, count in enumerate(real_stop_counts)]
+
+    real_gc = [seqo.calc_seq_gc(seq) for seq in intron_seqs]
+
+    with open(output_file, "w") as outfile:
+        outfile.write("sim_no,{0}\n".format(",".join([name for name in intron_seq_names[:len(intron_seqs)]])))
+        outfile.write("gc,{0}\n".format(",".join([gc for gc in gen.stringify(real_gc[:len(intron_seqs)])])))
+        outfile.write("real,{0}\n".format(",".join(gen.stringify(real_densities))))
+        for file in temp_filelist:
+            data = gen.read_many_fields(temp_filelist[file], ",")
+            outfile.write("{0},{1}\n".format(file, ",".join(data[0])))
 
     gen.remove_directory(temp_output_directory)
     gen.get_time(start_time)

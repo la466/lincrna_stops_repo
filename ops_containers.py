@@ -177,3 +177,40 @@ def stop_density_test(gtf_file, genome_fasta, seqs_fasta, simulations, output_di
 
     threshold = 0.5
     simoc.sim_stop_density(seqs_fasta, non_features_fasta, threshold, simulations, output_directory, output_file)
+
+
+def cds_motif_test(cds_fasta, output_file):
+
+    nts = ["A", "C", "G", "T"]
+    stops = ["TAA", "TAG", "TGA"]
+
+    codon_list = sorted(["".join(codon) for codon in it.product(nts, nts, nts)])
+    combinations = [sorted(i) for i in it.combinations(codon_list, 3)]
+    # combination_not_all_stops = [i for i in combinations if len(list(set(i) & set(stops))) < 3]
+
+    combinations = combinations[:30]
+
+    temp_dir = "temp_motif_densities"
+    gen.create_output_directories(temp_dir)
+
+    args = [cds_fasta, temp_dir]
+    outputs = simoc.run_simulation_function(combinations, args, ops.calc_motif_densities, sim_run=False)
+
+    temp_filelist = []
+    for output in outputs:
+        temp_filelist.append(output)
+
+    densities = collections.defaultdict(lambda: collections.defaultdict())
+
+    for file in temp_filelist:
+        motif = file.split("/")[-1].split(".")[0]
+        data = gen.read_many_fields(file, ",")[0]
+        gc = data[0]
+        density = data[1]
+        densities[gc][motif] = density
+
+    with open(output_file, "w") as outfile:
+        outfile.write("motif,gc,density\n")
+        for gc in sorted(densities):
+            for motif in sorted(densities[gc]):
+                outfile.write("{0},{1},{2}\n".format(motif, gc, densities[gc][motif]))

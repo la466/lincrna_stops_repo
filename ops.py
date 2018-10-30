@@ -46,6 +46,39 @@ def build_sequences(input_fasta, input_stops_fasta, output_fasta):
         for transcript_id in sorted(sequence_dict):
             outfile.write(">{0}\n{1}\n".format(transcript_id, "".join(sequence_dict[transcript_id])))
 
+def calc_motif_gc(motif_set):
+    motif = list("".join(motif_set))
+    return np.divide(sum([motif.count(i) for i in ["G", "C"]]), len(motif))
+
+def calc_motif_density(seq, motif_set):
+    codon_regex = re.compile(".{3}")
+    c1 = re.findall(codon_regex, seq[1:])
+    c2 = re.findall(codon_regex, seq[2:])
+    return (np.sum([c1.count(codon) for codon in motif_set]) + np.sum([c2.count(codon) for codon in motif_set]))*3
+
+
+def calc_motif_densities(motif_sets, cds_fasta, temp_dir):
+
+    temp_files = []
+    cds_seqs = gen.read_fasta(cds_fasta)[1]
+
+    if motif_sets:
+        for i, set in enumerate(motif_sets):
+            print("{0}/{1} {2}".format(i+1, len(motif_sets), "_".join(set)))
+            temp_file = "{0}/{1}.bed".format(temp_dir, "_".join(set))
+            temp_files.append(temp_file)
+            if not os.path.isfile(temp_file):
+                stop_count = 0
+                nt_count = 0
+                for seq in cds_seqs:
+                    stop_count += calc_motif_density(seq[:-3], set)
+                    nt_count += len(seq[:-3])
+                with open(temp_file, "w") as outfile:
+                    outfile.write("{0},{1}\n".format(calc_motif_gc(set), np.divide(stop_count, nt_count)))
+    return temp_files
+
+
+
 def check_exon_files(input_bed1, input_bed2):
     """
     Do a sanity check to make sure there are no coding exons in the
@@ -438,6 +471,44 @@ def get_exon_reading_frame(coding_exons_fasta, full_exons_fasta, output_file):
             exon_id = int(name.split(".")[1].split("(")[0])
             # print(name, full_reading_frames[id][exon_id])
             outfile.write(">{0}\n{1}\n".format(name, full_reading_frames[id][exon_id]))
+
+
+def get_introns_from_bed(input_bed, output_file):
+
+    exons = gen.read_many_fields(input_bed, "\t")
+
+    exon_list = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    strands = {}
+    chrs = {}
+
+    for exon in exons:
+        transcript = exon[3].split(".")[0]
+        exon_id = exon[3].split(".")[1]
+        if "(" in exon_id:
+            exon_id = exon_id.split("(")[0]
+        exon_id = int(exon_id)
+        start = int(exon[1])
+        end = int(exon[2])
+        chr = exon[0]
+        strand = exon[5]
+        strands[transcript] = strand
+        chrs[transcript] = chr
+        exon_list[transcript][exon_id] = [start, end]
+
+    with open(output_file, "w") as outfile:
+        for transcript in exon_list:
+            for exon_id in sorted(exon_list[transcript]):
+                # check whether the next exon exists
+                if exon_id + 1 in exon_list[transcript]:
+                    if strands[transcript] == "+":
+                        intron_start = exon_list[transcript][exon_id][1]
+                        intron_end = exon_list[transcript][exon_id+1][0]
+                    else:
+                        intron_start = exon_list[transcript][exon_id+1][1]
+                        intron_end = exon_list[transcript][exon_id][0]
+                    outdata = [chrs[transcript], intron_start, intron_end, "{0}.{1}-{2}".format(transcript, exon_id, exon_id+1), ".", strands[transcript]]
+                    outfile.write("{0}\n".format("\t".join(gen.stringify(outdata))))
+
 
 
 def get_region_stop_counts(input_list, window_start, window_end):
