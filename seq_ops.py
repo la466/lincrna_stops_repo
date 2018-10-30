@@ -44,6 +44,59 @@ def calc_stop_density(seq):
     return density
 
 
+def get_exon_positions_bed(full_bed, coding_bed, output_file):
+    """
+    Given a bed file containing all CDS exons, get the start position, lengths
+    and frames of internal coding exonsself.
+
+    Args:
+        full_bed (str): path to full bed file
+        coding_bed (str): path to coding bed file
+        output_file (str): path to output file
+    """
+
+    full = gen.read_many_fields(full_bed, "\t")
+    coding = gen.read_many_fields(coding_bed, "\t")
+
+    # get a list of coding exons for each transcript
+    coding_exons = collections.defaultdict(lambda: [])
+    for exon in coding:
+        transcript = exon[3].split(".")[0]
+        exon_id = int(exon[3].split(".")[1])
+        coding_exons[transcript].append(exon_id)
+
+    # get the info for all exons
+    full_exons = collections.defaultdict(lambda: collections.defaultdict())
+    for exon in full:
+        transcript = exon[3].split(".")[0]
+        exon_id = int(exon[3].split(".")[1])
+        start = int(exon[1])
+        end = int(exon[2])
+        length = end - start
+        full_exons[transcript][exon_id] = [start, length]
+
+    # get the start positions, lengths and frames for all exons
+    exon_info = collections.defaultdict(lambda: collections.defaultdict())
+    for transcript in full_exons:
+        moving_start = 0
+        for i, exon_id in enumerate(sorted(full_exons[transcript])):
+            start = full_exons[transcript][exon_id][0]
+            length = full_exons[transcript][exon_id][1]
+            exon_info[transcript][exon_id] = [moving_start, length, moving_start%3]
+            moving_start += length
+
+    # write only coding exons to file
+    with open(output_file, "w") as outfile:
+        for transcript in coding_exons:
+            exons = [i for i in sorted(exon_info[transcript]) if i in coding_exons[transcript]]
+            starts = [exon_info[transcript][i][0] for i in sorted(exon_info[transcript]) if i in coding_exons[transcript]]
+            lengths = [exon_info[transcript][i][1] for i in sorted(exon_info[transcript]) if i in coding_exons[transcript]]
+            frames = [exon_info[transcript][i][2] for i in sorted(exon_info[transcript]) if i in coding_exons[transcript]]
+            if transcript in coding_exons:
+                outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(transcript, ",".join(gen.stringify(exons)), ",".join(gen.stringify(starts)), ",".join(gen.stringify(lengths)), ",".join(gen.stringify(frames))))
+
+
+
 def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, output_bed, output_fasta, output_directory):
     """
     Get the sequences that are not featured in a gtf file.

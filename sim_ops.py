@@ -4,6 +4,7 @@ import ops
 import numpy as np
 import random
 import re
+import collections
 
 def get_seq_seed(seq_seeds, simulation_number, sequence_number):
     """
@@ -388,11 +389,20 @@ def sim_cds_seqs(codon_list, starts, stops, seed=None):
     if seed:
         np.random.seed(seed)
 
-    randomised_seqs = []
-    for i, codon_set in enumerate(codon_list):
-        np.random.shuffle(codon_set)
-        randomised_seqs.append("{0}{1}{2}".format(starts[i], "".join(codon_set), stops[i]))
-    return randomised_seqs
+    if isinstance(codon_list, list):
+        randomised_seqs = []
+        for i, codon_set in enumerate(codon_list):
+            np.random.shuffle(codon_set)
+            randomised_seqs.append("{0}{1}{2}".format(starts[i], "".join(codon_set), stops[i]))
+        return randomised_seqs
+
+    if isinstance(codon_list, dict):
+        randomised_seqs = {}
+        for name in codon_list:
+            np.random.shuffle(codon_list[name])
+            randomised_seqs[name] = "{0}{1}{2}".format(starts[name], "".join(codon_list[name]), stops[name])
+        return randomised_seqs
+
 
 
 def sim_cds_seqs_stop_counts(simulations, seqs, temp_dir, seeds=None):
@@ -432,5 +442,208 @@ def sim_cds_seqs_stop_counts(simulations, seqs, temp_dir, seeds=None):
             temp_files.append(temp_file)
             with open(temp_file, "w") as outfile:
                 outfile.write("{0}".format(",".join(gen.stringify([np.divide(count, len(randomised_seqs[i])) for i, count in enumerate(sim_stop_counts)]))))
+
+    return temp_files
+
+
+def get_exon_info(bed_file):
+
+    exon_info = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    lines = gen.read_many_fields(bed_file, "\t")
+    for line in lines:
+        transcript = line[0]
+        exons = [int(i) for i in line[1].split(",")]
+        starts = [int(i) for i in line[2].split(",")]
+        lengths = [int(i) for i in line[3].split(",")]
+        frames = [int(i) for i in line[4].split(",")]
+        for i, exon_id in enumerate(exons):
+            exon_info[transcript][exon_id] = [starts[i], lengths[i], frames[i]]
+    return exon_info
+
+
+def get_exon_stop_densities(seqs, exon_info):
+
+
+    stops = ["TAA", "TAG", "TGA"]
+
+    densities = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+    core_densities = []
+
+    for name in sorted(seqs):
+        cds_seq = seqs[name]
+
+        exon_densities = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
+        exon_core_densities = []
+
+        for exon_id in exon_info[name]:
+            info = exon_info[name][exon_id]
+            start = info[0]
+            length = info[1]
+            frame = info[2]
+
+            exon_seq = cds_seq[start:start+length]
+            half = int(len(exon_seq) / 2)
+
+            region_size = 20
+
+            regions = list(range(0, min(half, 140), region_size))
+
+            for region in regions:
+                # get the regions that arent at the ends of the exon
+                # and not at the core
+                if region != 0 and region < 120:
+                    five_prime_seq = exon_seq[region:region+region_size]
+                    three_prime_seq = exon_seq[length-region:length-region+region_size]
+                    five_prime_count = 0
+                    three_prime_count = 0
+                    # get just the normal stop codons not at ends for regions
+                    for i in range(0, len(five_prime_seq)):
+                        codon = five_prime_seq[i:i+3]
+                        if codon in stops:
+                            five_prime_count += 3
+                    for i in range(0, len(three_prime_seq)):
+                        codon = three_prime_seq[i:i+3]
+                        if codon in stops:
+                            three_prime_count += 3
+                    # now get the counts at the 5' end of the region
+                    five_prime_region_five_prime_end = exon_seq[region-2:region+2]
+                    three_prime_region_five_prime_end = exon_seq[length-region-2:length-region+2]
+                    if five_prime_region_five_prime_end[:3] in stops:
+                        five_prime_count += 1
+                    if five_prime_region_five_prime_end[1:] in stops:
+                        five_prime_count += 2
+                    if three_prime_region_five_prime_end[:3] in stops:
+                        three_prime_count += 1
+                    if three_prime_region_five_prime_end[1:] in stops:
+                        three_prime_count += 2
+                    # now get the counts at the 3' end of the region
+                    five_prime_region_three_prime_end = exon_seq[region+region_size-2:region+region_size+2]
+                    three_prime_region_three_prime_end = exon_seq[length-region+region_size-2:length-region+region_size+2]
+                    if five_prime_region_three_prime_end[:3] in stops:
+                        five_prime_count += 2
+                    if five_prime_region_five_prime_end[1:] in stops:
+                        five_prime_count += 1
+                    if three_prime_region_five_prime_end[:3] in stops:
+                        three_prime_count += 2
+                    if three_prime_region_five_prime_end[1:] in stops:
+                        three_prime_count += 1
+
+                    five_prime_density = np.divide(five_prime_count, region_size)
+                    three_prime_density = np.divide(three_prime_count, region_size)
+                    exon_densities[5][region].append(five_prime_density)
+                    exon_densities[3][region].append(three_prime_density)
+
+                # get the core region
+                if region >= 120:
+                    core_seq = exon_seq[region:length-region]
+                    core_count = 0
+                    for i in range(0, len(core_seq), 3):
+                        codon = core_seq[i:i+3]
+                        if codon in stops:
+                            core_count += 3
+                    five_prime_core = exon_seq[region-2:region+2]
+                    if five_prime_core[:3] in stops:
+                        core_count += 1
+                    if five_prime_core[1:] in stops:
+                        core_count += 2
+                    three_prime_core = exon_seq[length-region-2:length-region+2]
+                    if three_prime_core[:3] in stops:
+                        core_count += 2
+                    if three_prime_core[1:] in stops:
+                        core_count += 1
+                    core_density = np.divide(core_count, len(core_seq))
+                    exon_core_densities.append(core_density)
+
+                # get the five prime exon end
+                five_prime_end = exon_seq[:region_size]
+                five_prime_end_count = 0
+                for i in range(0, len(five_prime_end), 3):
+                    codon = five_prime_end[i:i+3]
+                    if codon in stops:
+                        five_prime_end_count += 3
+                five_prime_start = cds_seq[start-2:start+2]
+                if five_prime_start[:3] in stops:
+                    five_prime_end_count += 1
+                if five_prime_start[1:] in stops:
+                    five_prime_end_count += 2
+                five_prime_end = exon_seq[region_size-2:region_size+2]
+                if five_prime_end[:3] in stops:
+                    five_prime_end_count += 2
+                if five_prime_end[1:] in stops:
+                    five_prime_end_count += 1
+                five_prime_end_density = np.divide(five_prime_end_count, region_size)
+                exon_densities[5][0].append(five_prime_end_density)
+
+                # get the three prime exon end
+                three_prime_end = exon_seq[start+length-region_size:start+length]
+                three_prime_end_count = 0
+                for i in range(0, len(three_prime_end), 3):
+                    codon = three_prime_end[i:i+3]
+                    if codon in stops:
+                        three_prime_end_count += 3
+                three_prime_end_start = exon_seq[start+length-region_size-2:start+length-region_size+2]
+                if three_prime_end_start[:3] in stops:
+                    three_prime_end_count += 1
+                if three_prime_end_start[1:] in stops:
+                    three_prime_end_count += 2
+                three_prime_end_end = cds_seq[start+length-2:start+length+2]
+                if three_prime_end_end[:3] in stops:
+                    three_prime_end_count += 2
+                if three_prime_end_end[1:] in stops:
+                    three_prime_end_count += 1
+                three_prime_end_density = np.divide(three_prime_end_count, region_size)
+                exon_densities[3][0].append(three_prime_end_density)
+
+        for end in exon_densities:
+            for region in exon_densities[end]:
+                densities[end][region].append(np.mean(exon_densities[end][region]))
+        core_densities.append(np.mean(exon_core_densities))
+
+
+    return densities, core_densities
+
+def sim_exon_stop_density(simulations, seqs, exon_positions_bed, temp_dir, seeds=None):
+    """
+    Shuffle coding sequences and count the number of stop codons present.
+
+    Args:
+        simulations (list): list of simluations to iterate over
+        seqs (dict): a dictionary of sequences
+        exons_positions_bed (dict): a dictionary of sequences
+        temp_dir (str): a temporary directory to hold the outputs of the simulations
+        seeds (list): list of seeds to be used for the randomisations
+
+    Returns:
+        temp_files (list): list containing file paths to simulation outputs
+    """
+
+    temp_files = []
+    if len(simulations):
+
+        exon_info = get_exon_info(exon_positions_bed)
+
+        codon_regex = re.compile(".{3}")
+        codon_list = {name: re.findall(codon_regex, seqs[name]) for name in seqs}
+        # get a list of start and stop codons
+        starts = {name: codon_list[name][0] for name in codon_list}
+        stops = {name: codon_list[name][-1] for name in codon_list}
+        # get a list of internal codons in the list
+        codon_list = {name: codon_list[name][1:-1] for name in codon_list}
+
+        for sim_no, simulation in enumerate(simulations):
+            # set the seed
+            set_seed(seeds, simulation)
+            # print the simulation number out
+            gen.print_simulation(sim_no+1, simulations)
+            # get the randomised seqs
+            randomised_seqs = sim_cds_seqs(codon_list, starts, stops)
+            sim_densities, sim_core_densities = get_exon_stop_densities(randomised_seqs, exon_info)
+            temp_file = "{0}/{1}.{2}.txt".format(temp_dir, random.random(), simulation+1)
+            temp_files.append(temp_file)
+            with open(temp_file, "w") as outfile:
+                for end in sim_densities:
+                    for region in sim_densities[end]:
+                        outfile.write("{0},{1},{2}\n".format(end, region, ",".join(gen.stringify(sim_densities[end][region]))))
+                outfile.write("core,{0}\n".format(",".join(gen.stringify(sim_core_densities))))
 
     return temp_files

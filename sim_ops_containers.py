@@ -8,7 +8,8 @@ import numpy as np
 import os
 import collections
 import time
-
+import csv
+from itertools import zip_longest
 
 
 def get_temp_filelist(outputs):
@@ -581,7 +582,6 @@ def sim_cds_stop_density(source_file, required_simulations, output_file, paralle
 
     cds_names, cds_seqs = gen.read_fasta(source_file)
 
-    # cds_seqs = cds_seqs[:15000]
 
     simulations = list(range(required_simulations))
     sim_args = [cds_seqs, temp_output_directory]
@@ -601,6 +601,83 @@ def sim_cds_stop_density(source_file, required_simulations, output_file, paralle
         for file in temp_filelist:
             data = gen.read_many_fields(temp_filelist[file], ",")
             outfile.write("{0},{1}\n".format(file, ",".join(data[0])))
+
+    gen.remove_directory(temp_output_directory)
+    gen.get_time(start_time)
+
+
+def sim_exon_stop_density(source_cds_fasta, source_cds_bed, source_coding_exons_bed, required_simulations, output_directory, output_file, parallel=True):
+    """
+    Given a file containing sequences, simulate them by shuffling codons and calculate
+    stop codon densitiesself.
+
+    Args:
+        source_file (str): path to fasta file containing sequences
+        source_file (str): path to fasta file containing sequences
+        source_file (str): path to fasta file containing sequences
+        required_simulations (int): number of simulations to run
+        output_dir (str): path to output directory
+        output_file (str): path to output file
+        parallel (bool): if true, run in parallel
+    """
+
+    start_time = time.time()
+
+    temp_output_directory = "temp_exons_dir"
+    gen.create_output_directories(temp_output_directory)
+
+    exon_positions_bed = "{0}/exon_positions.bed".format(output_directory)
+    if not os.path.isfile(exon_positions_bed):
+        seqo.get_exon_positions_bed(source_cds_bed, source_coding_exons_bed, exon_positions_bed)
+
+    cds_names, cds_seqs = gen.read_fasta(source_cds_fasta)
+    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names)}
+
+    exon_info = simo.get_exon_info(exon_positions_bed)
+    real_densities, real_core_densities = simo.get_exon_stop_densities(cds_list, exon_info)
+
+
+    simulations = list(range(required_simulations))
+    sim_args = [cds_list, exon_positions_bed, temp_output_directory]
+    outputs = run_simulation_function(required_simulations, sim_args, simo.sim_exon_stop_density, parallel=parallel)
+
+    # get temp filelist so we can order simulants for tests
+    temp_filelist = get_temp_filelist(outputs)
+
+    sim_densities = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(lambda: [])))
+    sim_core_densities = collections.defaultdict(lambda: [])
+
+    for file in temp_filelist:
+        data = gen.read_many_fields(temp_filelist[file], ",")
+        for line in data[:-1]:
+            end = int(line[0])
+            region = int(line[1])
+            sim_density_list = [float(i) for i in line[2:]]
+            for i, sim_density in enumerate(sim_density_list):
+                sim_densities[end][region][i].append(sim_density)
+        sim_cores = [float(i) for i in data[-1][1:]]
+        for i, sim_core_density in enumerate(sim_cores):
+            sim_core_densities[i].append(sim_core_density)
+
+    with open(output_file, "w") as outfile:
+
+        outlist = []
+        for end in real_densities:
+            for region in real_densities[end]:
+                outdata = ["{0}_{1}".format(end, region)]
+                for i, real_density in enumerate(real_densities[end][region]):
+                    nd = np.divide(real_density - np.mean(sim_densities[end][region][i]), np.mean(sim_densities[end][region][i]))
+                    outdata.append(nd)
+                outlist.append(outdata)
+        core = ["core"]
+        for i, core_density in enumerate(real_core_densities):
+            nd = np.divide(core_density - np.mean(sim_core_densities[i]), np.mean(sim_core_densities[i]))
+            core.append(nd)
+        outlist.append(core)
+        outrows = zip_longest(*outlist, fillvalue = '')
+        for item in outrows:
+            item = [i for i in item]
+            outfile.write("{0}\n".format(",".join(gen.stringify(item))))
 
     gen.remove_directory(temp_output_directory)
     gen.get_time(start_time)

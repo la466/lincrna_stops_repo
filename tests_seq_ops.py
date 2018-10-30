@@ -104,6 +104,17 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = get_dinucleotide_probabilities_markov(seqs)
         self.assertEqual(expected, observed)
 
+    def test_get_exon_positions_bed(self):
+        input_full = "test_data/seq_ops/test_get_exon_positions_bed/input_full.bed"
+        input_coding = "test_data/seq_ops/test_get_exon_positions_bed/input_coding.bed"
+        expected_file = "test_data/seq_ops/test_get_exon_positions_bed/expected.bed"
+        observed_file = "test_data/seq_ops/test_get_exon_positions_bed/observed.bed"
+        gen.remove_file(observed_file)
+        get_exon_positions_bed(input_full, input_coding, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_get_gc_matched_seqs(self):
         input_seqs_file = "test_data/seq_ops/test_get_gc_matched_seqs/input_seqs.fasta"
         input_genome_seqs_file = "test_data/seq_ops/test_get_gc_matched_seqs/input_genome_seqs.fasta"
