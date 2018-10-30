@@ -188,7 +188,7 @@ def cds_motif_test(cds_fasta, output_file):
     combinations = [sorted(i) for i in it.combinations(codon_list, 3)]
     # combination_not_all_stops = [i for i in combinations if len(list(set(i) & set(stops))) < 3]
 
-    # combinations = combinations[:30]
+    combinations = combinations[:30]
 
     temp_dir = "temp_motif_densities"
     gen.create_output_directories(temp_dir)
@@ -209,8 +209,10 @@ def cds_motif_test(cds_fasta, output_file):
         density = data[1]
         densities[gc][motif] = density
 
+    iterator = 0
     with open(output_file, "w") as outfile:
-        outfile.write("motif,gc,density\n")
+        outfile.write("id,motif,gc,density\n")
         for gc in sorted(densities):
             for motif in sorted(densities[gc]):
-                outfile.write("{0},{1},{2}\n".format(motif, gc, densities[gc][motif]))
+                iterator += 1
+                outfile.write("{0},{1},{2},{3}\n".format(iterator,motif, gc, densities[gc][motif]))
