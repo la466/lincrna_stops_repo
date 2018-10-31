@@ -11,6 +11,13 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = [calc_seq_gc(seq) for seq in seqs]
         self.assertEqual(expected, observed)
 
+    def test_calc_seqs_stop_density(self):
+        input_file = "test_data/seq_ops/test_calc_seqs_stop_density/input.bed"
+        seqs = [i[0] for i in gen.read_many_fields(input_file, "\t")]
+        expected = np.divide(6,30)
+        observed = calc_seqs_stop_density(seqs)
+        self.assertEqual(expected, observed)
+
     def test_calc_stop_density(self):
         input_file = "test_data/seq_ops/test_calc_stop_density/input.fasta"
         seqs = gen.read_fasta(input_file)[1]
