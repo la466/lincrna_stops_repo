@@ -26,6 +26,26 @@ def calc_seqs_gc(seqs):
     if isinstance(seqs, dict):
         return {name: calc_seq_gc(seqs[name]) for name in seqs}
 
+def calc_seqs_stop_density(seqs):
+    """
+    For a list of sequences, calculate the combined stop density.
+
+    Args:
+        seqs (list): list of seqeunces
+
+    Returns:
+        stop_density (float): proportion of nucleotides contributing to stop codons
+    """
+
+    stop_nt_count = 0
+    nt_count = 0
+    for seq in seqs:
+        stop_nt_count += (len(re.findall("(TAA|TAG|TGA)", seq))*3)
+        nt_count += len(seq)
+    stop_density = np.divide(stop_nt_count, nt_count)
+    return stop_density
+
+
 def calc_stop_density(seq):
     """
     Calculate the stop codon density in all frames per nucleotide. How many
@@ -42,6 +62,7 @@ def calc_stop_density(seq):
     # maximum of 1 stop codon, so is simply number of stops * 3
     density = np.divide(len(stop_count)*3, len(seq))
     return density
+
 
 
 def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, output_bed, output_fasta, output_directory):
