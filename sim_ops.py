@@ -339,7 +339,41 @@ def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotid
 
     return sim_densities
 
+def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, nucleotide_content, output_directory, seeds=None, seq_seeds=None):
 
+    dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
+    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    nucleotide_choices = [n for n in sorted(nucleotide_content)]
+    nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
+
+    output_files = []
+
+    if len(simulations):
+        for sim_no, simulation in enumerate(simulations):
+            # set the seed
+            set_seed(seeds, simulation)
+
+            # print the simulation number out
+            gen.print_simulation(sim_no+1, simulations)
+
+            simulated_seqs = []
+            # Generate a list of nucleotide matched sequences
+            for i, seq in enumerate(seqs):
+                generated = False
+                seq_seed = get_seq_seed(seq_seeds, sim_no, i)
+                while not generated:
+                    sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                    if sim_seq not in simulated_seqs:
+                        generated = True
+                        simulated_seqs.append(sim_seq)
+
+            output_file = "{0}/{1}.txt".format(output_directory, random.random())
+            output_files.append(output_file)
+            with open(output_file, "w") as outfile:
+                for i, seq in enumerate(simulated_seqs):
+                    outfile.write(">{0}\n{1}\n".format(i+1,seq))
+
+    return output_files
 
 
 def generate_matched_gc_seqs(simulations, seqs_fasta, non_features_fasta, threshold, output_dir, seeds=None):

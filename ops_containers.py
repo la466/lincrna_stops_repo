@@ -96,6 +96,29 @@ def get_non_coding_exons(genome_fasta, gtf, coding_exons_bed, non_coding_exons_b
     fo.fasta_from_intervals(coding_exons_bed, coding_exons_fasta, genome_fasta, names=True)
 
 
+
+def get_sequence_densities(query_sets, seqs, sim_sequence_files, output_directory):
+
+    output_files = []
+
+    if query_sets:
+        sequence_lists = [gen.read_fasta(file)[1] for file in sim_sequence_files]
+        for i, set in enumerate(query_sets):
+            print("{0}/{1}: {2}".format(i+1, len(query_sets), "_".join(set)))
+            real_density = seqo.calc_codon_density_in_seqs(set, seqs)
+            sim_densities = [seqo.calc_codon_density_in_seqs(set, sim_sequences) for sim_sequences in sequence_lists]
+            output_file = "{0}/{1}.txt".format(output_directory, "_".join(set))
+            output_files.append(output_file)
+            if not os.path.isfile(output_file):
+                with open(output_file, "w") as outfile:
+                    outfile.write(">{0}\n{1}\n>sim\n{2}\n".format("_".join(set), real_density, ",".join(gen.stringify(sim_densities))))
+
+    return output_files
+
+
+
+
+
 def lincRNA_expression(fasta_file, link_file, expression_file, output_file):
     """
     Wrapper to look at expression of lincRNA
