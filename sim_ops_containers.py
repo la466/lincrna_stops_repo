@@ -729,7 +729,7 @@ def sim_intron_density(coding_exons_bed, genome_fasta, required_simulations, out
     gen.get_time(start_time)
 
 
-def sim_motif_codon_densities(seqs_file, required_simulations, output_directory, output_file):
+def sim_motif_codon_densities(seqs_file, required_simulations, output_directory):
 
     # get gc matched motifs
     stops = ["TAA", "TAG", "TGA"]
@@ -760,17 +760,8 @@ def sim_motif_codon_densities(seqs_file, required_simulations, output_directory,
     density_args = [seqs, simulated_seqs, temp_dir]
     density_files = run_simulation_function(query_sets, density_args, opsc.get_sequence_densities, parallel=True, sim_run=False)
 
-    # for i, query_set in enumerate(query_sets):
-    #     temp_file = "{0}/{1}.txt".format(temp_dir, "_".join(query_set))
-    #     temp_files.append(temp_file)
-    #     if not os.path.isfile(temp_file):
-    #         print("{0}/{1}: {2}".format(i+1, len(query_sets), "_".join(query_set)))
-    #         real_density = seqo.calc_codon_density_in_seqs(query_set, motif_seqs)
-    #         sim_args = [motif_seqs, dinucleotide_content, nucleotide_content, query_set]
-    #         simulated_densities = run_simulation_function(required_simulations, sim_args, simo.sim_motif_codon_densities)
-    #         with open(temp_file, "w") as temp:
-    #             temp.write(">{0}\n{1}\n>sim\n{2}\n".format("_".join(query_set), real_density, ",".join(gen.stringify(simulated_densities))))
-    #
+    output_file = "{0}/{1}_sim_motif_densities.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+
     with open(output_file, "w") as outfile:
         outfile.write("id,codons,density\n")
         for i,file in enumerate(sorted(density_files)):

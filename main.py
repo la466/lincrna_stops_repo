@@ -93,9 +93,9 @@ def main():
     if motif_codon_density:
         opsc.motif_codon_density(motif_file, output_directory)
 
-    sim_motif_density_file = "{0}/sim_motif_densities.csv".format(output_directory)
+    
     if sim_motif_codon_densities:
-        simopc.sim_motif_codon_densities(motif_file, required_simulations, output_directory, sim_motif_density_file)
+        simopc.sim_motif_codon_densities(motif_file, required_simulations, output_directory)
 
     if cds_nd:
         opsc.cds_nd(source_exons_path, output_directory)
