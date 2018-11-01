@@ -760,7 +760,7 @@ def sim_motif_codon_densities(seqs_file, required_simulations, output_directory)
     density_args = [seqs, simulated_seqs, temp_dir]
     density_files = run_simulation_function(query_sets, density_args, opsc.get_sequence_densities, parallel=True, sim_run=False)
 
-    output_file = "{0}/{1}_sim_motif_densities.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+    output_file = "{0}/{1}_sim_motif_densities.csv".format(output_directory, seqs_file.split("/")[-1].split(".")[0])
 
     with open(output_file, "w") as outfile:
         outfile.write("id,codons,density\n")
