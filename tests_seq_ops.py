@@ -4,6 +4,14 @@ import unittest
 
 class Test_Seq_Ops(unittest.TestCase):
 
+    def test_calc_codon_density_in_seqs(self):
+        input_file = "test_data/seq_ops/test_calc_codon_density_in_seqs/input.fasta"
+        seqs = gen.read_fasta(input_file)[1]
+        codons = ["GAG", "TAT"]
+        expected = np.divide(11,40)
+        observed = calc_codon_density_in_seqs(codons, seqs)
+        self.assertEqual(expected, observed)
+
     def test_calc_seq_gc(self):
         input_file = "test_data/seq_ops/test_calc_seq_gc/input.fasta"
         names, seqs = gen.read_fasta(input_file)

@@ -224,3 +224,33 @@ def cds_nd(cds_fasta, output_directory):
     motif_file = "{0}/gc_matched_combinations.bed".format(output_directory)
     if not os.path.isfile(motif_file):
         seqo.get_gc_matched_motifs(stops, motif_file)
+
+
+def motif_codon_density(motif_file, output_directory):
+
+    stops = ["TAA", "TAG", "TGA"]
+    gc_matchd_motifs_file = "{0}/gc_matched_combinations.bed".format(output_directory)
+    if not os.path.isfile(gc_matchd_motifs_file):
+        seqo.get_gc_matched_motifs(stops, gc_matchd_motifs_file)
+
+    temp_dir = "temp_motif_density"
+    gen.create_output_directories(temp_dir)
+
+    motif_sets = gen.read_many_fields(gc_matchd_motifs_file, "\t")
+    motif_sets.append(["TAA", "TAG", "TGA"])
+
+    args = [motif_file, temp_dir]
+    outputs = simoc.run_simulation_function(motif_sets, args, ops.calc_codon_density_in_motifs, sim_run=False)
+
+    new_output_dir = "{0}/motif_densities".format(output_directory)
+    gen.create_output_directories(new_output_dir)
+
+
+    output_file = "{0}/{1}.csv".format(new_output_dir, motif_file.split("/")[-1].split(".")[0])
+    with open(output_file, "w") as outfile:
+        outfile.write("id,motifs,density\n")
+        for i,file in enumerate(sorted(outputs)):
+            data = gen.read_many_fields(file, ",")[0]
+            outfile.write("{0},{1},{2}\n".format(i+1,data[0],data[1]))
+
+    gen.remove_directory(temp_dir)

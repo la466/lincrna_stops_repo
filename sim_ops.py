@@ -307,6 +307,41 @@ def sim_motif_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_co
     return temp_files
 
 
+def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotide_content, query_set, seeds=None, seq_seeds=None):
+
+    sim_densities = []
+
+    dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
+    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    nucleotide_choices = [n for n in sorted(nucleotide_content)]
+    nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
+
+    for sim_no, simulation in enumerate(simulations):
+        # set the seed
+        set_seed(seeds, simulation)
+
+        # # print the simulation number out
+        # gen.print_simulation(sim_no+1, simulations)
+
+        simulated_seqs = []
+        # Generate a list of nucleotide matched sequences
+        for i, seq in enumerate(seqs):
+            generated = False
+            seq_seed = get_seq_seed(seq_seeds, sim_no, i)
+            while not generated:
+                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                if sim_seq not in simulated_seqs:
+                    generated = True
+                    simulated_seqs.append(sim_seq)
+
+        sim_density = seqo.calc_codon_density_in_seqs(query_set, simulated_seqs)
+        sim_densities.append(sim_density)
+
+    return sim_densities
+
+
+
+
 def generate_matched_gc_seqs(simulations, seqs_fasta, non_features_fasta, threshold, output_dir, seeds=None):
 
     temp_files = []

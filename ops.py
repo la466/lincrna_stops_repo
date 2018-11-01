@@ -56,7 +56,6 @@ def calc_motif_density(seq, motif_set):
     c2 = re.findall(codon_regex, seq[2:])
     return (np.sum([c1.count(codon) for codon in motif_set]) + np.sum([c2.count(codon) for codon in motif_set]))*3
 
-
 def calc_motif_densities(motif_sets, cds_fasta, temp_dir):
 
     temp_files = []
@@ -909,3 +908,22 @@ def uniquify_transcripts(input_fasta, transcript_gene_links, output_fasta):
             max_length_transcript = transcript_gene_links[gene_id][sequence_lengths.index(max(sequence_lengths))]
             # write the longest transcript to file
             outfile.write(">{0}\n{1}\n".format(max_length_transcript, seqs[names.index(max_length_transcript)]))
+
+
+def calc_codon_density_in_motifs(motif_sets, motif_file, temp_dir):
+
+    temp_files = []
+    if motif_sets:
+        # get the list of motifs to query
+        query_motifs = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0]]
+
+        for i, set in enumerate(motif_sets):
+            print("{0}/{1}: {2}".format(i+1, len(motif_sets), "_".join(set)))
+            temp_file = "{0}/{1}.txt".format(temp_dir, "_".join(set))
+            temp_files.append(temp_file)
+            if not os.path.isfile(temp_file):
+                density = seqo.calc_codon_density_in_seqs(set, query_motifs)
+                with open(temp_file, "w") as outfile:
+                    outfile.write("{0},{1}\n".format("_".join(set), density))
+
+    return temp_files

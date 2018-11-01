@@ -727,3 +727,49 @@ def sim_intron_density(coding_exons_bed, genome_fasta, required_simulations, out
 
     gen.remove_directory(temp_output_directory)
     gen.get_time(start_time)
+
+
+def sim_motif_codon_densities(motif_file, required_simulations, output_directory, output_file):
+
+    # get gc matched motifs
+    stops = ["TAA", "TAG", "TGA"]
+    gc_matchd_motifs_file = "{0}/gc_matched_combinations.bed".format(output_directory)
+    if not os.path.isfile(gc_matchd_motifs_file):
+        seqo.get_gc_matched_motifs(stops, gc_matchd_motifs_file)
+
+    motif_seqs = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0]]
+    dinucleotide_content = seqo.get_dinucleotide_content(motif_seqs)
+    nucleotide_content = seqo.get_nucleotide_content(motif_seqs)
+
+    query_sets = gen.read_many_fields(gc_matchd_motifs_file, "\t")
+    query_sets = [stops] + query_sets
+
+    temp_dir = "temp_sim_motif_codon_densities"
+    gen.create_output_directories(temp_dir)
+
+    start = time.time()
+
+    temp_files = []
+    for i, query_set in enumerate(query_sets):
+        temp_file = "{0}/{1}.txt".format(temp_dir, "_".join(query_set))
+        temp_files.append(temp_file)
+        if not os.path.isfile(temp_file):
+            print("{0}/{1}: {2}".format(i+1, len(query_sets), "_".join(query_set)))
+            real_density = seqo.calc_codon_density_in_seqs(query_set, motif_seqs)
+            sim_args = [motif_seqs, dinucleotide_content, nucleotide_content, query_set]
+            simulated_densities = run_simulation_function(required_simulations, sim_args, simo.sim_motif_codon_densities, parallel=False)
+            with open(temp_file, "w") as temp:
+                temp.write(">{0}\n{1}\n>sim\n{2}\n".format("_".join(query_set), real_density, ",".join(gen.stringify(simulated_densities))))
+
+    with open(output_file, "w") as outfile:
+        for i,file in enumerate(sorted(temp_files)):
+            ids, densities = gen.read_fasta(file)
+            real_density = float(densities[0])
+            sim_densities = densities[1]
+            sim_densities = [float(i) for i in densities[1].split(",")]
+            nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
+            outfile.write("{0},{1},{2}\n".format(i+1, ids[0], nd))
+
+    gen.get_time(start)
+
+    gen.remove_directory(temp_dir)

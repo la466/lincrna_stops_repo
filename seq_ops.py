@@ -7,6 +7,36 @@ import re
 import collections
 import os
 
+def calc_codon_density_in_seqs(codons, seqs):
+    """
+    Calculate the density of codons in given sequences, that is the proportion of
+    nucleotides that contribute to a set of codons in the sequences.
+
+    Args:
+        codons (list): list of codons
+        seqs (list): list of sequences
+
+    Returns:
+        density (float): nucleotides contributing to codons / total nucleotides
+    """
+
+    nt_count = 0
+    contribution_count = 0
+    for seq in seqs:
+        indices = []
+        # for each possible codon in the sequence, get the positions that overlap
+        # the query codons
+        for i in range(len(seq)):
+            codon = seq[i:i+3]
+            if codon in codons:
+                indices.extend(list(range(i, i+3)))
+        # now only count each overlap once
+        contribution_count += len(list(set(indices)))
+        nt_count += len(seq)
+    density = np.divide(contribution_count, nt_count)
+    return density
+
+
 def calc_seq_gc(seq):
     """
     Calculate GC content of a sequence
