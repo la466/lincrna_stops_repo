@@ -122,6 +122,17 @@ class Test_Seq_Ops(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_get_gc_matched_motifs(self):
+        input = ["AA", "GT"]
+        expected_file = "test_data/seq_ops/test_get_gc_matched_motifs/expected.bed"
+        observed_file = "test_data/seq_ops/test_get_gc_matched_motifs/observed.bed"
+        gen.remove_file(observed_file)
+        get_gc_matched_motifs(input, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+
     def test_get_gc_matched_seqs(self):
         input_seqs_file = "test_data/seq_ops/test_get_gc_matched_seqs/input_seqs.fasta"
         input_genome_seqs_file = "test_data/seq_ops/test_get_gc_matched_seqs/input_genome_seqs.fasta"

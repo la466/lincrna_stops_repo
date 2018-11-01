@@ -115,7 +115,29 @@ def get_exon_positions_bed(full_bed, coding_bed, output_file):
             if transcript in coding_exons:
                 outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(transcript, ",".join(gen.stringify(exons)), ",".join(gen.stringify(starts)), ",".join(gen.stringify(lengths)), ",".join(gen.stringify(frames))))
 
+def get_gc_matched_motifs(motifs, output_file):
 
+    motifs = sorted(motifs)
+    motifs_gc = calc_seq_gc("".join(motifs))
+
+    nts = ["A", "C", "G", "T"]
+    lengths = [len(i) for i in motifs]
+    motif_lists = {i: ["".join(j) for j in it.product(nts, repeat=i)] for i in lengths}
+
+    choices = [motif_lists[len(i)] for i in motifs]
+    c = [i for i in it.product(*choices)]
+    uniques = []
+    for item in c:
+        sorted_item = sorted(item)
+        if sorted_item not in uniques:
+            uniques.append(sorted_item)
+
+    singles = [i for i in uniques if len(list(set(i))) == len(motifs)]
+    passed = [i for i in singles if calc_seq_gc("".join(i)) == motifs_gc and i != motifs]
+
+    with open(output_file, "w") as outfile:
+        for motif_set in passed:
+            outfile.write("{0}\n".format("\t".join(motif_set)))
 
 def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, output_bed, output_fasta, output_directory):
     """
