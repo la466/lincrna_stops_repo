@@ -758,7 +758,7 @@ def sim_motif_codon_densities(seqs_file, required_simulations, output_directory,
 
     # now get densities for each set
     density_args = [seqs, simulated_seqs, temp_dir]
-    density_files = run_simulation_function(query_sets, density_args, opsc.get_sequence_densities, parallel=False, sim_run=False)
+    density_files = run_simulation_function(query_sets, density_args, opsc.get_sequence_densities, parallel=True, sim_run=False)
 
     # for i, query_set in enumerate(query_sets):
     #     temp_file = "{0}/{1}.txt".format(temp_dir, "_".join(query_set))
