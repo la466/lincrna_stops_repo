@@ -241,13 +241,6 @@ def cds_motif_test(cds_fasta, output_file):
                 outfile.write("{0},{1},{2},{3}\n".format(iterator,motif, gc, densities[gc][motif]))
 
 
-def cds_nd(cds_fasta, output_directory):
-
-    stops = ["TAA", "TAG", "TGA"]
-    motif_file = "{0}/gc_matched_combinations.bed".format(output_directory)
-    if not os.path.isfile(motif_file):
-        seqo.get_gc_matched_motifs(stops, motif_file)
-
 
 def motif_codon_density(motif_file, output_directory):
 

@@ -7,8 +7,8 @@ import time
 def main():
 
     description = "Main file to ask questions about the prevelance of stop codons in sequences."
-    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "codes_file", "expression_file", "motif_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "stop_counts_exon_ends", "sim_motifs", "stop_density_test", "clean_run", "hg38", "NONCODE", "sim_cds_density", "sim_exon_density", "intron_test", "cds_motif_test", "cds_nd", "motif_codon_density", "sim_motif_codon_densities"], flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27], ints=[8])
-    source_exons_path, genome_fasta, gtf, mapping_file, codes_file, expression_file, motif_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, stop_counts_regions, stop_counts_exon_ends, sim_motifs, stop_density_test, clean_run, hg38, NONCODE, sim_cds_density, sim_exon_density, intron_test, cds_motif_test, cds_nd, motif_codon_density, sim_motif_codon_densities = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.codes_file, args.expression_file, args.motif_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.stop_counts_exon_ends, args.sim_motifs, args.stop_density_test, args.clean_run, args.hg38, args.NONCODE, args.sim_cds_density, args.sim_exon_density, args.intron_test, args.cds_motif_test, args.cds_nd, args.motif_codon_density, args.sim_motif_codon_densities
+    args = gen.parse_arguments(description, ["source_exons_path", "genome_fasta", "gtf", "mapping_file", "codes_file", "expression_file", "motif_file", "output_directory", "required_simulations", "extract_seqs", "sim_orf_length", "sim_stop_count", "lincRNA_expression", "non_coding_exons", "stop_counts_regions", "stop_counts_exon_ends", "sim_motifs", "stop_density_test", "clean_run", "hg38", "NONCODE", "sim_cds_density", "sim_exon_density", "intron_test", "cds_motif_test", "cds_nd", "motif_codon_density", "sim_motif_codon_densities", "sim_motif_codon_densities_genome"], flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28], ints=[8])
+    source_exons_path, genome_fasta, gtf, mapping_file, codes_file, expression_file, motif_file, output_directory, required_simulations, extract_seqs, sim_orf_length, sim_stop_count, lincRNA_expression, non_coding_exons, stop_counts_regions, stop_counts_exon_ends, sim_motifs, stop_density_test, clean_run, hg38, NONCODE, sim_cds_density, sim_exon_density, intron_test, cds_motif_test, cds_nd, motif_codon_density, sim_motif_codon_densities, sim_motif_codon_densities_genome = args.source_exons_path, args.genome_fasta, args.gtf, args.mapping_file, args.codes_file, args.expression_file, args.motif_file, args.output_directory, args.required_simulations, args.extract_seqs, args.sim_orf_length, args.sim_stop_count, args.lincRNA_expression, args.non_coding_exons, args.stop_counts_regions, args.stop_counts_exon_ends, args.sim_motifs, args.stop_density_test, args.clean_run, args.hg38, args.NONCODE, args.sim_cds_density, args.sim_exon_density, args.intron_test, args.cds_motif_test, args.cds_nd, args.motif_codon_density, args.sim_motif_codon_densities, args.sim_motif_codon_densities_genome
 
     # set a start time
     start = time.time()
@@ -30,6 +30,9 @@ def main():
     # might need to do some filtering of sequences in here
     # *****
 
+
+    ## lincRNA stuff
+
     sim_orf_length_output_file = "{0}/sim_orf_lengths.csv".format(output_directory)
     if sim_orf_length:
         simopc.sim_orf_length(seqs_fasta, required_simulations, sim_orf_length_output_file)
@@ -38,13 +41,12 @@ def main():
     if sim_stop_count:
         simopc.sim_stop_count(exons_fasta, required_simulations, sim_stop_count_output_file)
 
-    # sim_stop_count_mm_output_file = "{0}/sim_stop_count_mm.csv".format(output_directory)
-    # if sim_stop_count_mm:
-    #     simopc.sim_stop_count_mm(seqs_fasta, required_simulations, sim_stop_count_mm_output_file)
-
     lincRNA_expression_output_file = "{0}/lincRNA_expression_links.csv".format(output_directory)
     if lincRNA_expression:
         opsc.lincRNA_expression(seqs_fasta, mapping_file, expression_file, lincRNA_expression_output_file)
+
+
+    # exon stuff
 
     sim_stop_count_non_coding_exons_file = "{0}/sim_stop_count_non_coding_exons.csv".format(output_directory)
     sim_stop_count_coding_exons_file = "{0}/sim_stop_count_coding_exons.csv".format(output_directory)
@@ -59,6 +61,8 @@ def main():
     if stop_counts_exon_ends:
         simopc.sim_coding_exon_flanks_stop_counts(genome_fasta, gtf, output_directory, stop_count_coding_exons_ends_file, required_simulations, clean_run=None)
 
+
+    # motif stuff
     motif_sim_output_dir = "{0}/motif_simulations".format(output_directory)
     gen.create_output_directories(motif_sim_output_dir)
     motifs_sim_file = "{0}/sim_{1}_stop_count.csv".format(motif_sim_output_dir, motif_file.split("/")[-1].split(".")[0])
@@ -93,12 +97,15 @@ def main():
     if motif_codon_density:
         opsc.motif_codon_density(motif_file, output_directory)
 
-    
+    # get the normalised densities when compared with other codon combinations
     if sim_motif_codon_densities:
         simopc.sim_motif_codon_densities(motif_file, required_simulations, output_directory)
 
-    if cds_nd:
-        opsc.cds_nd(source_exons_path, output_directory)
+    # get the normalised densities when compared with sequences from non coding
+    # parts of the genome
+    if sim_motif_codon_densities_genome:
+        simopc.sim_motif_codon_densities_genome(genome_fasta, gtf, motif_file, required_simulations, output_directory)
+
 
 if __name__ == "__main__":
     main()

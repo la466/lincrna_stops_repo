@@ -776,3 +776,72 @@ def sim_motif_codon_densities(seqs_file, required_simulations, output_directory)
 
     gen.remove_directory(temp_dir)
     gen.remove_directory(temp_seq_dir)
+
+
+def sim_motif_codon_densities_genome(genome_fasta, gtf, seqs_file, required_simulations, output_directory):
+
+    # get gc matched motifs
+    stops = ["TAA", "TAG", "TGA"]
+    gc_matchd_motifs_file = "{0}/gc_matched_combinations.bed".format(output_directory)
+    if not os.path.isfile(gc_matchd_motifs_file):
+        seqo.get_gc_matched_motifs(stops, gc_matchd_motifs_file)
+
+    seqs = [i[0] for i in gen.read_many_fields(seqs_file, "\t") if "#" not in i[0]]
+    # now write to fasta for getting gc matched sequences
+    gen.create_output_directories("temp_data")
+    temp_seqs_fasta = "temp_data/temp_seqs.fasta"
+    with open(temp_seqs_fasta, "w") as temp_seqs_file:
+        for i, seq in enumerate(seqs):
+            temp_seqs_file.write(">{0}\n{1}\n".format(i+1, seq))
+    # dinucleotide_content = seqo.get_dinucleotide_content(seqs)
+    # nucleotide_content = seqo.get_nucleotide_content(seqs)
+
+    query_sets = gen.read_many_fields(gc_matchd_motifs_file, "\t")
+    query_sets = [stops] + query_sets
+
+    temp_dir = "temp_sim_motif_codon_densities"
+    temp_seq_dir = "temp_gc_matched_seq_dir"
+    gen.create_output_directories(temp_dir)
+    gen.create_output_directories(temp_seq_dir)
+
+    start = time.time()
+
+    # create sets of motifs
+    print("Simluating sequences...")
+    genome_seq_outputs = "{0}/genome_sequence_files".format(output_directory)
+    gen.create_output_directories(genome_seq_outputs)
+
+    # get the sequences for non features
+    features_bed = "{0}/genome_features.bed".format(genome_seq_outputs)
+    non_features_bed = "{0}/non_genome_features.bed".format(genome_seq_outputs)
+    non_features_fasta = "{0}/non_genome_features.fasta".format(genome_seq_outputs)
+    if not os.path.isfile(non_features_fasta):
+        seqo.get_non_transcribed_regions(gtf_file, genome_fasta, features_bed, non_features_bed, non_features_fasta, genome_seq_outputs)
+
+    threshold = 0.05
+    names, non_features_seqs = gen.read_fasta(non_features_fasta)
+    non_features_seqs= non_features_seqs[:100]
+    args = [temp_seqs_fasta, non_features_seqs, threshold, temp_seq_dir]
+    simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_matched_gc_seqs)
+
+    # now get densities for each set
+    density_args = [seqs, simulated_seqs, temp_dir]
+    density_files = run_simulation_function(query_sets, density_args, opsc.get_sequence_densities, parallel=True, sim_run=False)
+
+    output_file = "{0}/{1}_sim_motif_genome_gc_matched_densities.csv".format(output_directory, seqs_file.split("/")[-1].split(".")[0])
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,codons,density\n")
+        for i,file in enumerate(sorted(density_files)):
+            ids, densities = gen.read_fasta(file)
+            real_density = float(densities[0])
+            sim_densities = densities[1]
+            sim_densities = [float(i) for i in densities[1].split(",")]
+            nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
+            outfile.write("{0},{1},{2}\n".format(i+1, ids[0], nd))
+    # #
+    gen.get_time(start)
+    #
+    # gen.remove_file(temp_seqs_fasta)
+    gen.remove_directory(temp_dir)
+    # gen.remove_directory(temp_seq_dir)

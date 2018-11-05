@@ -376,7 +376,7 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
     return output_files
 
 
-def generate_matched_gc_seqs(simulations, seqs_fasta, non_features_fasta, threshold, output_dir, seeds=None):
+def generate_matched_gc_seqs(simulations, seqs_fasta, non_features_seqs, threshold, output_dir, seeds=None):
 
     temp_files = []
 
@@ -384,7 +384,7 @@ def generate_matched_gc_seqs(simulations, seqs_fasta, non_features_fasta, thresh
         # get the sequences
         input_names, input_seqs = gen.read_fasta(seqs_fasta)
         input_seqs_list = {name: input_seqs[i] for i, name in enumerate(input_names)}
-        genome_seqs = gen.read_fasta(non_features_fasta)[1]
+        genome_seqs = non_features_seqs
         # get the non-transcribed region of the genome as a string to query
         genome_query_string = "".join(genome_seqs)
 
