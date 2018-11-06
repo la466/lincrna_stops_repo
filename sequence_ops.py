@@ -131,6 +131,18 @@ class Genome_Functions(object):
         return feature_list
 
 
+    def get_transcript_features(self):
+        """
+        Get the list of transcript features
+        """
+
+        feature_list = collections.defaultdict(lambda: [])
+        for feature in self.features:
+            if feature[-1] == "transcript" and feature[3] in self.ids:
+                feature_list[feature[3]].append(feature)
+        return feature_list
+
+
     def load_genome_dataset(self, dataset_name, dataset_file_path, input_list = None):
         """
         Load a genome dataset from file.
@@ -249,6 +261,26 @@ def filter_gtf_features(input_list, gtf_file_path, filter_transcripts = True):
 
     return outputs
 
+
+def filter_one_transcript_per_gene(transcript_list):
+    """
+    If there is more than one transcript per gene, keep only the longest.
+    """
+
+    # get a list of genes with the associated transcripts
+    gene_list = collections.defaultdict(lambda: [])
+    for transcript in transcript_list:
+        transcript_info = transcript_list[transcript][0]
+        gene_list[transcript_info[6]].append(transcript_info)
+    # now get the longest one
+    longest_transcripts = {}
+    for gene_id in gene_list:
+        if len(gene_list[gene_id]) > 1:
+            lengths = [int(i[2]) - int(i[1]) for i in gene_list[gene_id]]
+            longest_transcripts[gene_list[gene_id][lengths.index(max(lengths))][3]] = gene_list[gene_id][lengths.index(max(lengths))]
+        else:
+            longest_transcripts[gene_list[gene_id][0][3]] = gene_list[gene_id][0]
+    return longest_transcripts
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):

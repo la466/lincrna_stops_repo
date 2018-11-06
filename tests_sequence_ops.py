@@ -24,6 +24,15 @@ class Tests(unittest.TestCase):
         observed = filter_gtf_features(input_list, input_file, filter_transcripts = True)
         self.assertEqual(expected, observed)
 
+    def test_filter_one_transcript_per_gene(self):
+        input_file = "test_data/sequence_ops/test_filter_one_transcript_per_gene/input.bed"
+        expected_file = "test_data/sequence_ops/test_filter_one_transcript_per_gene/expected.bed"
+        inputs = collections.defaultdict(lambda: [])
+        [inputs[i[3]].append(i) for i in gen.read_many_fields(input_file, "\t")]
+        expected = {i[3]: i for i in gen.read_many_fields(expected_file, "\t")}
+        observed = filter_one_transcript_per_gene(inputs)
+        self.assertEqual(expected, observed)
+
     def test_list_transcript_ids_from_features(self):
         input_file = "test_data/sequence_ops/test_list_transcript_ids_from_features/input.gtf"
         expected = ["ENST00000456328", "ENST00032323", "ENST0003246"]
@@ -66,4 +75,13 @@ class Tests(unittest.TestCase):
         test.load_genome_dataset("test", input_file)
         expected = {i[3]: [[i[0], int(i[1]), int(i[2]), i[3], i[4], i[5], i[6], i[7]]] for i in gen.read_many_fields(expected_file, "\t")}
         observed = test.get_stop_codon_features()
+        self.assertEqual(expected, observed)
+
+    def test_get_transcript_features(self):
+        input_file = "test_data/sequence_ops/test_Genome_Functions/test_get_transcript_features/input.bed"
+        expected_file = "test_data/sequence_ops/test_Genome_Functions/test_get_transcript_features/expected.bed"
+        test = Genome_Functions(None, None)
+        test.load_genome_dataset("test", input_file)
+        expected = {i[3]: [[i[0], int(i[1]), int(i[2]), i[3], i[4], i[5], i[6], i[7]]] for i in gen.read_many_fields(expected_file, "\t")}
+        observed = test.get_transcript_features()
         self.assertEqual(expected, observed)

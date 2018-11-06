@@ -185,3 +185,9 @@ def order_temp_files(files):
         simulation_no = int(file.split('.')[-2])
         filelist[simulation_no] = file
     return filelist
+
+
+def write_fasta(input_dict, output_file):
+    with open(output_file, "w") as outfile:
+        for i in input_dict:
+            outfile.write(">{0}\n{1}\n".format(i, input_dict[i]))
