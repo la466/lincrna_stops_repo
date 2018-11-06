@@ -17,6 +17,8 @@ class Genome_Functions(object):
         Build CDS sequences from the list of features.
         """
 
+        print("Building cds...")
+
         stop_codons = ["TAA", "TAG", "TGA"]
 
         temp_dir = "temp_dir"
@@ -60,6 +62,8 @@ class Genome_Functions(object):
             filter_transcripts (bool): if true, filter transcripts from list
         """
 
+        print("Generating genome dataset...")
+
         # set some variables
         self.dataset_name = dataset_name
         self.features = []
@@ -93,6 +97,8 @@ class Genome_Functions(object):
         Get all the CDS features
         """
 
+        print("Getting cds features...")
+
         stop_codons = self.get_stop_codon_features()
         cds_features_list = collections.defaultdict(lambda: [])
         # get a list of all the exon parts that contribute to the cds
@@ -124,6 +130,8 @@ class Genome_Functions(object):
         Get all the features that match stop codon
         """
 
+        print("Getting stop_codon features...")
+
         feature_list = collections.defaultdict(lambda: [])
         for feature in self.features:
             if feature[-1] == "stop_codon":
@@ -135,6 +143,8 @@ class Genome_Functions(object):
         """
         Get the list of transcript features
         """
+
+        print("Getting transcript features...")
 
         feature_list = collections.defaultdict(lambda: [])
         for feature in self.features:
@@ -172,6 +182,8 @@ def filter_cds(input_fasta, output_fasta):
         input_fasta (str): path to fasta file containing input CDS sequences
         output_fasta (str): path to output file to put sequences that pass filtering
     """
+
+    print("Filtering cds...")
 
     # copile regex searches
     actg_regex = re.compile("[^ACTG]")
@@ -222,6 +234,8 @@ def filter_gtf_features(input_list, gtf_file_path, filter_transcripts = True):
     Given a .gtf file, filter the entries based on an input list
     """
 
+    print("Getting features from .gtf file...")
+
     outputs = []
 
     # only run if necessary
@@ -267,6 +281,8 @@ def filter_one_transcript_per_gene(transcript_list):
     If there is more than one transcript per gene, keep only the longest.
     """
 
+    print("Filtering to one transcript per gene...")
+
     # get a list of genes with the associated transcripts
     gene_list = collections.defaultdict(lambda: [])
     for transcript in transcript_list:
@@ -296,6 +312,8 @@ def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, f
     Returns:
         unique_ids (list): list of unique transcript ids
     """
+
+    print("Getting transcript ids...")
 
     ids = []
 
