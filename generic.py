@@ -555,6 +555,36 @@ def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, 
     return(results)
 
 
+def run_parallel_function(iteration_list, sim_args, function_to_run, parallel = True, workers = None):
+    """
+    Wrapper to run simulation function
+
+    Args:
+        iteration_lsit (int): the list to iterate over
+        sim_args (list): list of arguments for the simulation function
+        function_to_run (func): simulation_function
+        parallel (bool): if true, run in parallel
+
+    Returns:
+        outputs (list): list containing the result of the simulation
+    """
+
+    # run the simulations
+    if parallel:
+        # add foo to argument list for parallelisation
+        sim_args.insert(0, "foo")
+        if not workers:
+            workers = os.cpu_count() - 2
+        processes = run_in_parallel(iteration_list, sim_args, function_to_run, workers = workers)
+        outputs = []
+        for process in processes:
+            outputs.extend(process.get())
+    else:
+        outputs = function_to_run(iteration_list, *sim_args)
+
+    return outputs
+
+
 def run_process(arguments, return_string = True, input_to_pipe = None, return_error = False, file_for_input = None, file_for_output = None, univ_nl = True, shell = False):
     '''
     Run a command on the command line. Supply command as a list of strings.
