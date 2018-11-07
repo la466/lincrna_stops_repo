@@ -12,43 +12,44 @@ class Genome_Functions(object):
         self.genome_file_path = genome_file_path
 
 
-    def build_cds(self, cds_features_bed, output_file):
+    def build_cds(self, cds_features_bed, output_file, clean_run = None):
         """
         Build CDS sequences from the list of features.
         """
 
-        print("Building cds...")
+        if not os.path.isfile(output_file) or clean_run:
+            print("Building cds...")
 
-        stop_codons = ["TAA", "TAG", "TGA"]
+            stop_codons = ["TAA", "TAG", "TGA"]
 
-        temp_dir = "temp_dir"
-        gen.create_output_directories(temp_dir)
+            temp_dir = "temp_dir"
+            gen.create_output_directories(temp_dir)
 
-        # create temp file to contain sequences
-        temp_file = "{0}/temp_cds_features.fasta".format(temp_dir)
-        fo.fasta_from_intervals(cds_features_bed, temp_file, self.genome_file_path, names=True)
+            # create temp file to contain sequences
+            temp_file = "{0}/temp_cds_features.fasta".format(temp_dir)
+            fo.fasta_from_intervals(cds_features_bed, temp_file, self.genome_file_path, names=True)
 
-        # now build the sequences
-        sequence_parts = collections.defaultdict(lambda: collections.defaultdict())
-        sequence_names, seqs = gen.read_fasta(temp_file)
-        for i, name in enumerate(sequence_names):
-            transcript = name.split(".")[0]
-            exon_id = int(name.split(".")[1].split("(")[0])
+            # now build the sequences
+            sequence_parts = collections.defaultdict(lambda: collections.defaultdict())
+            sequence_names, seqs = gen.read_fasta(temp_file)
+            for i, name in enumerate(sequence_names):
+                transcript = name.split(".")[0]
+                exon_id = int(name.split(".")[1].split("(")[0])
 
-            seq = seqs[i]
-            # set the exon_id to an arbritrarily high number if it is the annotate stop codon
-            if len(seq) == 3 and seq in stop_codons:
-                exon_id = 9999999
-            sequence_parts[transcript][exon_id] = seq
+                seq = seqs[i]
+                # set the exon_id to an arbritrarily high number if it is the annotate stop codon
+                if len(seq) == 3 and seq in stop_codons:
+                    exon_id = 9999999
+                sequence_parts[transcript][exon_id] = seq
 
-        with open(output_file, "w") as outfile:
-            for transcript in sequence_parts:
-                sequence = []
-                for exon_id in sorted(sequence_parts[transcript]):
-                    sequence.append(sequence_parts[transcript][exon_id])
-                outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
+            with open(output_file, "w") as outfile:
+                for transcript in sequence_parts:
+                    sequence = []
+                    for exon_id in sorted(sequence_parts[transcript]):
+                        sequence.append(sequence_parts[transcript][exon_id])
+                    outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
 
-        gen.remove_directory(temp_dir)
+            gen.remove_directory(temp_dir)
 
 
     def generate_genome_dataset(self, dataset_name, dataset_features_output_bed, input_list = None, filter_transcripts = True, clean_run = None):
@@ -102,8 +103,10 @@ class Genome_Functions(object):
         stop_codons = self.get_stop_codon_features()
         cds_features_list = collections.defaultdict(lambda: [])
         # get a list of all the exon parts that contribute to the cds
+        # [cds_features_list[feature[3]].append(feature) for feature in self.features if feature[-1] == "CDS" and feature[3] in self.ids]
         for feature in self.features:
             if feature[-1] == "CDS" and feature[3] in self.ids:
+                print(feature)
                 cds_features_list[feature[3]].append(feature)
 
         for id in cds_features_list:
@@ -174,7 +177,7 @@ class Genome_Functions(object):
             raise FileNotFoundError
 
 
-def filter_cds(input_fasta, output_fasta):
+def filter_cds(input_fasta, output_fasta, clean_run = None):
     """
     Quality filter coding sequences
 
@@ -183,50 +186,51 @@ def filter_cds(input_fasta, output_fasta):
         output_fasta (str): path to output file to put sequences that pass filtering
     """
 
-    print("Filtering cds...")
+    if not os.path.isfile(output_fasta) or clean_run:
+        print("Filtering cds...")
 
-    # copile regex searches
-    actg_regex = re.compile("[^ACTG]")
-    codon_regex = re.compile(".{3}")
+        # copile regex searches
+        actg_regex = re.compile("[^ACTG]")
+        codon_regex = re.compile(".{3}")
 
-    stop_codons = ["TAA", "TAG", "TGA"]
+        stop_codons = ["TAA", "TAG", "TGA"]
 
-    # read the sequences
-    names, seqs = gen.read_fasta(input_fasta)
+        # read the sequences
+        names, seqs = gen.read_fasta(input_fasta)
 
-    print("{0} sequences prior to filtering...".format(len(seqs)))
+        print("{0} sequences prior to filtering...".format(len(seqs)))
 
-    # filter the sequences
-    with open(output_fasta, "w") as outfile:
-        pass_count = 0
-        for i, name in enumerate(names):
-            seq = seqs[i]
-            passed = True
-            # check to see if the first codon is ATG
-            if passed and seq[:3] != "ATG":
-                passed = False
-            # check to see if the last codon is a stop codon
-            if passed and seq[-3:] not in stop_codons:
-                passed = False
-            # check to see if sequence is a length that is a
-            # multiple of 3
-            if passed and len(seq) % 3 != 0:
-                passed = False
-            # check if there are any non ACTG characters in string
-            non_actg = re.subn(actg_regex, '!', seq)[1]
-            if passed and non_actg != 0:
-                passed = False
-            # check if there are any in frame stop codons
-            codons = re.findall(codon_regex, seq[3:-3])
-            inframe_stops = [codon for codon in codons if codon in stop_codons]
-            if passed and len(inframe_stops):
-                passed = False
-            # only if passed all the filters write to file
-            if passed:
-                outfile.write(">{0}\n{1}\n".format(name, seq))
-                pass_count += 1
+        # filter the sequences
+        with open(output_fasta, "w") as outfile:
+            pass_count = 0
+            for i, name in enumerate(names):
+                seq = seqs[i]
+                passed = True
+                # check to see if the first codon is ATG
+                if passed and seq[:3] != "ATG":
+                    passed = False
+                # check to see if the last codon is a stop codon
+                if passed and seq[-3:] not in stop_codons:
+                    passed = False
+                # check to see if sequence is a length that is a
+                # multiple of 3
+                if passed and len(seq) % 3 != 0:
+                    passed = False
+                # check if there are any non ACTG characters in string
+                non_actg = re.subn(actg_regex, '!', seq)[1]
+                if passed and non_actg != 0:
+                    passed = False
+                # check if there are any in frame stop codons
+                codons = re.findall(codon_regex, seq[3:-3])
+                inframe_stops = [codon for codon in codons if codon in stop_codons]
+                if passed and len(inframe_stops):
+                    passed = False
+                # only if passed all the filters write to file
+                if passed:
+                    outfile.write(">{0}\n{1}\n".format(name, seq))
+                    pass_count += 1
 
-    print("{0} sequences after filtering...".format(pass_count))
+        print("{0} sequences after filtering...".format(pass_count))
 
 
 def filter_gtf_features(input_list, gtf_file_path, filter_transcripts = True):

@@ -2,6 +2,7 @@ import generic as gen
 import sequence_ops as sequo
 import file_ops as fo
 import time
+import os
 
 def extract_sequences(gtf_file, genome_file, output_directory, clean_run = None):
 
@@ -31,11 +32,11 @@ def extract_sequences(gtf_file, genome_file, output_directory, clean_run = None)
 
     # build the cds sequences
     full_cds_fasta = "{0}/{1}.cds.no_filtering_full.fasta".format(genome_features_directory, human_dataset_name)
-    human_genome.build_cds(full_cds_features_bed, full_cds_fasta)
+    human_genome.build_cds(full_cds_features_bed, full_cds_fasta, clean_run = clean_run)
 
     # filter the sequences
     quality_filtered_cds_fasta = "{0}/{1}.cds.quality_filtered.step1.fasta".format(genome_features_directory, human_dataset_name)
-    sequo.filter_cds(full_cds_fasta, quality_filtered_cds_fasta)
+    sequo.filter_cds(full_cds_fasta, quality_filtered_cds_fasta, clean_run = clean_run)
 
     clean_transcript_ids, clean_transcript_seqs = gen.read_fasta(quality_filtered_cds_fasta)
     # get a list of transcripts from the gtf file and keep only those that we want
@@ -47,4 +48,5 @@ def extract_sequences(gtf_file, genome_file, output_directory, clean_run = None)
     unique_gene_cds = {name: clean_transcript_seqs[i] for i, name in enumerate(clean_transcript_ids) if name in transcript_list}
     # write the unique transcripts to file
     unique_cds_fasta = "{0}/{1}.cds.unique_gene_transcripts.step2.fasta".format(genome_features_directory, human_dataset_name)
-    fo.write_fasta(unique_gene_cds, unique_cds_fasta)
+    if not os.path.isfile(unique_cds_fasta) or clean_run:
+        fo.write_fasta(unique_gene_cds, unique_cds_fasta)
