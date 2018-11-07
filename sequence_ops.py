@@ -10,8 +10,8 @@ def generate_genome_dataset(gtf_file, genome_fasta, id_list, dataset_name, datas
 
     # if we want a clean run, remove any previous output directory
     if clean_run:
-        gen.remove_directory(genome_features_directory)
-    gen.create_output_directories(genome_features_directory)
+        gen.remove_directory(dataset_output_directory)
+    gen.create_output_directories(dataset_output_directory)
 
     # initalise genome object
     genome = Genome_Functions(gtf_file, genome_fasta, dataset_name, dataset_output_directory, clean_run)
@@ -30,6 +30,9 @@ def generate_genome_dataset(gtf_file, genome_fasta, id_list, dataset_name, datas
     # get a list of genes from the cleaned transcripts
     genome.list_genes_from_transcripts()
 
+    return genome.filelist
+
+
 
 class Genome_Functions(object):
 
@@ -39,6 +42,7 @@ class Genome_Functions(object):
         self.dataset_name = dataset_name
         self.dataset_output_directory = dataset_output_directory
         self.clean_run = clean_run
+        self.filelist = {}
 
 
     def build_coding_sequences(self):
@@ -50,6 +54,7 @@ class Genome_Functions(object):
         if not os.path.isfile(full_cds_fasta) or self.clean_run:
             build_coding_sequences(self.full_cds_features_bed, self.genome_fasta, full_cds_fasta)
         self.full_cds_fasta = full_cds_fasta
+        self.filelist["full_cds_fasta"] = full_cds_fasta
 
 
     def filter_one_transcript_per_gene(self):
@@ -61,15 +66,17 @@ class Genome_Functions(object):
         if not os.path.isfile(unique_cds_fasta) or self.clean_run:
             filtered_transcript_ids, filtered_transcript_seqs = gen.read_fasta(self.quality_filtered_cds_fasta)
             # # get a list of transcripts from the gtf file and keep only those that we want
-            transcript_list = extract_transcript_features(self.full_cds_features_bed, filtered_transcript_ids)
+            features = gen.read_many_fields(self.dataset_features_bed, "\t")
+            transcript_list = extract_transcript_features(features, filtered_transcript_ids)
             transcript_list = {i: transcript_list[i] for i in transcript_list if i in filtered_transcript_ids}
             # keep only the longest transcript if more than one per gene
             unique_gene_transcripts = filter_one_transcript_per_gene(transcript_list)
             transcript_list = unique_gene_transcripts
-            unique_gene_cds = {name: clean_transcript_seqs[i] for i, name in enumerate(filtered_transcript_ids) if name in transcript_list}
+            unique_gene_cds = {name: filtered_transcript_seqs[i] for i, name in enumerate(filtered_transcript_ids) if name in transcript_list}
             # write the unique transcripts to file
             fo.write_fasta(unique_gene_cds, unique_cds_fasta)
         self.unique_cds_fasta = unique_cds_fasta
+        self.filelist["unique_cds_fasta"] = unique_cds_fasta
 
 
     def get_cds_features(self):
@@ -84,6 +91,7 @@ class Genome_Functions(object):
             # write the cds_features to an output_file
             fo.write_features_to_bed(cds_features, full_cds_features_bed)
         self.full_cds_features_bed = full_cds_features_bed
+        self.filelist["full_cds_features_bed"] = full_cds_features_bed
 
 
     def generate_genome_features(self, input_list = None):
@@ -97,9 +105,10 @@ class Genome_Functions(object):
 
         dataset_features_bed = "{0}/{1}.{2}_features_dataset.bed".format(self.dataset_output_directory, self.gtf_file.split("/")[-1], self.dataset_name)
         # only run if the file doesn't exist or a clean run
-        if not os.path.isfile(human_dataset_features_bed) or self.clean_run:
+        if not os.path.isfile(dataset_features_bed) or self.clean_run:
             generate_genome_features_dataset(self.dataset_name, self.gtf_file, dataset_features_bed, input_list = input_list)
         self.dataset_features_bed = dataset_features_bed
+        self.filelist["dataset_features_bed"] = dataset_features_bed
 
 
     def list_genes_from_transcripts(self):
@@ -111,6 +120,7 @@ class Genome_Functions(object):
         if not os.path.isfile(unique_transcript_gene_list_file) or self.clean_run:
             get_clean_genes(self.unique_cds_fasta, self.full_cds_features_bed, unique_transcript_gene_list_file)
         self.unique_transcript_gene_list_file = unique_transcript_gene_list_file
+        self.filelist["unique_transcript_gene_list_file"] = unique_transcript_gene_list_file
 
 
     def load_genome_dataset(self, input_list = None):
@@ -126,7 +136,7 @@ class Genome_Functions(object):
             else:
                 self.ids = list(set([i[3] for i in entries]))
 
-            print("{0} dataset loaded...".format(dataset_name))
+            print("{0} dataset loaded...".format(self.dataset_name))
 
         except FileNotFoundError:
             raise FileNotFoundError
@@ -142,6 +152,7 @@ class Genome_Functions(object):
         if not os.path.isfile(quality_filtered_cds_fasta) or self.clean_run:
             quality_filter_cds_sequences(self.full_cds_fasta, quality_filtered_cds_fasta)
         self.quality_filtered_cds_fasta = quality_filtered_cds_fasta
+        self.filelist["quality_filtered_cds_fasta"] = quality_filtered_cds_fasta
 
 
 
@@ -393,6 +404,23 @@ def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_fea
     print("{0} dataset created...".format(dataset_name))
 
 
+def get_clean_genes(input_fasta, input_bed, output_bed):
+    """
+    Get a list of gene names for sequences in fasta
+
+    Args:
+        input_fasta (str): path to fasta file
+        input_bed (str): path to bed file
+        output_bed (str): path to output file
+    """
+
+    ids = gen.read_fasta(input_fasta)[0]
+    entries = gen.read_many_fields(input_bed, "\t")
+    clean_genes = {i[3].split(".")[0]: i[6] for i in entries if i[3].split(".")[0] in ids and i[3].split(".")[0]}
+    with open(output_bed, "w") as outfile:
+        [outfile.write("{0}\t{1}\n".format(i, clean_genes[i])) for i in clean_genes]
+
+
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
     """
     Given a gtf file, return a list of unique transcript ids associated with
@@ -495,25 +523,6 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
 
 
 
-
-
-
-
-def get_clean_genes(input_fasta, input_bed, output_bed):
-    """
-    Get a list of gene names for sequences in fasta
-
-    Args:
-        input_fasta (str): path to fasta file
-        input_bed (str): path to bed file
-        output_bed (str): path to output file
-    """
-
-    ids = gen.read_fasta(input_fasta)[0]
-    entries = gen.read_many_fields(input_bed, "\t")
-    clean_genes = {i[3].split(".")[0]: i[6] for i in entries if i[3].split(".")[0] in ids and i[3].split(".")[0]}
-    with open(output_bed, "w") as outfile:
-        [outfile.write("{0}\t{1}\n".format(i, clean_genes[i])) for i in clean_genes]
 
 
 def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
