@@ -12,47 +12,46 @@ class Genome_Functions(object):
         self.genome_file_path = genome_file_path
 
 
-    def build_cds(self, cds_features_bed, output_file, clean_run = None):
+    def build_cds(self, cds_features_bed, output_file):
         """
         Build CDS sequences from the list of features.
         """
 
-        if not os.path.isfile(output_file) or clean_run:
-            print("Building cds...")
+        print("Building cds...")
 
-            stop_codons = ["TAA", "TAG", "TGA"]
+        stop_codons = ["TAA", "TAG", "TGA"]
 
-            temp_dir = "temp_dir"
-            gen.create_output_directories(temp_dir)
+        temp_dir = "temp_dir"
+        gen.create_output_directories(temp_dir)
 
-            # create temp file to contain sequences
-            temp_file = "{0}/temp_cds_features.fasta".format(temp_dir)
-            fo.fasta_from_intervals(cds_features_bed, temp_file, self.genome_file_path, names=True)
+        # create temp file to contain sequences
+        temp_file = "{0}/temp_cds_features.fasta".format(temp_dir)
+        fo.fasta_from_intervals(cds_features_bed, temp_file, self.genome_file_path, names=True)
 
-            # now build the sequences
-            sequence_parts = collections.defaultdict(lambda: collections.defaultdict())
-            sequence_names, seqs = gen.read_fasta(temp_file)
-            for i, name in enumerate(sequence_names):
-                transcript = name.split(".")[0]
-                exon_id = int(name.split(".")[1].split("(")[0])
+        # now build the sequences
+        sequence_parts = collections.defaultdict(lambda: collections.defaultdict())
+        sequence_names, seqs = gen.read_fasta(temp_file)
+        for i, name in enumerate(sequence_names):
+            transcript = name.split(".")[0]
+            exon_id = int(name.split(".")[1].split("(")[0])
 
-                seq = seqs[i]
-                # set the exon_id to an arbritrarily high number if it is the annotate stop codon
-                if len(seq) == 3 and seq in stop_codons:
-                    exon_id = 9999999
-                sequence_parts[transcript][exon_id] = seq
+            seq = seqs[i]
+            # set the exon_id to an arbritrarily high number if it is the annotate stop codon
+            if len(seq) == 3 and seq in stop_codons:
+                exon_id = 9999999
+            sequence_parts[transcript][exon_id] = seq
 
-            with open(output_file, "w") as outfile:
-                for transcript in sequence_parts:
-                    sequence = []
-                    for exon_id in sorted(sequence_parts[transcript]):
-                        sequence.append(sequence_parts[transcript][exon_id])
-                    outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
+        with open(output_file, "w") as outfile:
+            for transcript in sequence_parts:
+                sequence = []
+                for exon_id in sorted(sequence_parts[transcript]):
+                    sequence.append(sequence_parts[transcript][exon_id])
+                outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
 
-            gen.remove_directory(temp_dir)
+        gen.remove_directory(temp_dir)
 
 
-    def generate_genome_dataset(self, dataset_name, dataset_features_output_bed, input_list = None, filter_transcripts = True, clean_run = None):
+    def generate_genome_dataset(self, dataset_name, dataset_features_output_bed, input_list = None, filter_transcripts = True):
         """
         Create a dataset containing all the relevant genome features from the
         given list.
@@ -69,28 +68,25 @@ class Genome_Functions(object):
         self.dataset_name = dataset_name
         self.features = []
 
-        # only run if the output file doesnt exist, or it is a clean run
-        if not os.path.isfile(dataset_features_output_bed) or clean_run:
-
-            if filter_transcripts:
-                if input_list:
-                    self.ids = input_list
-                else:
-                    print("Input list required...")
-                    raise Exception
+        if filter_transcripts:
+            if input_list:
+                self.ids = input_list
             else:
-                self.ids = "foo"
+                print("Input list required...")
+                raise Exception
+        else:
+            self.ids = "foo"
 
-            # do the filtering
-            args = [self.features_file_path]
-            # reduce the number of workers here otherwise it doesnt like it
-            features = gen.run_parallel_function(self.ids, args, filter_gtf_features, parallel=True, workers = int(os.cpu_count()/2) - 1)
-            # output the features to the bed file
-            with open(dataset_features_output_bed, "w") as outfile:
-                outfile.write("# {0} lines in {1}\n".format(dataset_name, self.features_file_path.split("/")[-1]))
-                [outfile.write("{0}\n".format("\t".join(feature))) for feature in features]
+        # do the filtering
+        args = [self.features_file_path]
+        # reduce the number of workers here otherwise it doesnt like it
+        features = gen.run_parallel_function(self.ids, args, filter_gtf_features, parallel=True, workers = int(os.cpu_count()/2) - 1)
+        # output the features to the bed file
+        with open(dataset_features_output_bed, "w") as outfile:
+            outfile.write("# {0} lines in {1}\n".format(dataset_name, self.features_file_path.split("/")[-1]))
+            [outfile.write("{0}\n".format("\t".join(feature))) for feature in features]
 
-            print("{0} dataset created...".format(dataset_name))
+        print("{0} dataset created...".format(dataset_name))
 
 
     def get_cds_features(self):
@@ -177,7 +173,7 @@ class Genome_Functions(object):
             raise FileNotFoundError
 
 
-def filter_cds(input_fasta, output_fasta, clean_run = None):
+def filter_cds(input_fasta, output_fasta):
     """
     Quality filter coding sequences
 
@@ -186,51 +182,50 @@ def filter_cds(input_fasta, output_fasta, clean_run = None):
         output_fasta (str): path to output file to put sequences that pass filtering
     """
 
-    if not os.path.isfile(output_fasta) or clean_run:
-        print("Filtering cds...")
+    print("Filtering cds...")
 
-        # copile regex searches
-        actg_regex = re.compile("[^ACTG]")
-        codon_regex = re.compile(".{3}")
+    # copile regex searches
+    actg_regex = re.compile("[^ACTG]")
+    codon_regex = re.compile(".{3}")
 
-        stop_codons = ["TAA", "TAG", "TGA"]
+    stop_codons = ["TAA", "TAG", "TGA"]
 
-        # read the sequences
-        names, seqs = gen.read_fasta(input_fasta)
+    # read the sequences
+    names, seqs = gen.read_fasta(input_fasta)
 
-        print("{0} sequences prior to filtering...".format(len(seqs)))
+    print("{0} sequences prior to filtering...".format(len(seqs)))
 
-        # filter the sequences
-        with open(output_fasta, "w") as outfile:
-            pass_count = 0
-            for i, name in enumerate(names):
-                seq = seqs[i]
-                passed = True
-                # check to see if the first codon is ATG
-                if passed and seq[:3] != "ATG":
-                    passed = False
-                # check to see if the last codon is a stop codon
-                if passed and seq[-3:] not in stop_codons:
-                    passed = False
-                # check to see if sequence is a length that is a
-                # multiple of 3
-                if passed and len(seq) % 3 != 0:
-                    passed = False
-                # check if there are any non ACTG characters in string
-                non_actg = re.subn(actg_regex, '!', seq)[1]
-                if passed and non_actg != 0:
-                    passed = False
-                # check if there are any in frame stop codons
-                codons = re.findall(codon_regex, seq[3:-3])
-                inframe_stops = [codon for codon in codons if codon in stop_codons]
-                if passed and len(inframe_stops):
-                    passed = False
-                # only if passed all the filters write to file
-                if passed:
-                    outfile.write(">{0}\n{1}\n".format(name, seq))
-                    pass_count += 1
+    # filter the sequences
+    with open(output_fasta, "w") as outfile:
+        pass_count = 0
+        for i, name in enumerate(names):
+            seq = seqs[i]
+            passed = True
+            # check to see if the first codon is ATG
+            if passed and seq[:3] != "ATG":
+                passed = False
+            # check to see if the last codon is a stop codon
+            if passed and seq[-3:] not in stop_codons:
+                passed = False
+            # check to see if sequence is a length that is a
+            # multiple of 3
+            if passed and len(seq) % 3 != 0:
+                passed = False
+            # check if there are any non ACTG characters in string
+            non_actg = re.subn(actg_regex, '!', seq)[1]
+            if passed and non_actg != 0:
+                passed = False
+            # check if there are any in frame stop codons
+            codons = re.findall(codon_regex, seq[3:-3])
+            inframe_stops = [codon for codon in codons if codon in stop_codons]
+            if passed and len(inframe_stops):
+                passed = False
+            # only if passed all the filters write to file
+            if passed:
+                outfile.write(">{0}\n{1}\n".format(name, seq))
+                pass_count += 1
 
-        print("{0} sequences after filtering...".format(pass_count))
+    print("{0} sequences after filtering...".format(pass_count))
 
 
 def filter_gtf_features(input_list, gtf_file_path, filter_transcripts = True):
@@ -303,6 +298,42 @@ def filter_one_transcript_per_gene(transcript_list):
     return longest_transcripts
 
 
+def get_clean_genes(input_fasta, input_bed, output_bed):
+    """
+    Get a list of gene names for sequences in fasta
+
+    Args:
+        input_fasta (str): path to fasta file
+        input_bed (str): path to bed file
+        output_bed (str): path to output file
+    """
+
+    ids = gen.read_fasta(input_fasta)[0]
+    entries = gen.read_many_fields(input_bed, "\t")
+    clean_genes = {i[3].split(".")[0]: i[6] for i in entries if i[3].split(".")[0] in ids and i[3].split(".")[0]}
+    with open(output_bed, "w") as outfile:
+        [outfile.write("{0}\t{1}\n".format(i, clean_genes[i])) for i in clean_genes]
+
+
+def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
+    """
+    Given a list of genes, get the ortholog from a file only if it exists
+
+    Args:
+        input_bed (str): path to file containing transcript and gene id links
+        input_pairs_file (str): path to file containing specific ortholog links
+        output_bed (str): path to output file
+    """
+
+    gene_ids = [i[1] for i in gen.read_many_fields(input_bed, "\t")]
+    ortholog_entries = gen.read_many_fields(input_pairs_file, ",")
+    with open(output_bed, "w") as outfile:
+        for entry in ortholog_entries:
+            # ensure the gene is in the gene ids required and that there is an ortholog
+            if entry[1] in gene_ids and entry[4]:
+                outfile.write("{0}\t{1}\n".format(entry[1], entry[4]))
+
+
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
     """
     Given a gtf file, return a list of unique transcript ids associated with
@@ -346,22 +377,3 @@ def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, f
     unique_ids = sorted(list(set(ids)))
 
     return unique_ids
-
-
-def write_features_to_bed(feature_list, output_file, clean_run = None):
-    """
-    Write a set of features to bed file
-
-    Args:
-        feature_list (dict): dictionary containing features with transcripts as keys
-        output_file (str): path to output file
-        clean_run (bool): if true, always write file
-    """
-
-    if not os.path.isfile(output_file) or clean_run:
-        with open(output_file, "w") as outfile:
-            for feature in feature_list:
-                for item in feature_list[feature]:
-                    item[3] = "{0}.{1}".format(item[3], item[4])
-                    item[4] = "."
-                    outfile.write("{0}\n".format("\t".join(gen.stringify(item))))

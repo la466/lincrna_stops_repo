@@ -191,3 +191,19 @@ def write_fasta(input_dict, output_file):
     with open(output_file, "w") as outfile:
         for i in input_dict:
             outfile.write(">{0}\n{1}\n".format(i, input_dict[i]))
+
+def write_features_to_bed(feature_list, output_file):
+    """
+    Write a set of features to bed file
+
+    Args:
+        feature_list (dict): dictionary containing features with transcripts as keys
+        output_file (str): path to output file
+    """
+
+    with open(output_file, "w") as outfile:
+        for feature in feature_list:
+            for item in feature_list[feature]:
+                item[3] = "{0}.{1}".format(item[3], item[4])
+                item[4] = "."
+                outfile.write("{0}\n".format("\t".join(gen.stringify(item))))
