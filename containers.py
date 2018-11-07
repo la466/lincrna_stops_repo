@@ -68,6 +68,4 @@ def extract_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_genome_
         sequo.get_orthologous_pairs(unique_transcript_gene_list_file, orthologs_file, orthologous_pairs_file)
 
     # get a list of ortholog gene ids to keep
-    ortholog_ids = [i[1] for i in gen.read_many_fields(orthologous_pairs_file)]
-
-    # now get the sequences for the orthologs
+    ortholog_ids = [i[1] for i in gen.read_many_fields(orthologous_pairs_file, "\t")]

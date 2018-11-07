@@ -325,13 +325,17 @@ def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
         output_bed (str): path to output file
     """
 
+    print("Filtering orthologs...")
+
     gene_ids = [i[1] for i in gen.read_many_fields(input_bed, "\t")]
     ortholog_entries = gen.read_many_fields(input_pairs_file, ",")
+    entries_kept = []
     with open(output_bed, "w") as outfile:
         for entry in ortholog_entries:
             # ensure the gene is in the gene ids required and that there is an ortholog
-            if entry[1] in gene_ids and entry[4]:
+            if entry[1] in gene_ids and entry[4] and entry[1] not in entries_kept:
                 outfile.write("{0}\t{1}\n".format(entry[1], entry[4]))
+                entries_kept.append(entry[1])
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
