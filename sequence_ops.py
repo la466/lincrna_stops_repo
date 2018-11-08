@@ -274,7 +274,7 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
 
     features = gen.read_many_fields(input_file, "\t")
     # get the features labelled as stop codons
-    stop_codons = extract_stop_codon_features(features, input_list)
+    stop_codons = extract_stop_codon_features(features, input_list, filter_by_gene = filter_by_gene)
     cds_features_list = collections.defaultdict(lambda: [])
     # get a list of all the exon parts that contribute to the cds
     # [cds_features_list[feature[3]].append(feature) for feature in self.features if feature[-1] == "CDS" and feature[3] in self.ids]
@@ -306,7 +306,7 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
     return cds_features_list
 
 
-def extract_stop_codon_features(input_features, input_list):
+def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):
     """
     Get all the features that match stop codon
 
@@ -323,8 +323,13 @@ def extract_stop_codon_features(input_features, input_list):
 
     feature_list = collections.defaultdict(lambda: [])
     for feature in input_features:
-        if feature[-1] == "stop_codon" and feature[3] in input_list:
-            feature_list[feature[3]].append(feature)
+        if feature[-1] == "stop_codon":
+            # if filtering by gene, check that gene is in the input list, else
+            # check the transcript
+            if filter_by_gene and feature[6] in input_list:
+                feature_list[feature[3]].append(feature)
+            elif feature[3] in input_list:
+                feature_list[feature[3]].append(feature)
     return feature_list
 
 
@@ -353,6 +358,12 @@ def extract_transcript_features(features_list, id_list):
 def filter_one_transcript_per_gene(transcript_list):
     """
     If there is more than one transcript per gene, keep only the longest.
+
+    Args:
+        transcript_list (dict): dict of transcripts
+
+    Returns:
+        longest_transcripts (dict): dict containing the longest transcript per gene
     """
 
     print("Filtering to one transcript per gene...")

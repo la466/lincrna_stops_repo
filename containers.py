@@ -6,7 +6,7 @@ import os
 
 def extract_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_genome_file, orthologs_file, output_directory, clean_run = None):
 
-    # get a list of transcript features we want to keep
+    # # get a list of transcript features we want to keep
     transcript_ids = sequo.list_transcript_ids_from_features(gtf_file)
 
     human_dataset_name = "human"
