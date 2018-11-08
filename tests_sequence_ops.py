@@ -106,6 +106,21 @@ class Tests(unittest.TestCase):
         self.assertEqual(expected, observed)
         self.assertEqual(expected_entries, observed_entries)
 
+    def test_get_transcript_and_orthologs(self):
+        input_fasta1 = "test_data/sequence_ops/test_get_transcript_and_orthologs/input1.fasta"
+        input_fasta2 = "test_data/sequence_ops/test_get_transcript_and_orthologs/input2.fasta"
+        input_links = "test_data/sequence_ops/test_get_transcript_and_orthologs/input.bed"
+        expected_file = "test_data/sequence_ops/test_get_transcript_and_orthologs/expected.bed"
+        expected_entries = gen.read_many_fields(expected_file, "\t")
+        expected = collections.defaultdict(lambda: [[],{}])
+        for i in expected_entries:
+            id = i[0].split(":")[0]
+            expected[id][0].append(i[0].split(":")[1])
+            for k in i[1:]:
+                expected[id][1][k.split(":")[0]] = k.split(":")[1]
+        observed = get_transcript_and_orthologs(input_fasta1, input_fasta2, input_links)
+        self.assertEqual(expected, observed)
+
     def test_list_transcript_ids_from_features(self):
         input_file = "test_data/sequence_ops/test_list_transcript_ids_from_features/input.gtf"
         expected = ["ENST00000456328", "ENST00032323", "ENST0003246"]

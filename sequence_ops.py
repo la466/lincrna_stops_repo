@@ -514,6 +514,36 @@ def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
     return entries_kept
 
 
+def get_transcript_and_orthologs(input_file1, input_file2, ortholog_transcript_links):
+    """
+    Given the sequences for a genome and orthologous seqeunces, pair the sequences in a
+    dictionary to use elsewhere.
+
+    Args:
+        input_file1 (str): path to fasta containing first set of sequences
+        input_file2 (str): path to fasta containing second set of sequences
+        ortholog_transcript_links (str): path to file containing the links
+
+    Returns:
+        sequences (dict): dictionary containing the linked sequences.
+            dict[transcript_id] = [[genome1_seq], [..ortholog_seqs]]
+    """
+
+    # get the links between transcripts
+    links = collections.defaultdict(lambda: [])
+    [links[i[0]].append(i[1]) for i in gen.read_many_fields(ortholog_transcript_links, "\t")]
+    # read in the sequences
+    names, seqs = gen.read_fasta(input_file1)
+    ortholog_names, ortholog_seqs = gen.read_fasta(input_file2)
+    # now create the output linking the sequences
+    sequences = collections.defaultdict(lambda: [[],{}])
+    for transcript_id in links:
+        sequences[transcript_id][0].append(seqs[names.index(transcript_id)])
+        for i in links[transcript_id]:
+            sequences[transcript_id][1][i] = ortholog_seqs[ortholog_names.index(i)]
+    return sequences
+
+
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
     """
     Given a gtf file, return a list of unique transcript ids associated with

@@ -1,5 +1,6 @@
 import generic as gen
 import sequence_ops as sequo
+import conservation as cons
 import file_ops as fo
 import time
 import os
@@ -35,3 +36,15 @@ def extract_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_genome_
     orthologs_transcript_links_file = "{0}/genome_sequences/{1}.{2}.transcripts.ortholog_links.bed".format(output_directory, human_dataset_name, ortholog_dataset_name)
     if not os.path.isfile(orthologs_transcript_links_file) or clean_run:
         sequo.get_ortholog_transcript_pairings(human_filelist["unique_transcript_gene_list_file"], ortholog_filelist["unique_transcript_gene_list_file"], orthologous_pairs_file, ortholog.cds_fasta, orthologs_transcript_links_file)
+
+    # # check orthologs conservation
+    # check_conservation(human.cds_fasta, ortholog.cds_fasta, orthologs_transcript_links_file)
+
+
+
+def check_conservation(human_cds_fasta, ortholog_cds_fasta, ortholog_transcripts_links, output_directory, clean_run = None):
+
+    # first generate a dictionary containing each of the transcripts with the orthologous transcripts
+    transcripts_with_orthologs = sequo.get_transcript_and_orthologs(human_cds_fasta, ortholog_cds_fasta, ortholog_transcripts_links)
+
+    cons.get_conservation(transcripts_with_orthologs)
