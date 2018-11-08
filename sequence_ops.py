@@ -6,7 +6,7 @@ import os
 import collections
 
 
-def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, clean_run = None):
+def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None):
 
     # if we want a clean run, remove any previous output directory
     if clean_run:
@@ -26,11 +26,14 @@ def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output
     # filter the sequences for quality
     genome.quality_filter_sequences()
     # filter to one transcript per gene
-    genome.filter_one_transcript_per_gene()
+    if filter_one_per_gene:
+        genome.filter_one_transcript_per_gene()
+        # have to get the cds_fasta here for the next step
+        genome.cds_fasta = genome.filelist["unique_cds_fasta"]
     # get a list of genes from the cleaned transcripts
     genome.list_genes_from_transcripts()
 
-    return genome.filelist
+    return genome, genome.filelist
 
 
 class Genome_Functions(object):
@@ -115,11 +118,15 @@ class Genome_Functions(object):
     def list_genes_from_transcripts(self):
         """
         Get a list of transcripts with the associated genes
+
+        Args:
+            input_fasta (str): path to input fasta. Set here because we might not filter
+                before to one transcript per gene
         """
 
         unique_transcript_gene_list_file = "{0}/{1}.cds.genes.bed".format(self.dataset_output_directory, self.dataset_name)
         if not os.path.isfile(unique_transcript_gene_list_file) or self.clean_run:
-            get_clean_genes(self.unique_cds_fasta, self.full_cds_features_bed, unique_transcript_gene_list_file)
+            get_clean_genes(self.cds_fasta, self.full_cds_features_bed, unique_transcript_gene_list_file)
         self.unique_transcript_gene_list_file = unique_transcript_gene_list_file
         self.filelist["unique_transcript_gene_list_file"] = unique_transcript_gene_list_file
 
@@ -153,6 +160,7 @@ class Genome_Functions(object):
         if not os.path.isfile(quality_filtered_cds_fasta) or self.clean_run:
             quality_filter_cds_sequences(self.full_cds_fasta, quality_filtered_cds_fasta)
         self.quality_filtered_cds_fasta = quality_filtered_cds_fasta
+        self.cds_fasta = quality_filtered_cds_fasta
         self.filelist["quality_filtered_cds_fasta"] = quality_filtered_cds_fasta
 
 
@@ -437,6 +445,51 @@ def get_clean_genes(input_fasta, input_bed, output_bed):
         [outfile.write("{0}\t{1}\n".format(i, clean_genes[i])) for i in clean_genes]
 
 
+def get_ortholog_transcript_pairings(input_file1, input_file2, ortholog_pairs_file, ortholog_fasta, output_file):
+    """
+    Give two files containing transcript-gene pairings, link the transcripts in the first
+    file to the the transcripts in the second.
+
+    Args:
+        input_file1 (str): path to the first transcript-gene pairings file
+        input_file2 (str): path to the second transcript-gene pairings file
+        ortholog_pairs_file (str): path to the file containing the ensembl biomart ortholog pairings
+        ortholog_fasta (str): path to fasta file containing filtered orthlog seqs
+        output_file (str): path to output file
+    """
+
+    # get the names of the sequnces in the fasta
+    fasta_names = gen.read_fasta(ortholog_fasta)[0]
+    # read in the transcript-gene links
+    transcripts1 = gen.read_many_fields(input_file1, "\t")
+    transcripts2 = gen.read_many_fields(input_file2, "\t")
+    # get the list of genes that are queried
+    queried_genes = [i[1] for i in transcripts1]
+    # get the links between transcripts and genes
+    # for the first file get transcript-genes
+    transcript_gene_links1 = collections.defaultdict(lambda: [])
+    [transcript_gene_links1[i[0]].append(i[1]) for i in transcripts1]
+    # for the second file get gene-transcripts
+    transcript_gene_links2 = collections.defaultdict(lambda: [])
+    [transcript_gene_links2[i[1]].append(i[0]) for i in transcripts2]
+    # read in the ortholog pairings
+    ortholog_pairings = collections.defaultdict(lambda: [])
+    [ortholog_pairings[i[0]].append(i[1]) for i in gen.read_many_fields(ortholog_pairs_file, "\t") if i[0] in queried_genes]
+    # now links them together
+    transcript_links = collections.defaultdict(lambda: [])
+    for transcript_id in transcript_gene_links1:
+        genes = transcript_gene_links1[transcript_id]
+        for gene in genes:
+            orthologs = ortholog_pairings[gene]
+            for ortholog in orthologs:
+                if transcript_gene_links2[ortholog]:
+                    [transcript_links[transcript_id].append(i) for i in transcript_gene_links2[ortholog] if i in fasta_names]
+    # write to output file
+    with open(output_file, "w") as outfile:
+        for transcript_id in transcript_links:
+            [outfile.write("{0}\t{1}\n".format(transcript_id, j)) for j in transcript_links[transcript_id]]
+
+
 def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
     """
     Given a list of genes, get the ortholog from a file only if it exists
@@ -458,6 +511,7 @@ def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
             if entry[1] in gene_ids and entry[4] and entry[1] not in entries_kept:
                 outfile.write("{0}\t{1}\n".format(entry[1], entry[4]))
                 entries_kept.append(entry[1])
+    return entries_kept
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):

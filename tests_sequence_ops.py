@@ -80,16 +80,31 @@ class Tests(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_get_ortholog_transcript_pairings(self):
+        input_file1 = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/input1.bed"
+        input_file2 = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/input2.bed"
+        input_pairs_file = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/input_pairs.bed"
+        input_fasta = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/input.fasta"
+        expected_file = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/expected.bed"
+        observed_file = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/observed.bed"
+        gen.remove_file(observed_file)
+        get_ortholog_transcript_pairings(input_file1, input_file2, input_pairs_file, input_fasta, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_get_orthologous_pairs(self):
         input_bed_file = "test_data/sequence_ops/test_get_orthologous_pairs/input.bed"
         input_pairs_file = "test_data/sequence_ops/test_get_orthologous_pairs/input.csv"
         expected_file = "test_data/sequence_ops/test_get_orthologous_pairs/expected.bed"
         observed_file = "test_data/sequence_ops/test_get_orthologous_pairs/observed.bed"
         gen.remove_file(observed_file)
-        get_orthologous_pairs(input_bed_file, input_pairs_file, observed_file)
+        observed_entries = get_orthologous_pairs(input_bed_file, input_pairs_file, observed_file)
+        expected_entries = ["ENSG0001", "ENSG0004", "ENSG0006"]
         expected = gen.read_many_fields(expected_file, "\t")
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
+        self.assertEqual(expected_entries, observed_entries)
 
     def test_list_transcript_ids_from_features(self):
         input_file = "test_data/sequence_ops/test_list_transcript_ids_from_features/input.gtf"
