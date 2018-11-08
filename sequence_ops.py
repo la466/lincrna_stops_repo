@@ -6,7 +6,7 @@ import os
 import collections
 
 
-def generate_genome_dataset(gtf_file, genome_fasta, id_list, dataset_name, dataset_output_directory, clean_run = None):
+def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, clean_run = None):
 
     # if we want a clean run, remove any previous output directory
     if clean_run:
@@ -16,11 +16,11 @@ def generate_genome_dataset(gtf_file, genome_fasta, id_list, dataset_name, datas
     # initalise genome object
     genome = Genome_Functions(gtf_file, genome_fasta, dataset_name, dataset_output_directory, clean_run)
     # get the genome features
-    genome.generate_genome_features(id_list)
+    genome.generate_genome_features(id_list, filter_by_transcript, filter_by_gene)
     # load the genome dataset
     genome.load_genome_dataset(id_list)
     # get the cds features
-    genome.get_cds_features()
+    genome.get_cds_features(filter_by_gene)
     # now build the cds sequences
     genome.build_coding_sequences()
     # filter the sequences for quality
@@ -31,7 +31,6 @@ def generate_genome_dataset(gtf_file, genome_fasta, id_list, dataset_name, datas
     genome.list_genes_from_transcripts()
 
     return genome.filelist
-
 
 
 class Genome_Functions(object):
@@ -79,7 +78,7 @@ class Genome_Functions(object):
         self.filelist["unique_cds_fasta"] = unique_cds_fasta
 
 
-    def get_cds_features(self):
+    def get_cds_features(self, filter_by_gene = None):
         """
         Get a list of CDS features from the feature list
         """
@@ -87,26 +86,28 @@ class Genome_Functions(object):
         # get the CDS features
         full_cds_features_bed = "{0}/{1}.cds.full_features.bed".format(self.dataset_output_directory, self.dataset_name)
         if not os.path.isfile(full_cds_features_bed) or self.clean_run:
-            cds_features = extract_cds_features(self.dataset_features_bed, self.ids)
+            cds_features = extract_cds_features(self.dataset_features_bed, self.ids, filter_by_gene = filter_by_gene)
             # write the cds_features to an output_file
             fo.write_features_to_bed(cds_features, full_cds_features_bed)
         self.full_cds_features_bed = full_cds_features_bed
         self.filelist["full_cds_features_bed"] = full_cds_features_bed
 
 
-    def generate_genome_features(self, input_list = None):
+    def generate_genome_features(self, input_list = None, filter_by_transcript = None, filter_by_gene = None):
         """
         Get a list of genome features. If wanting to get features with specific IDs, provide
         those in a list.
 
         Args:
-            input_list (str): if set, list of ids to filter features by
+            input_list (list): if set, list of ids to filter features by
+            filter_by_transcript (bool): if true, filter by transcript id
+            filter_by_gene (bool): if true, filter by gene id
         """
 
         dataset_features_bed = "{0}/{1}.{2}_features_dataset.bed".format(self.dataset_output_directory, self.gtf_file.split("/")[-1], self.dataset_name)
         # only run if the file doesn't exist or a clean run
         if not os.path.isfile(dataset_features_bed) or self.clean_run:
-            generate_genome_features_dataset(self.dataset_name, self.gtf_file, dataset_features_bed, input_list = input_list)
+            generate_genome_features_dataset(self.dataset_name, self.gtf_file, dataset_features_bed, input_list = input_list, filter_by_transcript = filter_by_transcript, filter_by_gene = filter_by_gene)
         self.dataset_features_bed = dataset_features_bed
         self.filelist["dataset_features_bed"] = dataset_features_bed
 
@@ -155,8 +156,6 @@ class Genome_Functions(object):
         self.filelist["quality_filtered_cds_fasta"] = quality_filtered_cds_fasta
 
 
-
-
 def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
     """
     Build CDS sequences from the list of features.
@@ -201,15 +200,15 @@ def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
     gen.remove_directory(temp_dir)
 
 
-def extract_gtf_features(input_list, gtf_file_path, filter_transcripts = True):
+def extract_gtf_features(input_list, gtf_file_path, filter_by_transcript = None, filter_by_gene = None):
     """
     Given a .gtf file, filter the entries based on an input list
 
     Args:
         input_list (list): list containing ids for which to filter from
         gtf_file_path (str): path to gtf file
-        filter_transcripts (bool): if true, filter transcripts leaving only those
-            in the input_list
+        filter_by_transcript (bool): if true, filter by transcript id
+        filter_by_gene (bool): if true, filter by gene id
 
     Returns:
         outputs (list): list containing features that passed the feature filtering
@@ -228,42 +227,42 @@ def extract_gtf_features(input_list, gtf_file_path, filter_transcripts = True):
             entry_info = entry[8]
             # look for transcript id
             transcript_search_results = re.search(transcript_id_pattern, entry_info)
+            gene_search_results = re.search(gene_id_pattern, entry_info)
             try:
+                # try to get transcript id and gene id
                 current_transcript_id = transcript_search_results.group(0)
+                current_gene_id = gene_search_results.group(0)
                 # if filtering by ids, do that here
                 passed_filter = True
-                if filter_transcripts:
+                if filter_by_transcript:
                     passed_filter = current_transcript_id in input_list
+                if filter_by_gene:
+                    passed_filter = current_gene_id in input_list
                 # if it passes the filter
                 if passed_filter:
-                    # look for gene id
-                    gene_search_results = re.search(gene_id_pattern, entry_info)
+                    exon_number_search_results = re.search(exon_number_pattern, entry_info)
                     try:
-                        current_gene_id = gene_search_results.group(0)
-                    except AttributeError:
-                        pass
-                    exon_number_results = re.search(exon_number_pattern, entry_info)
-                    # try to get the exon number
-                    try:
-                        exon_number = exon_number_results.group(1)
+                        # try to get the exon number
+                        exon_number = exon_number_search_results.group(1)
                     except AttributeError:
                         exon_number = "nan"
                     # minus 1 for the start because gtf are in base 0, but want base 1
                     outputs.append([entry[0], str(int(entry[3])-1), entry[4], current_transcript_id, exon_number, entry[6], current_gene_id, entry[2]])
-            # failed to find ID
+            # failed to find transcript or gene id
             except AttributeError:
                 pass
 
     return outputs
 
 
-def extract_cds_features(input_file, input_list):
+def extract_cds_features(input_file, input_list, filter_by_gene = None):
     """
     Get all the CDS features from a file
 
     Args:
         input_file (str): path to file containing features
         input_list (list): list containing ids to keep
+        filter_by_gene (bool): if true, match gene ids rather than transcript ids
 
     Returns:
         cds_features_list (dict): dict containing cds features, sorted according to
@@ -272,6 +271,7 @@ def extract_cds_features(input_file, input_list):
 
     print("Getting cds features...")
 
+
     features = gen.read_many_fields(input_file, "\t")
     # get the features labelled as stop codons
     stop_codons = extract_stop_codon_features(features, input_list)
@@ -279,8 +279,13 @@ def extract_cds_features(input_file, input_list):
     # get a list of all the exon parts that contribute to the cds
     # [cds_features_list[feature[3]].append(feature) for feature in self.features if feature[-1] == "CDS" and feature[3] in self.ids]
     for feature in features:
-        if feature[-1] == "CDS" and feature[3] in input_list:
-            cds_features_list[feature[3]].append(feature)
+        if feature[-1] == "CDS":
+            # if filtering by gene, check that gene is in the input list, else
+            # check the transcript
+            if filter_by_gene and feature[6] in input_list:
+                cds_features_list[feature[3]].append(feature)
+            elif feature[3] in input_list:
+                cds_features_list[feature[3]].append(feature)
 
     for id in cds_features_list:
         # get the stop codon coordinates if they exist
@@ -368,7 +373,7 @@ def filter_one_transcript_per_gene(transcript_list):
     return longest_transcripts
 
 
-def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_features_output_bed, input_list = None, filter_transcripts = True):
+def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_features_output_bed, input_list = None, filter_by_transcript = None, filter_by_gene = None):
     """
     Create a dataset containing all the relevant genome features from the
     given list.
@@ -378,24 +383,24 @@ def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_fea
         dataset_gtf_file (str): path to genome gtf file
         dataset_features_output_bed (str): path to bed file that contains the extacted features
         input_list (list): if set, use as a list to filter transcripts from
-        filter_transcripts (bool): if true, filter transcripts from list
+        filter_by_transcript (bool): if true, filter by transcript id
+        filter_by_gene (bool): if true, filter by gene id
     """
 
     print("Generating genome dataset...")
 
-    if filter_transcripts:
-        if input_list:
-            input_ids = input_list
-        else:
+    # make sure that if we want filtering, we have the ids
+    if filter_by_transcript or filter_by_gene:
+        if not input_list:
             print("Input list required...")
             raise Exception
-    else:
-        input_ids = "foo"
+    if not input_list:
+        input_list = ["foo"]
 
     # do the filtering
-    args = [dataset_gtf_file]
+    args = [dataset_gtf_file, filter_by_transcript, filter_by_gene]
     # reduce the number of workers here otherwise it doesnt like it
-    features = gen.run_parallel_function(input_ids, args, extract_gtf_features, parallel=True, workers = int(os.cpu_count()/2) - 1)
+    features = gen.run_parallel_function(input_list, args, extract_gtf_features, parallel = True, workers = int(os.cpu_count() / 2) - 1)
     # output the features to the bed file
     with open(dataset_features_output_bed, "w") as outfile:
         outfile.write("# {0} lines in {1}\n".format(dataset_name, dataset_gtf_file.split("/")[-1]))
@@ -419,6 +424,29 @@ def get_clean_genes(input_fasta, input_bed, output_bed):
     clean_genes = {i[3].split(".")[0]: i[6] for i in entries if i[3].split(".")[0] in ids and i[3].split(".")[0]}
     with open(output_bed, "w") as outfile:
         [outfile.write("{0}\t{1}\n".format(i, clean_genes[i])) for i in clean_genes]
+
+
+def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
+    """
+    Given a list of genes, get the ortholog from a file only if it exists
+
+    Args:
+        input_bed (str): path to file containing transcript and gene id links
+        input_pairs_file (str): path to file containing specific ortholog links
+        output_bed (str): path to output file
+    """
+
+    print("Filtering orthologs...")
+
+    gene_ids = [i[1] for i in gen.read_many_fields(input_bed, "\t")]
+    ortholog_entries = gen.read_many_fields(input_pairs_file, ",")
+    entries_kept = []
+    with open(output_bed, "w") as outfile:
+        for entry in ortholog_entries:
+            # ensure the gene is in the gene ids required and that there is an ortholog
+            if entry[1] in gene_ids and entry[4] and entry[1] not in entries_kept:
+                outfile.write("{0}\t{1}\n".format(entry[1], entry[4]))
+                entries_kept.append(entry[1])
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
@@ -519,30 +547,3 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
                 pass_count += 1
 
     print("{0} sequences after filtering...".format(pass_count))
-
-
-
-
-
-
-def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
-    """
-    Given a list of genes, get the ortholog from a file only if it exists
-
-    Args:
-        input_bed (str): path to file containing transcript and gene id links
-        input_pairs_file (str): path to file containing specific ortholog links
-        output_bed (str): path to output file
-    """
-
-    print("Filtering orthologs...")
-
-    gene_ids = [i[1] for i in gen.read_many_fields(input_bed, "\t")]
-    ortholog_entries = gen.read_many_fields(input_pairs_file, ",")
-    entries_kept = []
-    with open(output_bed, "w") as outfile:
-        for entry in ortholog_entries:
-            # ensure the gene is in the gene ids required and that there is an ortholog
-            if entry[1] in gene_ids and entry[4] and entry[1] not in entries_kept:
-                outfile.write("{0}\t{1}\n".format(entry[1], entry[4]))
-                entries_kept.append(entry[1])

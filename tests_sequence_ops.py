@@ -26,12 +26,20 @@ class Tests(unittest.TestCase):
         observed = extract_cds_features(input_file, input_list)
         self.assertEqual(expected, observed)
 
-    def test_extract_gtf_features(self):
-        input_file = "test_data/sequence_ops/test_extract_gtf_features/input.gtf"
-        expected_file = "test_data/sequence_ops/test_extract_gtf_features/expected.bed"
+    def test_extract_gtf_features_gene_id(self):
+        input_file = "test_data/sequence_ops/test_extract_gtf_features_gene_id/input.gtf"
+        expected_file = "test_data/sequence_ops/test_extract_gtf_features_gene_id/expected.bed"
+        input_list = ["ENSG00000223972", "ENSG00000223973", "ENSG00000223974"]
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = extract_gtf_features(input_list, input_file, filter_by_gene = True)
+        self.assertEqual(expected, observed)
+
+    def test_extract_gtf_features_transcript_id(self):
+        input_file = "test_data/sequence_ops/test_extract_gtf_features_transcript_id/input.gtf"
+        expected_file = "test_data/sequence_ops/test_extract_gtf_features_transcript_id/expected.bed"
         input_list = ["ENST00000456328", "ENST0003246"]
         expected = gen.read_many_fields(expected_file, "\t")
-        observed = extract_gtf_features(input_list, input_file, filter_transcripts = True)
+        observed = extract_gtf_features(input_list, input_file, filter_by_transcript = True)
         self.assertEqual(expected, observed)
 
     def test_extract_stop_codon_features(self):

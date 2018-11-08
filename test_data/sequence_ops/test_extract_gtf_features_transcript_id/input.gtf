@@ -8,3 +8,4 @@
 1	havana	exon	13221	14409	.	+	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00000456328"; exon_number "2"; gene_biotype "protein_coding";
 3	ensembl	CDS	6473	6501	.	-	.	gene_id "ENSG00000223972"; gene_version "4"; transcript_id "ENST00032323"; exon_number "3"; gene_biotype "protein_coding";
 1	ensembl	CDS	6383	6456	.	+	.	gene_id "ENSG000003"; gene_version "4"; transcript_id "ENST0003246"; gene_biotype "protein_coding";  exon_number "2";
+1	ensembl	CDS	100	200	.	+	.	gene_version "4"; transcript_id "ENST0003246"; gene_biotype "protein_coding";  exon_number "2";
