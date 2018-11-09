@@ -7,12 +7,12 @@ import random
 import re
 from useful_motif_sets import codon_map, stops
 from Bio.Seq import Seq
-# from Bio import SeqIO
+from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from Bio.Align.Applications import MuscleCommandline
-# from Bio.SeqRecord import SeqRecord
-# from Bio.Align import MultipleSeqAlignment
-# from Bio import AlignIO
+from Bio.SeqRecord import SeqRecord
+from Bio.Align import MultipleSeqAlignment
+from Bio import AlignIO
 
 
 def get_conservation(transcript_list):
@@ -23,14 +23,19 @@ def get_conservation(transcript_list):
         transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
     """
 
-    for transcript_id in transcript_list:
-        check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1])
+    for i, transcript_id in enumerate(transcript_list):
+        if i < 1:
+            check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1])
 
 
 def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
     """
     Check the conservation of a sequence.
     """
+
+    # create temp files for running alignment
+    temp_dir = "temp_alignment"
+    gen.create_output_directories(temp_dir)
 
     # setup the muscle alignment
     muscle_exe = "../tools/muscle3.8.31_i86darwin64"
@@ -50,11 +55,12 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
         # extract the alignments
         alignment_functions.extract_alignments()
         # now we want to get the nucleotide sequences for the alignments
-        alignment_functions.revert_alignment_to_nucleotides()
+        aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [cds_seq[0], transcript_cds_orthologs[ortholog_id]])
         # clean up the files
         alignment_functions.cleanup()
+        # we have the aligned sequences
 
-
+    
 
 
 class Alignment_Functions(object):
@@ -90,34 +96,33 @@ class Alignment_Functions(object):
         gen.remove_file(self.alignment_output_file)
 
 
-    def extract_alignments(self, input_file = None):
+    def extract_alignments(self, alignment_output_file = None):
         """
         Extract the alignments from a muscle output file
 
         Args:
             input_file (str): if set, the path to and alignment output file
         """
+
         # set the input file if not given
-        if not input_file:
-            input_file = self.alignment_input_file
-        alignments = extract_alignments(input_file)
+        if not alignment_output_file:
+            alignment_output_file = self.alignment_output_file
+        alignments = extract_alignments(alignment_output_file)
         self.protein_alignments = alignments
 
 
-    def revert_alignment_to_nucleotides(self, input_seq = None, input_alignment = None):
+    def revert_alignment_to_nucleotides(self, input_seqs, input_alignments = None):
         """
         Revert the aligned protein sequences back to nucleotides
 
         Args:
-            input_seqs (list): list containing the two nucleotide sequences
             input_alignments (list): list containing the two protein alignments
         """
 
-        if not input_seqs:
-            input_seqs = self.input_seqs
         if not input_alignments:
             input_alignments = self.protein_alignments
         aligned_seqs = [revert_alignment_to_nucleotides(seq, input_alignments[i]) for i, seq in enumerate(input_seqs)]
+        self.aligned_seqs = aligned_seqs
         return aligned_seqs
 
 
@@ -184,6 +189,7 @@ def extract_alignments(input_file):
 
     return alignments
 
+
 def revert_alignment_to_nucleotides(input_seq, input_alignment):
     """
     Given a protein alignment, convert the alignment back to the nucleotide
@@ -200,12 +206,13 @@ def revert_alignment_to_nucleotides(input_seq, input_alignment):
     # create a list to hold the aligned sequence
     aligned_sequence = []
     sequence_position = 0
+
     for i, amino_acid in enumerate(input_alignment_items):
         if amino_acid == "-":
             aligned_sequence.append("---")
         else:
             codon = "".join([input_nts[sequence_position], input_nts[sequence_position+1], input_nts[sequence_position+2]])
-            if codon in stops or  amino_acid != codon_map[codon]:
+            if codon in stops or amino_acid != codon_map[codon]:
                 print("There is an error in the alignment...")
                 print(input_seq)
                 print(input_alignment)
