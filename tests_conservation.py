@@ -41,3 +41,13 @@ class Tests(unittest.TestCase):
         for input in inputs:
             observed.append(extract_alignments(input))
         self.assertEqual(expected, observed)
+
+    def test_revert_alignment_to_nucleotides(self):
+        input_seqs_file = "test_data/conservation/test_revert_alignment_to_nucleotides/input_seqs.fasta"
+        input_alignments_file = "test_data/conservation/test_revert_alignment_to_nucleotides/input_protein_alignment.fasta"
+        expected_file = "test_data/conservation/test_revert_alignment_to_nucleotides/expected.fasta"
+        expected = gen.read_fasta(expected_file)[1]
+        input_seqs = gen.read_fasta(input_seqs_file)[1]
+        input_alignments = gen.read_fasta(input_alignments_file)[1]
+        observed = [revert_alignment_to_nucleotides(seq, input_alignments[i]) for i, seq in enumerate(input_seqs)]
+        self.assertEqual(expected, observed)
