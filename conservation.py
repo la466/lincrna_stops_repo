@@ -34,6 +34,7 @@ def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_
     gen.create_output_directories(temp_dir)
     # get a list of the transcript ids
     transcript_ids = list(transcript_list.keys())
+    transcript_ids = transcript_ids[:100]
     # output_filelist = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
     outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check)
     # remove the old output file if there is one
@@ -85,6 +86,7 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_di
         transcript_cds_orthologs (dict): dict containing the sequences of orthologous sequences
         max_dS_threshold (float): if set, the dS threshold you wish alignments to be below
         max_omega_threshold (float): if set, the omega threshold you wish alignments to be below
+
     Returns:
         best_ortholog_id (str): id of the ortholog that gives the most conserved alignment
     """
@@ -103,7 +105,7 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_di
     ortholog_ids = list(transcript_cds_orthologs.keys())
     orthologs_iupac = [Seq(ortholog) for ortholog in transcript_cds_orthologs.values()]
     ortholog_protein_seqs = [seq.translate() for seq in orthologs_iupac]
-    # set up lists to hold the transcript_ds scores and omega scores
+    # set up lists to hold the transcript dS scores and omega scores
     dS_scores = []
     omega_scores = []
     # for each of the ortholog sequences
