@@ -22,8 +22,8 @@ def main():
     # get the sequences
     if extract_sequences:
         # input_file1 = gtf genome 1, input_file2 = genome fasta 1, input_file3 = gtf genome 2, input_file4 = genome fasta 2, input_file5 = orthlogs file
-        # cont.extract_sequences(input_file1, input_file2, input_file3, input_file4, input_file5, output_directory, clean_run = clean_run)
-        cont.check_conservation(input_file1, input_file2, input_file3, output_directory, clean_run = clean_run)
+        cont.extract_clean_sequences(input_file1, input_file2, input_file3, input_file4, input_file5, output_directory, clean_run = clean_run)
+        # cont.check_conservation(input_file1, input_file2, input_file3, output_directory, clean_run = clean_run)
 
 
 if __name__ == "__main__":
