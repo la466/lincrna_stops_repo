@@ -46,7 +46,7 @@ def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_g
 
 def check_conservation(human_cds_fasta, ortholog_cds_fasta, ortholog_transcripts_links_file, output_file, max_dS_threshold = None, max_omega_threshold = None):
     """
-    Outer wrapper to check conservation between cds and orthologous cds. Only keep transcripts
+    Wrapper to check conservation between cds and orthologous cds. Only keep transcripts
     that have dS less than max_dS_threshold and omega less than max_omega_threshold.
 
     Args:
