@@ -1,18 +1,19 @@
 import generic as gen
 import file_ops as fo
+import sequence_ops as sequo
 import time
 import os
 import collections
 import random
 import re
 from useful_motif_sets import codon_map, stops
+from Bio.Phylo.PAML import codeml
 from Bio.Seq import Seq
 from Bio import SeqIO
 from Bio.Alphabet import IUPAC
 from Bio.Align.Applications import MuscleCommandline
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
-from Bio import AlignIO
 
 
 def get_conservation(transcript_list):
@@ -23,9 +24,14 @@ def get_conservation(transcript_list):
         transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
     """
 
-    for i, transcript_id in enumerate(transcript_list):
-        if i < 1:
-            check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1])
+    output_file = "clean_run/genome_sequences/human.macaque.conservation_filtered_ortholog_ids.bed"
+    with open(output_file, "w") as outfile:
+        for i, transcript_id in enumerate(transcript_list):
+            if i % 100 == 0:
+                print("{0}/{1}".format(i+1, len(transcript_list)))
+            ortholog_id = check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1])
+            if ortholog_id:
+                outfile.write("{0}\t{1}\n".format(transcript_id, ortholog_id))
 
 
 def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
@@ -34,7 +40,7 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
     """
 
     # create temp files for running alignment
-    temp_dir = "temp_alignment"
+    temp_dir = "temp_alignments"
     gen.create_output_directories(temp_dir)
 
     # setup the muscle alignment
@@ -44,10 +50,12 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
     # convert the sequences to protein sequence
     cds_iupac = Seq(cds_seq[0], IUPAC.unambiguous_dna)
     cds_protein_seq = cds_iupac.translate()
-    ortholog_ids = transcript_cds_orthologs.keys()
+    ortholog_ids = list(transcript_cds_orthologs.keys())
     orthologs_iupac = [Seq(ortholog) for ortholog in transcript_cds_orthologs.values()]
     ortholog_protein_seqs = [seq.translate() for seq in orthologs_iupac]
-
+    # set up lists to hold the transcript_ds scores and omega scores
+    dS_scores = []
+    omega_scores = []
     # for each of the ortholog sequences
     for i, ortholog_id in enumerate(ortholog_ids):
         # align the sequences
@@ -59,8 +67,30 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
         # clean up the files
         alignment_functions.cleanup()
         # we have the aligned sequences
+        #write the nucleotide alignment to a phylip file
+        aligned_sequences_iupac = [Seq("".join(i),IUPAC.unambiguous_dna) for i in aligned_sequences]
+        alignment = MultipleSeqAlignment([SeqRecord(aligned_sequences_iupac[0], id = "seq"), SeqRecord(aligned_sequences_iupac[1], id = "orth_seq")])
+        temp_phylip_file = "{0}/{1}_{2}.phy".format(temp_dir, transcript_id, ortholog_id)
+        temp_output_file = "{0}/phy_{1}_{2}.out".format(temp_dir, transcript_id, ortholog_id)
+        fo.write_to_phylip(alignment, temp_phylip_file)
+        # # run paml on sequences
+        paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file)
+        # run codeml
+        codeml_output = paml.run_codeml()
+        # cleanup the outputs it may generate
+        paml.cleanup()
+        dS_scores.append(codeml_output["NSsites"][0]["parameters"]["dS"])
+        omega_scores.append(codeml_output["NSsites"][0]["parameters"]["omega"])
 
-    
+    min_omega = min(omega_scores)
+    # check that there is an ortholog with omega < 0.5
+    if min_omega >= 0.5:
+        return None
+    else:
+        min_dS = min(dS_scores)
+        # get the ortholog with the minimum dS Score
+        return ortholog_ids[dS_scores.index(min_dS)]
+
 
 
 class Alignment_Functions(object):

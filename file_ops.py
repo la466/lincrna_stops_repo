@@ -3,6 +3,8 @@ import ops
 import collections
 import os
 import path
+from Bio import AlignIO
+
 
 def build_seqs_from_exons_fasta(input_fasta, output_fasta):
     """
@@ -207,3 +209,14 @@ def write_features_to_bed(feature_list, output_file):
                 item[3] = "{0}.{1}".format(item[3], item[4])
                 item[4] = "."
                 outfile.write("{0}\n".format("\t".join(gen.stringify(item))))
+
+
+def write_to_phylip(alignment, output_file = None):
+    """
+    Write alignment to .phylip file
+    """
+
+    if not output_file:
+        print("Please provide output file.")
+        raise Exception
+    AlignIO.write(alignment, output_file, "phylip-sequential")

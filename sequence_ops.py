@@ -4,6 +4,8 @@ from regex_patterns import exon_number_pattern, gene_id_pattern, transcript_id_p
 import re
 import os
 import collections
+from Bio.Phylo.PAML import codeml
+
 
 
 def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None):
@@ -162,6 +164,67 @@ class Genome_Functions(object):
         self.quality_filtered_cds_fasta = quality_filtered_cds_fasta
         self.cds_fasta = quality_filtered_cds_fasta
         self.filelist["quality_filtered_cds_fasta"] = quality_filtered_cds_fasta
+
+
+class PAML_Functions(object):
+
+    def __init__(self, input_file = None, output_file = None, tree_file = None):
+        self.input_file = input_file
+        self.output_file = output_file
+        self.tree_file = tree_file
+
+    def cleanup(self):
+        """
+        Clean up any output files
+        """
+
+        cwd = os.getcwd()
+        output_files = ["2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "codeml.ctl", "lnf", "rst", "rst1", "rub"]
+        output_files = ["{0}/{1}".format(cwd, i) for i in output_files]
+        [gen.remove_file(i) for i in output_files]
+
+
+    def generate_tree_file(self):
+        """
+        Generate a simple tree file for use with Biopython codeml wrapper
+        """
+
+        temp_dir = "temp_files"
+        gen.create_output_directories(temp_dir)
+        tree_file = "{0}/temp_tree.tree".format(temp_dir)
+        with open(tree_file, "w") as outfile:
+            outfile.write("2 1\n(1,2);")
+        self.tree_file = tree_file
+
+
+    def run_codeml(self, input_file = None, output_file = None, tree_file = None, command = None, verbose = False):
+        """
+        Run Biopython codeml.
+
+        Args:
+            input_file (str): if set, use specified input file
+            output_file (str): if set, use specified output file
+            tree_file (str): if set, use specified tree file
+            command (str): if set, use the given command
+            verbose (bool): if set, print output to terminal
+        """
+
+        # create a tree file if not given
+        if not tree_file:
+            self.generate_tree_file()
+
+        if not input_file:
+            input_file = self.input_file
+        if not output_file:
+            output_file = self.output_file
+        # set up codeml
+        cml = codeml.Codeml(alignment = input_file, out_file = output_file, tree = self.tree_file)
+        cml.set_options(seqtype = 1, runmode = 0, model = 0, NSsites = [])
+        if command:
+            cml_dict = cml.run(command = command)
+        else:
+            cml_dict = cml.run()
+        return cml_dict
 
 
 def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
