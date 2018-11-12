@@ -44,7 +44,7 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
     gen.create_output_directories(temp_dir)
 
     # setup the muscle alignment
-    muscle_exe = "../tools/muscle3.8.31_i86darwin64"
+    muscle_exe = "../tools/muscle3.8.31_i86linux64"
     alignment_functions = Alignment_Functions(muscle_exe)
 
     # convert the sequences to protein sequence
@@ -83,6 +83,8 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
         omega_scores.append(codeml_output["NSsites"][0]["parameters"]["omega"])
 
     min_omega = min(omega_scores)
+    # remove the temp dir
+    gen.remove_directory(temp_dir)
     # check that there is an ortholog with omega < 0.5
     if min_omega >= 0.5:
         return None
