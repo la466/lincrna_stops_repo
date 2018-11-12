@@ -6,6 +6,7 @@ import os
 import collections
 import random
 import re
+import sys
 from useful_motif_sets import codon_map, stops
 from Bio.Phylo.PAML import codeml
 from Bio.Seq import Seq
@@ -16,35 +17,82 @@ from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 
 
-def get_conservation(transcript_list):
+def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_omega_threshold = None):
     """
     Get the conversation for a list of sequences and only keep those that pass
 
     Args:
         transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
+        output_file (str): path to output file
+        max_dS_threshold (float): if set, pass in the dS threshold you wish alignments to be below
+        max_omega_threshold (float): if set, pass in the omega threshold you wish alignments to be below
     """
 
-    output_file = "clean_run/genome_sequences/human.macaque.conservation_filtered_ortholog_ids.bed"
-    with open(output_file, "w") as outfile:
-        for i, transcript_id in enumerate(transcript_list):
-            if i % 100 == 0:
-                print("{0}/{1}".format(i+1, len(transcript_list)))
-            ortholog_id = check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1])
-            if ortholog_id:
-                outfile.write("{0}\t{1}\n".format(transcript_id, ortholog_id))
+    temp_dir = "temp_conservation_files"
+    gen.create_output_directories(temp_dir)
+    # get a list of the transcript ids
+    transcript_ids = list(transcript_list.keys())
+    # output_filelist = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
+    outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check)
+    # remove the old output file if there is one
+    gen.remove_file(output_file)
+    # now concat the output files
+    args = ["cat"]
+    [args.append(i) for i in outputs]
+    gen.run_process(args, file_for_output = output_file)
+    gen.remove_directory(temp_dir)
 
 
-def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
+def run_conservation_check(input_list, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir):
+    """
+    Wrapper to run the conservation check in parallel
+
+    Args:
+        input_list (list): list of transcript ids to iterate over
+        transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
+        output_file (str): path to output file
+        max_dS_threshold (float): if set, pass in the dS threshold you wish alignments to be below
+        max_omega_threshold (float): if set, pass in the omega threshold you wish alignments to be below
+    """
+    # create a list to keep temporary outputs
+    temp_filelist = []
+    temp_instance_dir = "temp_codeml_dir.{0}".format(random.random())
+    gen.create_output_directories(temp_instance_dir)
+
+    if input_list:
+        temp_file = "{0}/best_ortholog_match.{1}.bed".format(temp_dir, random.random())
+        temp_filelist.append(temp_file)
+        with open(temp_file, "w") as outfile:
+            # get best ortholog for each transcript
+            for i, transcript_id in enumerate(input_list):
+                print("{0}/{1}".format(i+1, len(input_list)))
+                ortholog_id = check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1], temp_instance_dir,  max_dS_threshold = max_dS_threshold, max_omega_threshold = max_omega_threshold)
+                if ortholog_id:
+                    outfile.write("{0}\t{1}\n".format(transcript_id, ortholog_id))
+    gen.remove_directory(temp_instance_dir)
+    return temp_filelist
+
+
+def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_dir, max_dS_threshold = None, max_omega_threshold = None):
     """
     Check the conservation of a sequence.
+
+    Args:
+        transcript_id (str): id of the transcript in question
+        cds_seq (str): nucleotide sequence of the transcript
+        transcript_cds_orthologs (dict): dict containing the sequences of orthologous sequences
+        max_dS_threshold (float): if set, the dS threshold you wish alignments to be below
+        max_omega_threshold (float): if set, the omega threshold you wish alignments to be below
+    Returns:
+        best_ortholog_id (str): id of the ortholog that gives the most conserved alignment
     """
 
-    # create temp files for running alignment
-    temp_dir = "temp_alignments"
-    gen.create_output_directories(temp_dir)
+    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
+    if not os.path.isfile(muscle_exe):
+        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
+        raise Exception
 
     # setup the muscle alignment
-    muscle_exe = "../tools/muscle3.8.31_i86linux64"
     alignment_functions = Alignment_Functions(muscle_exe)
 
     # convert the sequences to protein sequence
@@ -74,24 +122,26 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs):
         temp_output_file = "{0}/phy_{1}_{2}.out".format(temp_dir, transcript_id, ortholog_id)
         fo.write_to_phylip(alignment, temp_phylip_file)
         # # run paml on sequences
-        paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file)
+        paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file, working_dir = temp_dir)
         # run codeml
         codeml_output = paml.run_codeml()
-        # cleanup the outputs it may generate
-        paml.cleanup()
         dS_scores.append(codeml_output["NSsites"][0]["parameters"]["dS"])
         omega_scores.append(codeml_output["NSsites"][0]["parameters"]["omega"])
 
+    # get the minimum dS and omega scores
+    min_dS = min(dS_scores)
     min_omega = min(omega_scores)
-    # remove the temp dir
-    gen.remove_directory(temp_dir)
+
+    # get the alignment with the min dS
+    # do it this way so that if you dont have the filters, you just keep the most conserved
+    best_ortholog_id = ortholog_ids[dS_scores.index(min_dS)]
     # check that there is an ortholog with omega < 0.5
-    if min_omega >= 0.5:
-        return None
-    else:
-        min_dS = min(dS_scores)
-        # get the ortholog with the minimum dS Score
-        return ortholog_ids[dS_scores.index(min_dS)]
+    if min_omega >= max_omega_threshold:
+        best_ortholog_id = None
+    if min_dS >= max_dS_threshold:
+        best_ortholog_id = None
+
+    return best_ortholog_id
 
 
 

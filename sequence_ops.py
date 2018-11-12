@@ -168,10 +168,13 @@ class Genome_Functions(object):
 
 class PAML_Functions(object):
 
-    def __init__(self, input_file = None, output_file = None, tree_file = None):
+    def __init__(self, input_file = None, output_file = None, tree_file = None, working_dir = None):
         self.input_file = input_file
         self.output_file = output_file
         self.tree_file = tree_file
+        if not working_dir:
+            working_dir = os.getcwd()
+        self.working_dir = working_dir
 
     def cleanup(self):
         """
@@ -218,7 +221,7 @@ class PAML_Functions(object):
         if not output_file:
             output_file = self.output_file
         # set up codeml
-        cml = codeml.Codeml(alignment = input_file, out_file = output_file, tree = self.tree_file)
+        cml = codeml.Codeml(alignment = input_file, out_file = output_file, working_dir = self.working_dir, tree = self.tree_file)
         cml.set_options(seqtype = 1, runmode = 0, model = 0, NSsites = [])
         if command:
             cml_dict = cml.run(command = command)

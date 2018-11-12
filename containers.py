@@ -46,5 +46,9 @@ def check_conservation(human_cds_fasta, ortholog_cds_fasta, ortholog_transcripts
 
     # first generate a dictionary containing each of the transcripts with the orthologous transcripts
     transcripts_with_orthologs = sequo.get_transcript_and_orthologs(human_cds_fasta, ortholog_cds_fasta, ortholog_transcripts_links)
+    # remove lambda for pickling
+    transcripts_with_orthologs = {i: transcripts_with_orthologs[i] for i in transcripts_with_orthologs}
 
-    cons.get_conservation(transcripts_with_orthologs)
+    conservation_filtered_file = "clean_run/genome_sequences/human.macaque.conservation_filtered_ortholog_ids.bed"
+    if not os.path.isfile(conservation_filtered_file) or clean_run:
+        cons.get_conservation(transcripts_with_orthologs, conservation_filtered_file, max_dS_threshold = 0.2, max_omega_threshold = 0.5)
