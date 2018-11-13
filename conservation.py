@@ -34,10 +34,10 @@ def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_
     gen.create_output_directories(temp_dir)
     # get a list of the transcript ids
     transcript_ids = list(transcript_list.keys())
-    # transcript_ids = transcript_ids[:100]
+    transcript_ids = transcript_ids[:200]
     # run this linearly because it doesnt like being parallelised
-    outputs = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
-    # outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check)
+    # outputs = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
+    outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check, parallel = False)
     # remove the old output file if there is one
     gen.remove_file(output_file)
     # now concat the output files

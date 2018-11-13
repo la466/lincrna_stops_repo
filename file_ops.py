@@ -171,6 +171,26 @@ def fasta_from_intervals(bed_file, fasta_file, genome_fasta, force_strand = True
     gen.write_to_fasta(names, seqs, fasta_file)
 
 
+def filter_fasta_from_bed(bed_file, input_fasta, output_fasta, filter_column = 3):
+    """
+    Given a bed file, filter a fasta file file to contain only entries with ids
+    in the given column
+
+    Args:
+        bed_file (str): path to bed file containing entries
+        input_fasta (str): path to fasta file containing the sequences to filter
+        output_fasta (str): path to output fasta file
+        filter_column (int): base 0 index of the column to use as filtering
+    """
+
+    # get the ids from the given column
+    ids = [i for i in gen.run_process(["cut", "-f{0}".format(filter_column+1), bed_file]).split("\n") if i]
+    # read in the sequences
+    names, seqs = gen.read_fasta(input_fasta)
+    # filter and output to file
+    with open(output_fasta, "w") as outfile:
+        [outfile.write(">{0}\n{1}\n".format(name, seqs[i])) for i, name in enumerate(names) if name in ids]
+
 def order_temp_files(files):
     """
     Get a dictionary of filelists by simulation number

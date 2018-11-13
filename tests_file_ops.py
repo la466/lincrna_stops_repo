@@ -1,7 +1,7 @@
 from file_ops import *
 import unittest
 
-class Test_File_Ops(unittest.TestCase):
+class Tests(unittest.TestCase):
 
     def test_build_seqs_from_exons_fasta(self):
         input_file = "test_data/file_ops/test_build_seqs_from_exons_fasta/input.fasta"
@@ -32,6 +32,16 @@ class Test_File_Ops(unittest.TestCase):
         expected = gen.read_fasta(expected)
         observed = gen.read_fasta(observed)
         self.assertEqual(observed,expected)
+
+    def test_filter_fasta_from_bed(self):
+        bed_file = "test_data/file_ops/test_filter_fasta_from_bed/input.bed"
+        fasta_file = "test_data/file_ops/test_filter_fasta_from_bed/input.fasta"
+        expected_file = "test_data/file_ops/test_filter_fasta_from_bed/expected.fasta"
+        observed_file = "test_data/file_ops/test_filter_fasta_from_bed/observed.fasta"
+        filter_fasta_from_bed(bed_file, fasta_file, observed_file, filter_column = 0)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
 
     def test_order_temp_files(self):
         input = ["./path/0.34242.3.txt", "./path/0.321111.1.txt", "./path/0.983243.4.txt", "./path/0.2131313.2.txt"]
