@@ -7,6 +7,9 @@ import collections
 import random
 import re
 import sys
+import csv
+import itertools as it
+import numpy as np
 from useful_motif_sets import codon_map, stops
 from Bio.Phylo.PAML import codeml
 from Bio.Seq import Seq
@@ -34,7 +37,7 @@ def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_
     gen.create_output_directories(temp_dir)
     # get a list of the transcript ids
     transcript_ids = list(transcript_list.keys())
-    transcript_ids = transcript_ids[:200]
+    # transcript_ids = transcript_ids[:200]
     # run this linearly because it doesnt like being parallelised
     # outputs = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
     outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check, parallel = False)
@@ -254,6 +257,45 @@ def align_sequences(muscle_exe, seq1, seq2, seq1_id = None, seq2_id = None, temp
     return temp_input_file, temp_output_file
 
 
+def blast_all_against_all(fasta_file, output_file, database_name = None):
+    """
+    Blast all sequences against all other sequences
+    """
+
+    # create the blast database
+    blast_db_path = "temp_blast_db"
+    gen.create_output_directories(blast_db_path)
+    if not database_name:
+        database_name = random.random()
+    database_path = "{0}/{1}/{1}".format(blast_db_path, database_name)
+    make_blast_database(fasta_file, database_path)
+
+    # now blast each sequence against each other
+    blast_sequences(fasta_file, database_path, output_file)
+
+
+def blast_sequences(fasta_file, database_path, output_file, evalue = None):
+    """
+    Given a fasta file and a database, run a blast
+
+    Args:
+        fasta_file (str): path to fasta file to blast sequences for
+        database_path (str): path to local blast database
+        output_file (str): path to output file
+        evalue (str):
+    """
+
+    print("Blasting sequences...")
+    if not evalue:
+        evalue = "1e-04"
+    elif type(evalue) != "str":
+        print("evalue must be a string!")
+        raise Exception
+    # run blast
+    args = ["blastn", "-query", fasta_file, "-db", database_path, "-out", output_file, "-outfmt", "10", "-evalue", evalue, "-num_threads", str(int((os.cpu_count())-3))]
+    gen.run_process(args)
+
+
 def extract_alignments(input_file):
     """
     Extract the alignments from a muscle output file
@@ -275,6 +317,161 @@ def extract_alignments(input_file):
         alignments = re.findall("^[A-Z\-]+(?=\n)", muscle_alignments, re.MULTILINE)
 
     return alignments
+
+
+def flatten(structured_list):
+    '''
+    Flatten a structured list.
+    '''
+    flat_list = list(it.chain(*structured_list))
+    return(flat_list)
+
+def extend_family(blast_results, families, query):
+    '''
+    Given a gene identifier (query), find all genes that are connected to it
+    in the BLAST results (i.e. one is a hit for the other). Add them to the current family and remove
+    the relevant lines from the BLAST results.
+    '''
+    to_add = [i for i in blast_results if query in i]
+    blast_results = [i for i in blast_results if query not in i]
+    to_add = flatten(to_add)
+    families[-1].extend(to_add)
+    families[-1] = list(set(families[-1]))
+    return(blast_results, families)
+
+
+def add_family_hits(results, families, id):
+    """
+    Given the remaining result ids and the current family groupings, take the given id
+    and find all other results that contain that id. Add them to the list, and remove
+    all entries containing the id hit from the results
+
+    Args:
+        results (list): list of paired ids
+        families (list): list of lists containing asssociated ids
+        id (str): current query id to match with results
+
+    Returns:
+        results (list): list of paired ids, with the set of ids added to the family
+            in this loop remove
+        families (list): list of lists containing the updated id associations
+    """
+
+    # get results that contain the query id and add to the family list
+    family_hits = [i for i in results if id in i]
+    family_hits_list = []
+    [family_hits_list.extend(i) for i in family_hits]
+    unique_family_hits = list(set(family_hits_list))
+    # add to the family list, -1 because the current family is the last in the list
+    families[-1].extend(unique_family_hits)
+    # now remove all duplicates
+    families[-1] = list(set(families[-1]))
+    # remove the hits from the results
+    results = [i for i in results if id not in i]
+    return results, families
+
+
+def remove_self_blast_hits(results):
+    """
+    Given a list of blast results, remove self hits
+
+    Args:
+        results (list): list of blast results
+
+    Returns:
+        clean_results (list): list of [gene1, gene2] results that
+            are not self hits
+    """
+
+    clean_results = [[i[0],i[1]] for i in results if i[0] != i[1]]
+    return clean_results
+
+
+def group_ids_into_families(results, seed = None):
+    """
+    Given a list of id pairs, group so that the associated ids are all grouped
+    into one list, leaving all associated ids together
+
+    Args:
+        results (list): list containing pairs of ids
+        seed (int): if set, set the randomisation seed
+
+    Returns:
+        families (list): list of lists containing associated ids
+    """
+
+    np.random.seed(seed)
+    families = []
+    # while there remains results to choose from
+    while len(results):
+        # while there still remains results
+        # pick a random blast pair
+        blast_pair_choice = results[np.random.choice(len(results))]
+        # add the pair to the families list
+        families.append(blast_pair_choice)
+        # for each of the ids in the latest family, add all genes that are related
+        # to that gene to the family
+        ids_checked = []
+        for id in families[-1]:
+            # use this to only do ids that haven't already been checked
+            if id not in ids_checked:
+                ids_checked.append(id)
+                # get the updated set of results and families
+                results, families = add_family_hits(results, families, id)
+    return families
+
+
+def group_blast_into_families(input_file, output_file):
+    """
+    Given the results from a blast, group the ids into families so that
+    all the ids that are associated are grouped together
+
+    Args:
+        input_file (str): path to blast results file
+    """
+
+    # read in the blast results
+    results = gen.read_many_fields(input_file, ",")
+    print("Total BLAST hits: {0}".format(len(results)))
+    # remove self hits
+    results = remove_self_blast_hits(results)
+    print("Non-self BLAST hits: {0}".format(len(results)))
+    # get a list of unique query ids
+    unique_query_ids = list(set([i[0] for i in results]))
+    # get a list of query_matches
+    unique_query_matches = list(set([i[1] for i in results]))
+    # group ids into families
+    families = group_ids_into_families(results)
+    # write to file
+    with open(output_file, "w") as outfile:
+        [outfile.write("{0}\n".format(",".join(i))) for i in families]
+
+
+
+    
+
+
+
+def filter_families(input_fasta):
+    """
+    Given a fasta containing cds sequences, get paralagous families
+    """
+
+    database_name = "human_clean"
+    output_file = "clean_run/genome_sequences/blast_result.csv"
+    blast_all_against_all(input_fasta, output_file, database_name = database_name)
+    # group_blast_into_families()
+
+
+def make_blast_database(fasta_file, database_path):
+    """
+    Make a blast database
+    """
+
+    print("Making blast database...")
+
+    args = ["makeblastdb", "-in", fasta_file, "-out", database_path, "-dbtype", "nucl"]
+    gen.run_process(args)
 
 
 def revert_alignment_to_nucleotides(input_seq, input_alignment):

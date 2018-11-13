@@ -7,6 +7,19 @@ muscle_exe = "../tools/muscle3.8.31_i86darwin64"
 
 class Tests(unittest.TestCase):
 
+    def test_add_family_hits(self):
+        input_file = "test_data/conservation/test_add_family_hits/input.bed"
+        inputs = gen.read_many_fields(input_file, "\t")
+        families = [[]]
+        expected_results = [["ENST0004", "ESNT0005"], ["ENST0004", "ENST0008"], ["ENST0005", "ENST0004"], ["ENST0006", "ENST0009"], ["ENST0008", "ENST0004"], ["ENST0008", "ENST0011"], ["ENST0009", "ENST0006"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"]]
+        expected_families = [["ENST0001", "ENST0002", "ENST0003", "ENST0013"]]
+        id = "ENST0001"
+        observed_results, observed_families = add_family_hits(inputs, families, id)
+        print(expected_results)
+        print(observed_results)
+        self.assertEqual(expected_results, observed_results)
+        self.assertEqual(expected_families, observed_families)
+
     def test_align_sequences(self):
         input_fasta1 = "test_data/conservation/test_align_sequences/input1.fasta"
         input_fasta2 = "test_data/conservation/test_align_sequences/input2.fasta"
@@ -40,6 +53,14 @@ class Tests(unittest.TestCase):
         observed = []
         for input in inputs:
             observed.append(extract_alignments(input))
+        self.assertEqual(expected, observed)
+
+    def test_remove_self_blast_hits(self):
+        input_file = "test_data/conservation/test_remove_self_blast_hits/input.csv"
+        expected_file = "test_data/conservation/test_remove_self_blast_hits/expected.csv"
+        expected = gen.read_many_fields(expected_file, ",")
+        entries = gen.read_many_fields(input_file, ",")
+        observed = remove_self_blast_hits(entries)
         self.assertEqual(expected, observed)
 
     def test_revert_alignment_to_nucleotides(self):
