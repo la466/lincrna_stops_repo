@@ -34,9 +34,10 @@ def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_
     gen.create_output_directories(temp_dir)
     # get a list of the transcript ids
     transcript_ids = list(transcript_list.keys())
-    transcript_ids = transcript_ids[:1000]
-    # output_filelist = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
-    outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check)
+    # transcript_ids = transcript_ids[:100]
+    # run this linearly because it doesnt like being parallelised
+    outputs = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
+    # outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check)
     # remove the old output file if there is one
     gen.remove_file(output_file)
     # now concat the output files
@@ -91,6 +92,7 @@ def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_di
         best_ortholog_id (str): id of the ortholog that gives the most conserved alignment
     """
 
+    # put the muscle executable in tools directory for your os
     muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
     if not os.path.isfile(muscle_exe):
         print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
@@ -210,7 +212,6 @@ class Alignment_Functions(object):
         aligned_seqs = [revert_alignment_to_nucleotides(seq, input_alignments[i]) for i, seq in enumerate(input_seqs)]
         self.aligned_seqs = aligned_seqs
         return aligned_seqs
-
 
 
 

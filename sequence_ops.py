@@ -224,7 +224,7 @@ class PAML_Functions(object):
         cml = codeml.Codeml(alignment = input_file, out_file = output_file, working_dir = self.working_dir, tree = self.tree_file)
         cml.set_options(seqtype = 1, runmode = 0, model = 0, NSsites = [])
         if command:
-            cml_dict = cml.run(command = command)
+            cml_dict = cml.run(command = command, verbose = True)
         else:
             cml_dict = cml.run()
         return cml_dict
