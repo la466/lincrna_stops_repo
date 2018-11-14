@@ -2,8 +2,9 @@ from conservation import *
 import numpy as np
 import unittest
 import collections
+import sys
 
-muscle_exe = "../tools/muscle3.8.31_i86darwin64"
+muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
 
 class Tests(unittest.TestCase):
 
@@ -11,12 +12,29 @@ class Tests(unittest.TestCase):
         input_file = "test_data/conservation/test_add_family_hits/input.bed"
         inputs = gen.read_many_fields(input_file, "\t")
         families = [[]]
-        expected_results = [["ENST0004", "ESNT0005"], ["ENST0004", "ENST0008"], ["ENST0005", "ENST0004"], ["ENST0006", "ENST0009"], ["ENST0008", "ENST0004"], ["ENST0008", "ENST0011"], ["ENST0009", "ENST0006"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"]]
-        expected_families = [["ENST0001", "ENST0002", "ENST0003", "ENST0013"]]
+        expected_results = [["ENST0003", "ENST0013"], ["ENST0004", "ENST0005"], ["ENST0004", "ENST0008"], ["ENST0005", "ENST0004"], ["ENST0006", "ENST0009"], ["ENST0008", "ENST0004"], ["ENST0008", "ENST0011"], ["ENST0009", "ENST0006"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"], ["ENST0013", "ENST0003"]]
+        expected_families = [["ENST0001", "ENST0002", "ENST0003"]]
         id = "ENST0001"
         observed_results, observed_families = add_family_hits(inputs, families, id)
-        print(expected_results)
-        print(observed_results)
+        observed_families = [sorted(i) for i in observed_families]
+        self.assertEqual(expected_results, observed_results)
+        self.assertEqual(expected_families, observed_families)
+        inputs = [["ENST0003", "ENST0013"], ["ENST0004", "ENST0005"], ["ENST0004", "ENST0008"], ["ENST0005", "ENST0004"], ["ENST0006", "ENST0009"], ["ENST0008", "ENST0004"], ["ENST0008", "ENST0011"], ["ENST0009", "ENST0006"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"], ["ENST0013", "ENST0003"]]
+        families = [["ENST0001", "ENST0002", "ENST0003"], []]
+        expected_results = [["ENST0003", "ENST0013"], ["ENST0006", "ENST0009"], ["ENST0008", "ENST0011"], ["ENST0009", "ENST0006"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"], ["ENST0013", "ENST0003"]]
+        expected_families = [["ENST0001", "ENST0002", "ENST0003"], ["ENST0004", "ENST0005", "ENST0008"]]
+        id = "ENST0004"
+        observed_results, observed_families = add_family_hits(inputs, families, id)
+        observed_families = [sorted(i) for i in observed_families]
+        self.assertEqual(expected_results, observed_results)
+        self.assertEqual(expected_families, observed_families)
+        inputs = [["ENST0003", "ENST0013"], ["ENST0006", "ENST0009"], ["ENST0008", "ENST0011"], ["ENST0009", "ENST0006"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"], ["ENST0013", "ENST0003"]]
+        families = [["ENST0001", "ENST0002", "ENST0003"], ["ENST0004", "ENST0005", "ENST0008"], ["ENST0006", "ENST0009"]]
+        expected_results = [["ENST0003", "ENST0013"], ["ENST0008", "ENST0011"], ["ENST0010", "ENST0012"], ["ENST0011", "ENST0008"], ["ENST0012", "ENST0010"], ["ENST0013", "ENST0003"]]
+        expected_families = [["ENST0001", "ENST0002", "ENST0003"], ["ENST0004", "ENST0005", "ENST0008"], ["ENST0006", "ENST0009"]]
+        id = "ENST0009"
+        observed_results, observed_families = add_family_hits(inputs, families, id)
+        observed_families = [sorted(i) for i in observed_families]
         self.assertEqual(expected_results, observed_results)
         self.assertEqual(expected_families, observed_families)
 
@@ -54,6 +72,21 @@ class Tests(unittest.TestCase):
         for input in inputs:
             observed.append(extract_alignments(input))
         self.assertEqual(expected, observed)
+
+    def test_group_ids_into_families(self):
+        input_file1 = "test_data/conservation/test_group_ids_into_families/input1.bed"
+        input_file2 = "test_data/conservation/test_group_ids_into_families/input2.bed"
+        expected_file1 = "test_data/conservation/test_group_ids_into_families/expected1.bed"
+        expected_file2 = "test_data/conservation/test_group_ids_into_families/expected2.bed"
+        inputs = gen.read_many_fields(input_file1, "\t")
+        expected = [sorted(i) for i in gen.read_many_fields(expected_file1, "\t")].sort(key=lambda x: x[0])
+        observed = [sorted(i) for i in group_ids_into_families(inputs)].sort(key=lambda x: x[0])
+        self.assertEqual(expected, observed)
+        inputs = gen.read_many_fields(input_file2, "\t")
+        expected = [sorted(i) for i in gen.read_many_fields(expected_file2, "\t")].sort(key=lambda x: x[0])
+        observed = [sorted(i) for i in group_ids_into_families(inputs)].sort(key=lambda x: x[0])
+        self.assertEqual(expected, observed)
+
 
     def test_remove_self_blast_hits(self):
         input_file = "test_data/conservation/test_remove_self_blast_hits/input.csv"

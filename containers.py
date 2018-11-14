@@ -66,9 +66,8 @@ def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_g
     if not os.path.isfile(human_ids_after_conservation_file) or not os.path.isfile(human_cds_after_ortholog_filter_fasta) or clean_run:
         check_conservation(human.cds_fasta, ortholog.cds_fasta, orthologs_transcript_links_file, human_ids_after_conservation_file, human_cds_after_ortholog_filter_fasta, max_dS_threshold = 0.2, max_omega_threshold = 0.5, clean_run = clean_run)
 
-
-def filter_families(cds_fasta):
-    """
-    Filter families
-    """
-    cons.filter_families(cds_fasta)
+    # filter the sequences
+    human_blast_file = "{0}/genome_sequences/{1}/{1}.cds.blast_all_against_all.csv".format(output_directory, human_dataset_name)
+    human_families_file = "{0}/genome_sequences/{1}/{1}.cds.families.bed".format(output_directory, human_dataset_name)
+    if not os.path.isfile(human_blast_file) or not os.path.isfile(human_families_file) or clean_run:
+        cons.filter_families(human_cds_after_ortholog_filter_fasta, human_blast_file, human_families_file, dataset_name = human_dataset_name)
