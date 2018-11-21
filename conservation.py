@@ -19,141 +19,6 @@ from Bio.Align.Applications import MuscleCommandline
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
 
-
-def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_omega_threshold = None):
-    """
-    Get the conversation for a list of sequences and only keep those that pass
-
-    Args:
-        transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
-        output_file (str): path to output file
-        max_dS_threshold (float): if set, pass in the dS threshold you wish alignments to be below
-        max_omega_threshold (float): if set, pass in the omega threshold you wish alignments to be below
-    """
-
-    print("Getting the most conserved ortholog for each transcript...")
-
-    temp_dir = "temp_conservation_files"
-    gen.create_output_directories(temp_dir)
-    # get a list of the transcript ids
-    transcript_ids = list(transcript_list.keys())
-    # transcript_ids = transcript_ids[:200]
-    # run this linearly because it doesnt like being parallelised
-    # outputs = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
-    outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check, parallel = False)
-    # remove the old output file if there is one
-    gen.remove_file(output_file)
-    # now concat the output files
-    args = ["cat"]
-    [args.append(i) for i in outputs]
-    gen.run_process(args, file_for_output = output_file)
-    gen.remove_directory(temp_dir)
-
-
-def run_conservation_check(input_list, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir):
-    """
-    Wrapper to run the conservation check in parallel
-
-    Args:
-        input_list (list): list of transcript ids to iterate over
-        transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
-        output_file (str): path to output file
-        max_dS_threshold (float): if set, pass in the dS threshold you wish alignments to be below
-        max_omega_threshold (float): if set, pass in the omega threshold you wish alignments to be below
-    """
-    # create a list to keep temporary outputs
-    temp_filelist = []
-    temp_instance_dir = "temp_codeml_dir.{0}".format(random.random())
-    gen.create_output_directories(temp_instance_dir)
-
-    if input_list:
-        temp_file = "{0}/best_ortholog_match.{1}.bed".format(temp_dir, random.random())
-        temp_filelist.append(temp_file)
-        with open(temp_file, "w") as outfile:
-            # get best ortholog for each transcript
-            for i, transcript_id in enumerate(input_list):
-                print("{0}/{1}".format(i+1, len(input_list)))
-                ortholog_id = check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1], temp_instance_dir,  max_dS_threshold = max_dS_threshold, max_omega_threshold = max_omega_threshold)
-                if ortholog_id:
-                    outfile.write("{0}\t{1}\n".format(transcript_id, ortholog_id))
-    gen.remove_directory(temp_instance_dir)
-    return temp_filelist
-
-
-def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_dir, max_dS_threshold = None, max_omega_threshold = None):
-    """
-    Check the conservation of a sequence.
-
-    Args:
-        transcript_id (str): id of the transcript in question
-        cds_seq (str): nucleotide sequence of the transcript
-        transcript_cds_orthologs (dict): dict containing the sequences of orthologous sequences
-        max_dS_threshold (float): if set, the dS threshold you wish alignments to be below
-        max_omega_threshold (float): if set, the omega threshold you wish alignments to be below
-
-    Returns:
-        best_ortholog_id (str): id of the ortholog that gives the most conserved alignment
-    """
-
-    # put the muscle executable in tools directory for your os
-    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
-    if not os.path.isfile(muscle_exe):
-        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
-        raise Exception
-
-    # setup the muscle alignment
-    alignment_functions = Alignment_Functions(muscle_exe)
-
-    # convert the sequences to protein sequence
-    cds_iupac = Seq(cds_seq[0], IUPAC.unambiguous_dna)
-    cds_protein_seq = cds_iupac.translate()
-    ortholog_ids = list(transcript_cds_orthologs.keys())
-    orthologs_iupac = [Seq(ortholog) for ortholog in transcript_cds_orthologs.values()]
-    ortholog_protein_seqs = [seq.translate() for seq in orthologs_iupac]
-    # set up lists to hold the transcript dS scores and omega scores
-    dS_scores = []
-    omega_scores = []
-    # for each of the ortholog sequences
-    for i, ortholog_id in enumerate(ortholog_ids):
-        # align the sequences
-        alignment_functions.align_seqs(cds_protein_seq, ortholog_protein_seqs[i], transcript_id, ortholog_id)
-        # extract the alignments
-        alignment_functions.extract_alignments()
-        # now we want to get the nucleotide sequences for the alignments
-        aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [cds_seq[0], transcript_cds_orthologs[ortholog_id]])
-        # clean up the files
-        alignment_functions.cleanup()
-        # we have the aligned sequences
-        #write the nucleotide alignment to a phylip file
-        aligned_sequences_iupac = [Seq("".join(i),IUPAC.unambiguous_dna) for i in aligned_sequences]
-        alignment = MultipleSeqAlignment([SeqRecord(aligned_sequences_iupac[0], id = "seq"), SeqRecord(aligned_sequences_iupac[1], id = "orth_seq")])
-        temp_phylip_file = "{0}/{1}_{2}.phy".format(temp_dir, transcript_id, ortholog_id)
-        temp_output_file = "{0}/phy_{1}_{2}.out".format(temp_dir, transcript_id, ortholog_id)
-        fo.write_to_phylip(alignment, temp_phylip_file)
-        # # run paml on sequences
-        paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file, working_dir = temp_dir)
-        # run codeml
-        codeml_output = paml.run_codeml()
-        dS_scores.append(codeml_output["NSsites"][0]["parameters"]["dS"])
-        omega_scores.append(codeml_output["NSsites"][0]["parameters"]["omega"])
-
-    # get the minimum dS and omega scores
-    min_dS = min(dS_scores)
-    min_omega = min(omega_scores)
-
-    # get the alignment with the min dS
-    # do it this way so that if you dont have the filters, you just keep the most conserved
-    best_ortholog_id = ortholog_ids[dS_scores.index(min_dS)]
-    # check that there is an ortholog with omega < 0.5
-    if min_omega >= max_omega_threshold:
-        best_ortholog_id = None
-    if min_dS >= max_dS_threshold:
-        best_ortholog_id = None
-
-    return best_ortholog_id
-
-
-
 class Alignment_Functions(object):
 
     def __init__(self, muscle_exe):
@@ -286,29 +151,42 @@ def align_sequences(muscle_exe, seq1, seq2, seq1_id = None, seq2_id = None, temp
     return temp_input_file, temp_output_file
 
 
-def blast_all_against_all(fasta_file, output_file, database_name = None):
+def blast_all_against_all(fasta_file, output_file, database_path = None, remove_database = None, clean_run = None):
     """
     Blast all sequences against all other sequences
 
     Args:
         fasta_file (str): path to fasta file containing sequences
         output_file (str): path to output file
-        database_name (str): if set, use as temp dir identifier
+        database_path (str): if not set, use temp dir
+        remove_database (bool): if set, remove the database once blast has run
+        clean_run (bool): if set, run new blast
     """
 
-    print("BLASTing seuqences against each other...")
+    print("BLASTing sequences against each other...")
+
+    # remove the old database if we want a clean run
+    if clean_run:
+        gen.remove_directory(database_path)
 
     # create the blast database
-    blast_db_path = "temp_blast_db"
-    gen.create_output_directories(blast_db_path)
-    if not database_name:
-        database_name = random.random()
-    database_path = "{0}/{1}/{1}".format(blast_db_path, database_name)
-    make_blast_database(fasta_file, database_path)
+    if not database_path:
+        database_path = "temp_blast_db/{0}".format(random.random())
+        print("Temp blast db: {0}".format(database_path))
+    gen.create_output_directories(database_path)
+
+    # get the list of files
+    filelist = ["blast.nhr", "blast.nin", "blast.nsq"]
+    files_present = [i for i in filelist if i in os.listdir(database_path)]
+
+    database_path = "{0}/blast".format(database_path)
+    if len(filelist) != len(files_present) or clean_run:
+        make_blast_database(fasta_file, database_path)
     # now blast each sequence against each other
     blast_sequences(fasta_file, database_path, output_file)
     # remove the database
-    gen.remove_directory(blast_db_path)
+    if remove_database:
+        gen.remove_directory(database_path)
 
 
 def blast_sequences(fasta_file, database_path, output_file, evalue = None):
@@ -330,8 +208,81 @@ def blast_sequences(fasta_file, database_path, output_file, evalue = None):
         print("evalue must be a string!")
         raise Exception
     # run blast
-    args = ["blastn", "-query", fasta_file, "-db", database_path, "-out", output_file, "-outfmt", "10", "-evalue", evalue, "-num_threads", str(int((os.cpu_count())-3))]
+    args = ["Blastn", "-task", "blastn", "-query", fasta_file, "-db", database_path, "-out", output_file, "-outfmt", "10", "-evalue", evalue, "-num_threads", str(int((os.cpu_count())-3))]
     gen.run_process(args)
+
+
+def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_dir, max_dS_threshold = None, max_omega_threshold = None):
+    """
+    Check the conservation of a sequence.
+
+    Args:
+        transcript_id (str): id of the transcript in question
+        cds_seq (str): nucleotide sequence of the transcript
+        transcript_cds_orthologs (dict): dict containing the sequences of orthologous sequences
+        max_dS_threshold (float): if set, the dS threshold you wish alignments to be below
+        max_omega_threshold (float): if set, the omega threshold you wish alignments to be below
+
+    Returns:
+        best_ortholog_id (str): id of the ortholog that gives the most conserved alignment
+    """
+
+    # put the muscle executable in tools directory for your os
+    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
+    if not os.path.isfile(muscle_exe):
+        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
+        raise Exception
+
+    # setup the muscle alignment
+    alignment_functions = Alignment_Functions(muscle_exe)
+
+    # convert the sequences to protein sequence
+    cds_iupac = Seq(cds_seq[0], IUPAC.unambiguous_dna)
+    cds_protein_seq = cds_iupac.translate()
+    ortholog_ids = list(transcript_cds_orthologs.keys())
+    orthologs_iupac = [Seq(ortholog) for ortholog in transcript_cds_orthologs.values()]
+    ortholog_protein_seqs = [seq.translate() for seq in orthologs_iupac]
+    # set up lists to hold the transcript dS scores and omega scores
+    dS_scores = []
+    omega_scores = []
+    # for each of the ortholog sequences
+    for i, ortholog_id in enumerate(ortholog_ids):
+        # align the sequences
+        alignment_functions.align_seqs(cds_protein_seq, ortholog_protein_seqs[i], transcript_id, ortholog_id)
+        # extract the alignments
+        alignment_functions.extract_alignments()
+        # now we want to get the nucleotide sequences for the alignments
+        aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [cds_seq[0], transcript_cds_orthologs[ortholog_id]])
+        # clean up the files
+        alignment_functions.cleanup()
+        # we have the aligned sequences
+        #write the nucleotide alignment to a phylip file
+        aligned_sequences_iupac = [Seq("".join(i),IUPAC.unambiguous_dna) for i in aligned_sequences]
+        alignment = MultipleSeqAlignment([SeqRecord(aligned_sequences_iupac[0], id = "seq"), SeqRecord(aligned_sequences_iupac[1], id = "orth_seq")])
+        temp_phylip_file = "{0}/{1}_{2}.phy".format(temp_dir, transcript_id, ortholog_id)
+        temp_output_file = "{0}/phy_{1}_{2}.out".format(temp_dir, transcript_id, ortholog_id)
+        fo.write_to_phylip(alignment, temp_phylip_file)
+        # # run paml on sequences
+        paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file, working_dir = temp_dir)
+        # run codeml
+        codeml_output = paml.run_codeml()
+        dS_scores.append(codeml_output["NSsites"][0]["parameters"]["dS"])
+        omega_scores.append(codeml_output["NSsites"][0]["parameters"]["omega"])
+
+    # get the minimum dS and omega scores
+    min_dS = min(dS_scores)
+    min_omega = min(omega_scores)
+
+    # get the alignment with the min dS
+    # do it this way so that if you dont have the filters, you just keep the most conserved
+    best_ortholog_id = ortholog_ids[dS_scores.index(min_dS)]
+    # check that there is an ortholog with omega < 0.5
+    if min_omega >= max_omega_threshold:
+        best_ortholog_id = None
+    if min_dS >= max_dS_threshold:
+        best_ortholog_id = None
+
+    return best_ortholog_id
 
 
 def extract_alignments(input_file):
@@ -357,7 +308,7 @@ def extract_alignments(input_file):
     return alignments
 
 
-def filter_families(input_fasta, output_blast_file, output_families_file, dataset_name = None):
+def filter_families(input_fasta, output_blast_file, output_families_file, database_path = None, clean_run = None):
     """
     Given a fasta containing cds sequences, get paralagous families and write to output file
 
@@ -365,12 +316,12 @@ def filter_families(input_fasta, output_blast_file, output_families_file, datase
         input_fasta (str): path to fasta containing sequences
         output_blast_file (str): path to file to hold the blast results
         output_families_file (str): path to file to hold the ids of the items grouped into families
-        dataset_name (str): name of the dataset being queried
+        dataset_path (str): path to BLAST database to be created
     """
 
     print("Filtering CDS into families...")
-
-    blast_all_against_all(input_fasta, output_blast_file, database_name = dataset_name)
+    # run filtering
+    blast_all_against_all(input_fasta, output_blast_file, database_path = database_path, clean_run = clean_run)
     group_blast_into_families(output_blast_file, output_families_file)
 
 
@@ -405,6 +356,36 @@ def group_blast_into_families(input_file, output_file):
     [ids.extend(i) for i in families]
     print("Number of non-singleton genes: {0}".format(len(ids)))
     print("Number of unique non-singleton genes: {0}".format(len(list(set(ids)))))
+
+
+def get_conservation(transcript_list, output_file, max_dS_threshold = None, max_omega_threshold = None):
+    """
+    Get the conversation for a list of sequences and only keep those that pass
+
+    Args:
+        transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
+        output_file (str): path to output file
+        max_dS_threshold (float): if set, pass in the dS threshold you wish alignments to be below
+        max_omega_threshold (float): if set, pass in the omega threshold you wish alignments to be below
+    """
+
+    print("Getting the most conserved ortholog for each transcript...")
+
+    temp_dir = "temp_conservation_files"
+    gen.create_output_directories(temp_dir)
+    # get a list of the transcript ids
+    transcript_ids = list(transcript_list.keys())
+    # transcript_ids = transcript_ids[:200]
+    # run this linearly because it doesnt like being parallelised
+    # outputs = run_conservation_check(transcript_ids, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir)
+    outputs = gen.run_parallel_function(transcript_ids, [transcript_list, max_dS_threshold, max_omega_threshold, temp_dir], run_conservation_check, parallel = False)
+    # remove the old output file if there is one
+    gen.remove_file(output_file)
+    # now concat the output files
+    args = ["cat"]
+    [args.append(i) for i in outputs]
+    gen.run_process(args, file_for_output = output_file)
+    gen.remove_directory(temp_dir)
 
 
 def group_ids_into_families(results):
@@ -507,3 +488,33 @@ def revert_alignment_to_nucleotides(input_seq, input_alignment):
                 sequence_position += 3
     aligned_sequence = "".join(aligned_sequence)
     return aligned_sequence
+
+
+def run_conservation_check(input_list, transcript_list, max_dS_threshold, max_omega_threshold, temp_dir):
+    """
+    Wrapper to run the conservation check in parallel
+
+    Args:
+        input_list (list): list of transcript ids to iterate over
+        transcript_list (dict): dict containing transcript id, the cds and the ortholog seqs
+        output_file (str): path to output file
+        max_dS_threshold (float): if set, pass in the dS threshold you wish alignments to be below
+        max_omega_threshold (float): if set, pass in the omega threshold you wish alignments to be below
+    """
+    # create a list to keep temporary outputs
+    temp_filelist = []
+    temp_instance_dir = "temp_codeml_dir.{0}".format(random.random())
+    gen.create_output_directories(temp_instance_dir)
+
+    if input_list:
+        temp_file = "{0}/best_ortholog_match.{1}.bed".format(temp_dir, random.random())
+        temp_filelist.append(temp_file)
+        with open(temp_file, "w") as outfile:
+            # get best ortholog for each transcript
+            for i, transcript_id in enumerate(input_list):
+                print("{0}/{1}".format(i+1, len(input_list)))
+                ortholog_id = check_conservation(transcript_id, transcript_list[transcript_id][0], transcript_list[transcript_id][1], temp_instance_dir,  max_dS_threshold = max_dS_threshold, max_omega_threshold = max_omega_threshold)
+                if ortholog_id:
+                    outfile.write("{0}\t{1}\n".format(transcript_id, ortholog_id))
+    gen.remove_directory(temp_instance_dir)
+    return temp_filelist
