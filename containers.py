@@ -30,6 +30,18 @@ def check_conservation(human_cds_fasta, ortholog_cds_fasta, ortholog_transcripts
 
 
 def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_genome_file, orthologs_file, output_directory, clean_run = None):
+    """
+    Wrapper to extract clean CDS sequences.
+
+    Args:
+        gtf_file (str): path to gtf file containing genome features
+        genome_file (str): path to fasta file containing genome sequence
+        ortholog_gtf_file (str): path to ortholog gtf file containing ortholog genome features
+        ortholog_genome_file (str): path to ortholog fasta file containing ortholog genome sequence
+        orthologs_file (str): path to ensembl biomart file that contains focal-ortholog pairs
+        output_directory (str): path to output directory
+        clean_run (bool): if set, run
+    """
 
     # # get a list of transcript features we want to keep
     transcript_ids = sequo.list_transcript_ids_from_features(gtf_file)
@@ -72,3 +84,42 @@ def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_g
     human_blast_database_path = "{0}/genome_sequences/{1}/blast_all_against_all".format(output_directory, human_dataset_name)
     if not os.path.isfile(human_blast_file) or not os.path.isfile(human_families_file) or clean_run:
         cons.filter_families(human_cds_after_ortholog_filter_fasta, human_blast_file, human_families_file, database_path = human_blast_database_path, clean_run = clean_run)
+
+
+def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_exon_bed, single_exon_fasta, multi_exon_fasta, single_exon_families, multi_exon_families, clean_run = None):
+    """
+    Wrapper to extract lincRNA sequences
+
+    Args:
+        input_bed (str): path to bed file containing lincRNA coordinates
+        genome_fasta (str): path to genome fasta file
+        single_exon_bed (str): path to bed file containing coordinates of single exon cases
+        multi_exon_bed (str): path to bed file containing coordinates of multi exon cases
+        single_exon_fasta (str): path to fasta file containing sequences of single exon cases
+        multi_exon_fasta (str): path to fasta file containing sequences of multi exon cases
+        single_exon_families (str): path to bed file containing groupings of single exon paralogs
+        multi_exon_families (str): path to bed file containing groupings of multi exon paralogs
+        clean_run (bool): if set, run
+    """
+
+    print("Extracting lincRNA sequences...")
+
+    if not os.path.isfile(single_exon_bed) or not os.path.isfile(multi_exon_bed) or not os.path.isfile(single_exon_fasta) or not os.path.isfile(multi_exon_fasta) or clean_run:
+        # filter bed file to only containing those with strand information and then by number of exons
+        sequo.filter_bed_file(input_bed, filter_columns = [5,9], filter_values = [["+", "-"], ["1"]], inclusive = [True, True], output_file = single_exon_bed)
+        sequo.filter_bed_file(input_bed, filter_columns = [5,9], filter_values = [["+", "-"], ["1"]], inclusive = [True, False], output_file = multi_exon_bed)
+        # have to convert to hg38
+        fo.convert_bed(single_exon_bed)
+        fo.convert_bed(multi_exon_bed)
+        # now get sequence files
+        fo.fasta_from_intervals(single_exon_bed, single_exon_fasta, genome_fasta, names=True)
+        fo.fasta_from_intervals(multi_exon_bed, multi_exon_fasta, genome_fasta, names=True)
+
+    single_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(single_exon_families.split(".")[:-1]))
+    single_exon_blast_database = "{0}/single_exon_blast_all_against_all".format("/".join(single_exon_families.split("/")[:-1]))
+    multi_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(multi_exon_families.split(".")[:-1]))
+    multi_exon_blast_database = "{0}/multi_exon_blast_all_against_all".format("/".join(multi_exon_families.split("/")[:-1]))
+    # now group into paralagous families
+    if not os.path.isfile(single_exon_families) or os.path.isfile(multi_exon_families) or clean_run:
+        cons.filter_families(single_exon_fasta, single_exon_blast_file, single_exon_families, database_path = single_exon_blast_database, clean_run = clean_run)
+        cons.filter_families(multi_exon_fasta, multi_exon_blast_file, multi_exon_families, database_path = multi_exon_blast_database, clean_run = clean_run)

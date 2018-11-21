@@ -4,6 +4,7 @@ from regex_patterns import exon_number_pattern, gene_id_pattern, transcript_id_p
 import re
 import os
 import collections
+import random
 from Bio.Phylo.PAML import codeml
 
 
@@ -427,6 +428,45 @@ def extract_transcript_features(features_list, id_list):
         if feature[-1] == "transcript" and feature[3] in id_list:
             feature_list[feature[3]].append(feature)
     return feature_list
+
+
+def filter_bed_file(input_bed, filter_columns, filter_values, inclusive, output_file = None):
+    """
+    Given a bed file, filter columns based on values
+
+    Args:
+        input_bed (str): path to input bed file
+        filter_columns (list): list containing columns to filter by
+        filter_values (list): list of lists containing values that the column must correspond to
+        inclusive (list): list of bool values saying whether the filter value should be included or not
+        output_file (str): if set, use as output path. If not, assume bed file is to be filtered in place
+    """
+
+    # create temp file if no output file is given
+    if not output_file:
+        file_to_write = "temp_files/{0}.bed".format(random.random())
+    else:
+        file_to_write = output_file
+
+    # read entries
+    entries = gen.read_many_fields(input_bed, "\t")
+    # for each of the columns, filter by values
+    for i, column in enumerate(filter_columns):
+        values = filter_values[i]
+        inc = inclusive[i]
+        if inc:
+            entries = [entry for entry in entries if entry[column] in values]
+        else:
+            entries = [entry for entry in entries if entry[column] not in values]
+
+    # write the remaining entries to file
+    with open(file_to_write, "w") as outfile:
+        [outfile.write("{0}\n".format("\t".join(entry))) for entry in entries]
+
+    # remove the temp file if created
+    if not output_file:
+        gen.run_process(["mv", file_to_write, input_bed])
+        gen.remove_file(file_to_write)
 
 
 def filter_one_transcript_per_gene(transcript_list):

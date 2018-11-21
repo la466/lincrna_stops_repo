@@ -60,6 +60,35 @@ class Tests(unittest.TestCase):
         observed = extract_transcript_features(inputs, input_list)
         self.assertEqual(expected, observed)
 
+    def test_filter_bed_file(self):
+        input_file = "test_data/sequence_ops/test_filter_bed_file/input.bed"
+        expected_file1 = "test_data/sequence_ops/test_filter_bed_file/expected1.bed"
+        expected_file2 = "test_data/sequence_ops/test_filter_bed_file/expected2.bed"
+        expected_file3 = "test_data/sequence_ops/test_filter_bed_file/expected3.bed"
+        expected_file4 = "test_data/sequence_ops/test_filter_bed_file/expected4.bed"
+        expected_file5 = "test_data/sequence_ops/test_filter_bed_file/expected5.bed"
+        observed_file1 = "test_data/sequence_ops/test_filter_bed_file/observed1.bed"
+        observed_file2 = "test_data/sequence_ops/test_filter_bed_file/observed2.bed"
+        observed_file3 = "test_data/sequence_ops/test_filter_bed_file/observed3.bed"
+        observed_file4 = "test_data/sequence_ops/test_filter_bed_file/observed4.bed"
+        observed_file5 = "test_data/sequence_ops/test_filter_bed_file/observed5.bed"
+        expected_files = [expected_file1, expected_file2, expected_file3, expected_file4, expected_file5]
+        observed_files = [observed_file1, observed_file2, observed_file3, observed_file4, observed_file5]
+        filter_columns = [[5], [9], [5,9], [5,9], [0]]
+        filter_values = [[["+", "-"]], [["1"]], [["+", "-"], ["1"]], [["+", "-"], ["1"]], "2"]
+        inclusive = [[True], [False], [True, True], [True, False], [True]]
+        for file in observed_files:
+            gen.remove_file(file)
+        for i, expected_file in enumerate(expected_files):
+            observed_file = observed_files[i]
+            filter_cols = filter_columns[i]
+            filter_vals = filter_values[i]
+            inc = inclusive[i]
+            filter_bed_file(input_file, filter_columns = filter_cols, filter_values = filter_vals, inclusive = inc, output_file = observed_file)
+            expected = gen.read_many_fields(expected_file, "\t")
+            observed = gen.read_many_fields(observed_file, "\t")
+            self.assertEqual(expected, observed)
+
     def test_filter_one_transcript_per_gene(self):
         input_file = "test_data/sequence_ops/test_filter_one_transcript_per_gene/input.bed"
         expected_file = "test_data/sequence_ops/test_filter_one_transcript_per_gene/expected.bed"

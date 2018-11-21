@@ -3,6 +3,7 @@ import ops
 import collections
 import os
 import path
+import random
 from Bio import AlignIO
 
 
@@ -46,6 +47,38 @@ def build_seqs_from_exons_fasta(input_fasta, output_fasta):
 
     # write to file
     gen.write_to_fasta(names, seqs, output_fasta)
+
+
+def convert_bed(input_bed, output_bed = None, to_hg38 = True):
+    """
+    Convert bed file from hg37 to hg38 and vice versa
+
+    Args:
+        input_bed (str): path to bed file
+        output_bed (str): if set, path to output_file
+        to_hg38 (bool): if set, convert to hg38, else convert to hg37
+    """
+
+    # create temp file if no output file is given
+    if not output_bed:
+        file_to_write = "temp_files/{0}.bed".format(random.random())
+    else:
+        file_to_write = output_bed
+
+    entries = gen.read_many_fields(input_bed, "\t")
+    with open(file_to_write, "w") as outfile:
+        for entry in entries:
+            if to_hg38:
+                entry[0] = entry[0].strip("chr")
+            else:
+                entry[0] = "chr{0}".format(entry[0])
+            outfile.write("{0}\n".format("\t".join(entry)))
+
+    # remove the temp file if created
+    if not output_bed:
+        gen.run_process(["mv", file_to_write, input_bed])
+        gen.remove_file(file_to_write)
+
 
 
 def entries_to_bed(source_path, output_file, exclude_XY=None, hg38=None, NONCODE=None):
