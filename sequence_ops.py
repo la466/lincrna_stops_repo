@@ -6,7 +6,7 @@ import os
 import collections
 import random
 from Bio.Phylo.PAML import codeml
-
+import copy
 
 
 def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None):
@@ -379,6 +379,38 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
             cds_features_list[id].append(stop_codon)
 
     return cds_features_list
+
+
+def extract_multi_exons_entries_to_bed(input_bed):
+
+    entries = gen.read_many_fields(input_bed, "\t")
+    random_instance = random.random()
+    temp_bed_file = "temp_files/{0}.bed".format(random.random())
+    with open(temp_bed_file, "w") as outfile:
+        for entry in entries:
+            sizes = [int(i) for i in entry[10].split(",") if i]
+            starts = [int(i) for i in entry[11].split(",") if i]
+            for i, exon in enumerate(sizes):
+                start = int(entry[1]) + starts[i]
+                end = start + sizes[i]
+                bed_entry = copy.deepcopy(entry)
+                bed_entry[1] = start
+                bed_entry[2] = end
+                bed_entry[3] = "{0}.{1}".format(bed_entry[3], i+1)
+                outfile.write("{0}\n".format("\t".join(gen.stringify(bed_entry[:6]))))
+
+    gen.run_process(["mv", temp_bed_file, input_bed])
+    gen.remove_file(temp_bed_file)
+
+
+def extract_multi_exon_sequences_from_bed(input_bed, output_genome_fasta_file):
+
+    lines = gen.read_many_fields(input_bed, "\t")
+    lines = lines[:2]
+    for line in lines:
+        seq = extract_multi_exon_bed_sequence(line, genome_fasta_file)
+
+
 
 
 def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):
