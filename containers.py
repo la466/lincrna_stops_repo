@@ -85,6 +85,32 @@ def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_g
     if not os.path.isfile(human_blast_file) or not os.path.isfile(human_families_file) or clean_run:
         cons.filter_families(human_cds_after_ortholog_filter_fasta, human_blast_file, human_families_file, database_path = human_blast_database_path, clean_run = clean_run)
 
+    human_single_exon_bed = "{0}/genome_sequences/{1}/{1}.cds.single_exons.bed".format(output_directory, human_dataset_name)
+    human_multi_exon_bed = "{0}/genome_sequences/{1}/{1}.cds.multi_exons.bed".format(output_directory, human_dataset_name)
+    human_single_exon_fasta = "{0}/genome_sequences/{1}/{1}.cds.single_exons.fasta".format(output_directory, human_dataset_name)
+    human_multi_exon_fasta = "{0}/genome_sequences/{1}/{1}.cds.multi_exons.fasta".format(output_directory, human_dataset_name)
+    if not os.path.isfile(human_single_exon_bed) or not os.path.isfile(human_multi_exon_bed) or not os.path.isfile(human_single_exon_fasta) or not os.path.isfile(human_multi_exon_fasta) or clean_run:
+        sequo.filter_by_exon_number(human_filelist["full_cds_features_bed"], human_cds_after_ortholog_filter_fasta, human_single_exon_bed, human_multi_exon_bed, human_single_exon_fasta, human_multi_exon_fasta)
+
+
+def extract_exons(gtf_file, genome_file, output_directory, output_file, clean_run = None):
+
+    print("Extracting exons...")
+
+    human_dataset_name = "human"
+    human_directory = "{0}/genome_sequences/{1}".format(output_directory, human_dataset_name)
+    seqs_fasta = "{0}/genome_sequences/{1}/{1}.cds.conservation_filtered.step3.fasta".format(output_directory, human_dataset_name)
+    if not os.path.isfile(output_file) or clean_run:
+        # load the human dataset
+        human, human_filelist = sequo.generate_genome_dataset(gtf_file, genome_file, human_dataset_name, human_directory, clean_run = False)
+        # get the exons from the dataset
+        ids_to_extract = gen.read_fasta(seqs_fasta)[0]
+        exons = sequo.extract_gtf_feature(human_filelist["dataset_features_bed"], "exon", ids_to_keep = ids_to_extract)
+        with open(output_file, "w") as outfile:
+            for id in exons:
+                [outfile.write("{0}\n".format("\t".join(i))) for i in exons[id]]
+    
+
 
 def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_exon_bed, single_exon_fasta, multi_exon_fasta, single_exon_families, multi_exon_families, clean_run = None):
     """

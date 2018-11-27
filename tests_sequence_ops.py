@@ -109,6 +109,16 @@ class Tests(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
 
+    def test_get_intron_coordinates(self):
+        input_file = "test_data/sequence_ops/test_get_intron_coordinates/input.bed"
+        expected_file = "test_data/sequence_ops/test_get_intron_coordinates/expected.bed"
+        observed_file = "test_data/sequence_ops/test_get_intron_coordinates/observed.bed"
+        gen.remove_file(observed_file)
+        get_intron_coordinates(input_file, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_get_ortholog_transcript_pairings(self):
         input_file1 = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/input1.bed"
         input_file2 = "test_data/sequence_ops/test_get_ortholog_transcript_pairings/input2.bed"

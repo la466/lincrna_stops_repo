@@ -145,7 +145,7 @@ class Genome_Functions(object):
             if input_list:
                 self.ids = input_list
             else:
-                self.ids = list(set([i[3] for i in entries]))
+                self.ids = list(set([i[3] for i in entries if "#" not in i[0]]))
 
             print("{0} dataset loaded...".format(self.dataset_name))
 
@@ -275,6 +275,120 @@ def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
     gen.remove_directory(temp_dir)
 
 
+def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
+    '''
+    Given a bed file of exon coordinates and a bed file of CDS coordinates,
+    writes a new bed file that only contains those exon coordinates form the former file that
+    1) are fully coding
+    2) are internal
+    NB! Assumes that all the coordinates are from non-overlapping transcripts.
+    If this is not the case, set remove_overlaps to True and it'll remove overlapping
+    intervals.
+    '''
+    if remove_overlapping:
+        sort_bed(exons_file, exons_file)
+        remove_overlaps(exons_file, exons_file)
+    #filter out anything that isn't fully coding
+    #you have to write_both because you want to make sure that they
+    #haven't been kept because of an overlap to a transcript that doesn't appear in the exons file
+    temp_file = "temp_data/temp{0}.txt".format(random.random())
+    intersect_bed(exons_file, CDSs_file, overlap = 1, overlap_rec = True, output_file = temp_file, force_strand = True, write_both = True, no_dups = False, no_name_check = False)
+    #filter out terminal exons
+    #in theory, there shouldn't be any left after the previous step
+    #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
+    #whereas in reality, the exon is only partially coding
+    temp_file2 = "temp_data/temp{0}.txt".format(random.random())
+    with open(temp_file2, "w") as o_file:
+        #figure out the rank of the last exon for each transcript
+        filt_exons = gen.read_many_fields(exons_file, "\t")
+        filt_exons = [i for i in filt_exons if len(i) > 3]
+        names = [i[3].split(".") for i in filt_exons]
+        names = gen.list_to_dict(names, 0, 1, as_list = True)
+        names = {i: max([int(j) for j in names[i]]) for i in names}
+        coding_exons = gen.read_many_fields(temp_file, "\t")
+        for exon in coding_exons:
+            overlap_name = exon[9].split(".")
+            if overlap_name[0] in names:
+                name = exon[3].split(".")
+                if name[-1] != "1":
+                    last_exon = names[name[0]]
+                    if int(name[-1]) != last_exon:
+                        exon = [str(i) for i in exon[:6]]
+                        o_file.write("\t".join(exon))
+                        o_file.write("\n")
+        sort_bed(temp_file2, temp_file2)
+        gen.run_process(["mergeBed", "-i", temp_file2, "-c", "4,5,6", "-o", "distinct,distinct,distinct"], file_for_output = outfile)
+        gen.remove_file(temp_file)
+        gen.remove_file(temp_file2)
+
+
+
+
+def clean_feature_file(bed_file):
+    """
+    After extracting features, may want to make it in a more usable format
+
+    Args:
+        bed_file (str): path to bed file
+    """
+
+    temp_file = "{0}.bed".format(random.random())
+    entries = gen.read_many_fields(bed_file, "\t")
+    with open(temp_file, "w") as outfile:
+        for entry in entries:
+            entry[3] = "{0}.{1}".format(entry[3], entry[4])
+            entry[4] = "."
+            outfile.write("{0}\n".format("\t".join(entry)))
+
+    gen.run_process(["mv", temp_file, bed_file])
+    gen.remove_file(temp_file)
+
+
+
+def extract_gtf_feature(input_file, required_feature, ids_to_keep = None, filter_by_gene = None):
+    """
+    Get a feature from a gtf file
+
+    Args:
+        input_file (str): path to file containing features
+        required_feature: (str): feature to keep
+        ids_to_keep (list): if set, list containing ids to keep
+        filter_by_gene (bool): if true, match gene ids rather than transcript ids
+
+    Returns:
+        features_list (dict): dict containing features, sorted according to
+            their position in the transcript. dict[transcript_id] = [cds_features]
+    """
+
+    print("Getting {0}s...".format(required_feature))
+
+    features = gen.read_many_fields(input_file, "\t")
+    features_list = collections.defaultdict(lambda: [])
+    # get a list of all that match
+    for feature in features:
+        if feature[-1] == required_feature:
+            # if filtering by gene, check that gene is in the input list, else
+            # check the transcript
+            if ids_to_keep:
+                if filter_by_gene and feature[6] in ids_to_keep:
+                    features_list[feature[3]].append(feature)
+                elif feature[3] in ids_to_keep:
+                    features_list[feature[3]].append(feature)
+            # otherwise keep all features
+            else:
+                features_list[feature[3]].append(feature)
+
+    for id in features_list:
+        # now we need to sort the exons in order, reversing if on the minus strand
+        strand = features_list[id][0][5]
+        if strand == "+":
+            features_list[id] = sorted(features_list[id], key = lambda x:x[1])
+        elif strand == "-":
+            features_list[id] = sorted(features_list[id], key = lambda x:x[2], reverse = True)
+
+    return features_list
+
+
 def extract_gtf_features(input_list, gtf_file_path, filter_by_transcript = None, filter_by_gene = None):
     """
     Given a .gtf file, filter the entries based on an input list
@@ -381,6 +495,7 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
     return cds_features_list
 
 
+
 def extract_multi_exons_entries_to_bed(input_bed, output_bed = None):
 
     entries = gen.read_many_fields(input_bed, "\t")
@@ -424,8 +539,57 @@ def build_sequences_from_exon_fasta(input_fasta, output_fasta):
 
 
 
+def get_intron_coordinates(input_bed, output_bed):
+    """
+    Given a bed file of exon coordinates, extract the intron coordinates
+    """
+
+    exons = gen.read_many_fields(input_bed, "\t")
+    exon_list = collections.defaultdict(lambda: collections.defaultdict())
+    for exon in exons:
+        id = exon[3].split(".")[0]
+        exon_no = int(exon[3].split(".")[1])
+        exon_list[id][exon_no] = exon
 
 
+    with open(output_bed, "w") as outfile:
+        for id in exon_list:
+            for exon_no in exon_list[id]:
+                # check if there is another exon afterwards
+                if exon_no + 1 in exon_list[id]:
+                    entry = copy.deepcopy(exon_list[id][exon_no])
+                    strand = exon_list[id][exon_no][5]
+                    if strand == "-":
+                        entry[1] = exon_list[id][exon_no+1][2]
+                        entry[2] = exon_list[id][exon_no][1]
+                        entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
+                    else:
+                        entry[1] = exon_list[id][exon_no][2]
+                        entry[2] = exon_list[id][exon_no+1][1]
+                        entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
+                    outfile.write("{0}\n".format("\t".join(entry)))
+
+
+
+
+def extract_introns(exon_bed, intron_bed, intron_fasta, genome_fasta, clean_run = None):
+    """
+    Given a bed file containing exon coordinates, get the intron sequences of the introns
+
+    Args:
+        exon_bed (str): path to file containing exon coordinates
+        intron_bed (str): path to file containing output intron coordinates
+        intron_fasta (str): path to file containing output intron sequences
+        genome_fasta (str): path to genome sequence
+        clean_run (str): if set, run the extraction
+    """
+
+    print("Extracting introns...")
+    # get the coordinates of introns
+    if not os.path.isfile(intron_bed) or not os.path.isfile(intron_fasta) or clean_run:
+        get_intron_coordinates(exon_bed, intron_bed)
+        # now write to fasta
+        fo.fasta_from_intervals(intron_bed, intron_fasta, genome_fasta, names = True)
 
 
 def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):
@@ -514,6 +678,44 @@ def filter_bed_file(input_bed, filter_columns, filter_values, inclusive, output_
     if not output_file:
         gen.run_process(["mv", file_to_write, input_bed])
         gen.remove_file(file_to_write)
+
+
+def filter_by_exon_number(input_bed, input_fasta, single_exon_bed, multi_exon_bed, single_exon_fasta, multi_exon_fasta):
+    """
+    Given a bed file of CDS entries and a fasta file containing the sequences, filter to group the sequences
+    into single and multi exon cases.
+
+    Args:
+        input_bed (str): path to bed file
+        input_fasta (str): path to fasta file
+        single_exon_bed (str): path to file containing bed entries for single exon genes
+        multi_exon_bed (str): path to file containing bed entries for multi exon genes
+        single_exon_fasta (str): path to file containing single exon gene sequences
+        multi_exon_fasta (str): path to file containing multi exon gene sequences
+    """
+
+    # get a list of bed entries and hold by transcript id
+    bed_entries = gen.read_many_fields(input_bed, "\t")
+    info = collections.defaultdict(lambda: [])
+    [info[i[3].split(".")[0]].append(i) for i in bed_entries if i[-1] == "CDS"]
+    # now get a list of sequences
+    names, seqs = gen.read_fasta(input_fasta)
+    seq_list = {name: seqs[i] for i, name in enumerate(names)}
+
+    with open(single_exon_bed, "w") as outfile1:
+        with open(multi_exon_bed, "w") as outfile2:
+            with open(single_exon_fasta, "w") as outfile3:
+                with open(multi_exon_fasta, "w") as outfile4:
+                    for id in seq_list:
+                        if len(info[id]) > 1:
+                            [outfile2.write("{0}\n".format("\t".join(i))) for i in info[id]]
+                            outfile4.write(">{0}\n{1}\n".format(id, seq_list[id]))
+                        else:
+                            [outfile1.write("{0}\n".format("\t".join(i))) for i in info[id]]
+                            outfile3.write(">{0}\n{1}\n".format(id, seq_list[id]))
+
+
+
 
 
 def filter_one_transcript_per_gene(transcript_list):
