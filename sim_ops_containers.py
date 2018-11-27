@@ -1,14 +1,17 @@
 import generic as gen
 import sim_ops as simo
 import seq_ops as seqo
+import sequence_ops as sequo
 import file_ops as fo
 import ops_containers as opsc
 import ops
 import numpy as np
+import pandas as pd
 import os
 import collections
 import time
 import csv
+from useful_motif_sets import dinucleotides, nucleotides
 from itertools import zip_longest
 
 
@@ -532,6 +535,80 @@ def sim_motifs(motifs_file, output_file, required_simulations, seeds=None, seq_s
             data = gen.read_fasta(temp_filelist[file])[1]
             outfile.write("{0},{1}\n".format(file, data[0]))
     gen.remove_directory(temp_dir)
+
+
+def simulate_sequence_stop_density(input_fasta, output_file, required_simulations, families_file = None):
+    """
+    Given a fasta file, simulate the sequences through dinucleotide matched controls
+    and calculate the stop codon densities.
+
+    Args:
+        input_fasta (str): path to fasta file
+        output_file (str): path to output file
+        required_simulations (int): number of simulations to run
+        families_file (str): if set, path to families file. Take the mean of sequences grouped into family
+    """
+
+    # create the output directory if not already exists
+    gen.create_output_directories("/".join(output_file.split("/")[:-1]))
+    # create temp simulation directory
+    temp_dir = "temp_sims"
+    gen.create_output_directories(temp_dir)
+
+
+    names, seqs = gen.read_fasta(input_fasta)
+    # get the dicnucleotide and nucleotide content of the sequences
+    dinucleotide_content = seqo.get_dinucleotide_content(seqs)
+    dinucleotide_probabilities = [dinucleotide_content[i] for i in sorted(dinucleotide_content)]
+    nucleotide_content = seqo.get_nucleotide_content(seqs)
+    nucleotide_probabilities = [nucleotide_content[i] for i in sorted(nucleotide_content)]
+
+    query_sequences = {name: seqs[i] for i, name in enumerate(names)}
+
+    # run simulation
+    args = [query_sequences, nucleotide_probabilities, dinucleotide_probabilities, temp_dir]
+    outputs = run_simulation_function(required_simulations, args, simo.simulate_sequence_stop_density)
+    # calculate the real density
+    real_densities = {name: seqo.calc_stop_density(seqs[i]) for i, name in enumerate(sorted(names))}
+    gcs = {name: seqo.calc_seq_gc(seqs[i]) for i, name in enumerate(sorted(names))}
+
+    if families_file:
+        family_list = gen.read_many_fields(families_file, "\t")
+
+    with open(output_file, "w") as outfile:
+        # get families and group if required
+        if family_list:
+            gcs = sequo.group_family_results(gcs, family_list)
+            gcs = {i: np.mean(gcs[i]) for i in gcs}
+            real_densities = sequo.group_family_results(real_densities, family_list)
+            real_densities = {i: np.mean(real_densities[i]) for i in real_densities}
+
+        outfile.write("sim_id,{0}\n".format(",".join([i for i in sorted(real_densities)])))
+        outfile.write("gc,{0}\n".format(",".join(gen.stringify([gcs[i] for i in sorted(gcs)]))))
+        outfile.write("real,{0}\n".format(",".join(gen.stringify([real_densities[i] for i in sorted(real_densities)]))))
+
+
+        for i, file in enumerate(outputs):
+            sim_densities = {i[0]: float(i[1]) for i in gen.read_many_fields(file, "\t")}
+            if family_list:
+                sim_densities = sequo.group_family_results(sim_densities, family_list)
+                sim_densities = {i: np.mean(sim_densities[i]) for i in real_densities}
+            outfile.write("sim_{0},{1}\n".format(i+1, ",".join(gen.stringify([sim_densities[i] for i in sorted(sim_densities)]))))
+
+    gen.remove_directory(temp_dir)
+
+    output_results_file = "{0}.nds.csv".format(".".join(output_file.split(".")[:-1]))
+    # get the results
+    results = pd.read_csv(output_file)
+    cols = list(results)[1:]
+    with open(output_results_file, "w") as outfile:
+        outfile.write("id,gc,real_density,nd\n")
+        for col in cols:
+            gc = results[col][0]
+            real = results[col][1]
+            sims = results[col][2:]
+            nd = np.divide(real - np.mean(sims), np.mean(sims))
+            outfile.write("{0},{1},{2},{3}\n".format(col, gc, real, nd))
 
 
 

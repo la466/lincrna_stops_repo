@@ -381,12 +381,15 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
     return cds_features_list
 
 
-def extract_multi_exons_entries_to_bed(input_bed):
+def extract_multi_exons_entries_to_bed(input_bed, output_bed = None):
 
     entries = gen.read_many_fields(input_bed, "\t")
-    random_instance = random.random()
-    temp_bed_file = "temp_files/{0}.bed".format(random.random())
-    with open(temp_bed_file, "w") as outfile:
+    if not output_bed:
+        output_bed_file = "temp_files/{0}.bed".format(random.random())
+    else:
+        output_bed_file = output_bed
+
+    with open(output_bed_file, "w") as outfile:
         for entry in entries:
             sizes = [int(i) for i in entry[10].split(",") if i]
             starts = [int(i) for i in entry[11].split(",") if i]
@@ -399,16 +402,28 @@ def extract_multi_exons_entries_to_bed(input_bed):
                 bed_entry[3] = "{0}.{1}".format(bed_entry[3], i+1)
                 outfile.write("{0}\n".format("\t".join(gen.stringify(bed_entry[:6]))))
 
-    gen.run_process(["mv", temp_bed_file, input_bed])
-    gen.remove_file(temp_bed_file)
+    if not output_bed:
+        gen.run_process(["mv", output_bed_file, input_bed])
+        gen.remove_file(output_bed_file)
 
 
-def extract_multi_exon_sequences_from_bed(input_bed, output_genome_fasta_file):
 
-    lines = gen.read_many_fields(input_bed, "\t")
-    lines = lines[:2]
-    for line in lines:
-        seq = extract_multi_exon_bed_sequence(line, genome_fasta_file)
+def build_sequences_from_exon_fasta(input_fasta, output_fasta):
+    names, seqs = gen.read_fasta(input_fasta)
+    outputs = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(names):
+        id = name.split(".")[0]
+        exon = int(name.split(".")[1].split("(")[0])
+        outputs[id][exon] = seqs[i]
+
+    with open(output_fasta, "w") as outfile:
+        for id in outputs:
+            seq = []
+            [seq.append(outputs[id][exon]) for exon in sorted(outputs[id])]
+            outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
+
+
+
 
 
 
@@ -680,6 +695,26 @@ def get_transcript_and_orthologs(input_file1, input_file2, ortholog_transcript_l
         for i in links[transcript_id]:
             sequences[transcript_id][1][i] = ortholog_seqs[ortholog_names.index(i)]
     return sequences
+
+
+def group_family_results(result_list, families):
+    """
+    Group the results of sequences in paralagous family together
+    """
+
+    family_ids = []
+    [family_ids.extend(i) for i in families]
+
+    outputs = collections.defaultdict(lambda: [])
+    for id in result_list:
+        if id in family_ids:
+            list_id = [i for i, lst in enumerate(families) if id in lst][0]
+            outputs["group_{0}".format(list_id)].append(result_list[id])
+        else:
+            outputs[id].append(result_list[id])
+
+    return outputs
+
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):

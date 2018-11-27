@@ -115,17 +115,18 @@ def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_ex
         # single exon cases is easier
         fo.fasta_from_intervals(single_exon_bed, single_exon_fasta, genome_fasta, names = True)
         # multi exon not so much, have to extract each piece by itself
-        sequo.extract_multi_exons_entries_to_bed(multi_exon_bed)
+        multi_exon_exons_bed = "{0}.exons.bed".format(".".join(multi_exon_bed.split(".")[:-1]))
         multi_exon_exons_fasta = "{0}.exons.fasta".format(".".join(multi_exon_fasta.split(".")[:-1]))
-        print(multi_exon_exons_fasta)
-        # fo.fasta_from_intervals(multi_exon_bed, multi_exon_exons_fasta, genome_fasta, names = True)
-        # sequo.build_sequences_from_fasta(multi_exon_exons_fasta, mutli_exons_fasta)
+        sequo.extract_multi_exons_entries_to_bed(multi_exon_bed, multi_exon_exons_bed)
+        fo.fasta_from_intervals(multi_exon_exons_bed, multi_exon_exons_fasta, genome_fasta, names = True)
+        # build sequences from exons
+        sequo.build_sequences_from_exon_fasta(multi_exon_exons_fasta, multi_exon_fasta)
 
-    # single_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(single_exon_families.split(".")[:-1]))
-    # single_exon_blast_database = "{0}/single_exon_blast_all_against_all".format("/".join(single_exon_families.split("/")[:-1]))
-    # multi_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(multi_exon_families.split(".")[:-1]))
-    # multi_exon_blast_database = "{0}/multi_exon_blast_all_against_all".format("/".join(multi_exon_families.split("/")[:-1]))
-    # # now group into paralagous families
-    # if not os.path.isfile(single_exon_families) or os.path.isfile(multi_exon_families) or clean_run:
-    #     cons.filter_families(single_exon_fasta, single_exon_blast_file, single_exon_families, database_path = single_exon_blast_database, clean_run = clean_run)
-    #     cons.filter_families(multi_exon_fasta, multi_exon_blast_file, multi_exon_families, database_path = multi_exon_blast_database, clean_run = clean_run)
+    single_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(single_exon_families.split(".")[:-1]))
+    single_exon_blast_database = "{0}/single_exon_blast_all_against_all".format("/".join(single_exon_families.split("/")[:-1]))
+    multi_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(multi_exon_families.split(".")[:-1]))
+    multi_exon_blast_database = "{0}/multi_exon_blast_all_against_all".format("/".join(multi_exon_families.split("/")[:-1]))
+    # now group into paralagous families
+    if not os.path.isfile(single_exon_families) or os.path.isfile(multi_exon_families) or clean_run:
+        cons.filter_families(single_exon_fasta, single_exon_blast_file, single_exon_families, database_path = single_exon_blast_database, clean_run = clean_run)
+        cons.filter_families(multi_exon_fasta, multi_exon_blast_file, multi_exon_families, database_path = multi_exon_blast_database, clean_run = clean_run)
