@@ -918,6 +918,33 @@ def group_family_results(result_list, families):
     return outputs
 
 
+def intersect_coding_exons(full_bed, reduced_bed, output_file):
+    # intersect the two files, only keep those entries that have 100% hits for both
+    args = ["bedtools", "intersect", "-a", full_bed, "-b", reduced_bed, "-wo", "-f", "1", "-r", "-s"]
+    gen.run_process(args, file_for_output = output_file)
+
+def remove_terminal_exons(full_bed, intersect_bed, output_file):
+    # remove cases where the terminal exon might in fact have been included in the intersect
+    temp_file2 = "temp_data/temp{0}.txt".format(random.random())
+    with open(temp_file2, "w") as o_file:
+        #figure out the rank of the last exon for each transcript
+        filt_exons = gen.read_many_fields(exons_file, "\t")
+        filt_exons = [i for i in filt_exons if len(i) > 3]
+        names = [i[3].split(".") for i in filt_exons]
+        names = gen.list_to_dict(names, 0, 1, as_list = True)
+        names = {i: max([int(j) for j in names[i]]) for i in names}
+        coding_exons = gen.read_many_fields(temp_file, "\t")
+        for exon in coding_exons:
+            overlap_name = exon[9].split(".")
+            if overlap_name[0] in names:
+                name = exon[3].split(".")
+                if name[-1] != "1":
+                    last_exon = names[name[0]]
+                    if int(name[-1]) != last_exon:
+                        exon = [str(i) for i in exon[:6]]
+                        o_file.write("\t".join(exon))
+                        o_file.write("\n")
+
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
     """

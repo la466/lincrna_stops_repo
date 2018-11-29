@@ -160,6 +160,17 @@ class Tests(unittest.TestCase):
         observed = get_transcript_and_orthologs(input_fasta1, input_fasta2, input_links)
         self.assertEqual(expected, observed)
 
+    def test_intersect_coding_exons(self):
+        input_full = "test_data/sequence_ops/test_intersect_coding_exons/input_full.bed"
+        input_less = "test_data/sequence_ops/test_intersect_coding_exons/input_less.bed"
+        expected_file = "test_data/sequence_ops/test_intersect_coding_exons/expected.bed"
+        observed_file = "test_data/sequence_ops/test_intersect_coding_exons/observed.bed"
+        gen.remove_file(observed_file)
+        intersect_coding_exons(input_full, input_less, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_list_transcript_ids_from_features(self):
         input_file = "test_data/sequence_ops/test_list_transcript_ids_from_features/input.gtf"
         expected = ["ENST00000456328", "ENST00032323", "ENST0003246"]
