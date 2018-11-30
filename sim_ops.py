@@ -14,7 +14,7 @@ def get_gc_matched_seqs(sequence_ids, sequence_list, untranslated_sequence, outp
     temp_dir = "temp_files"
     gen.create_output_directories(temp_dir)
 
-    for i, id in enumerate(sequence_ids[:30]):
+    for i, id in enumerate(sequence_ids):
         print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(sequence_ids), id))
         output_file = "{0}/{1}.txt".format(output_directory, id)
         temp_file = "{0}/{1}.txt".format(temp_dir, random.random())
