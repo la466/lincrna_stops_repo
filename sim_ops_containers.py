@@ -70,11 +70,11 @@ def generate_gc_controls(input_file, untranslated_sequence_file, output_director
     sequence_names, sequences = gen.read_fasta(input_file)
     sequence_names = [i.split("(")[0] for i in sequence_names]
     sequence_list = {name: sequences[i] for i, name in enumerate(sequence_names)}
-    # get the untranslated regions and join
-    untranslated_sequences = [i for i in gen.read_fasta(untranslated_sequence_file)[1] if "N" not in i]
-    unstranslated_sequence = "".join(untranslated_sequences)
+    # get the untransribed regions and join
+    untransribed_sequences = [i for i in gen.read_fasta(untranslated_sequence_file)[1] if "N" not in i]
+    untranscribed_sequence = "".join(untransribed_sequences)
     # set up to generate sequences
-    args = [sequence_list, unstranslated_sequence, output_directory, required_simulations]
+    args = [sequence_list, untranscribed_sequence, output_directory, required_simulations]
     run_simulation_function(sequence_names, args, simo.get_gc_matched_seqs, sim_run = False)
 
 

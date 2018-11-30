@@ -9,7 +9,7 @@ from useful_motif_sets import dinucleotides, nucleotides
 import multiprocessing as mp
 
 
-def get_gc_matched_seqs(sequence_ids, sequence_list, untranslated_sequence, output_directory, required_simulations):
+def get_gc_matched_seqs(sequence_ids, sequence_list, untranscribed_sequence, output_directory, required_simulations):
 
     temp_dir = "temp_files"
     gen.create_output_directories(temp_dir)
@@ -21,7 +21,7 @@ def get_gc_matched_seqs(sequence_ids, sequence_list, untranslated_sequence, outp
         seq = sequence_list[id]
         # set the number of simulation for each seq to do
         input_seqs = {"{0}_{1}".format(id, i+1): seq for i in range(required_simulations)}
-        seqo.get_gc_matched_seqs(input_seqs, untranslated_sequence, 0.05, temp_file)
+        seqo.get_gc_matched_seqs(input_seqs, untranscribed_sequence, 0.05, temp_file)
         with open(output_file, "w") as outfile:
             outfile.write("{0}".format(",".join(gen.read_fasta(temp_file)[1])))
         gen.remove_file(temp_file)
