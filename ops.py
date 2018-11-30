@@ -338,6 +338,7 @@ def extract_gtf_features_all(gtf, bed, exclude_XY=None):
     with open(bed, "w") as outfile:
         for feature in gtf_features:
             if feature[0] in required_chrs:
+                feature[0] = feature[0].strip("chr")
                 outfile.write("{0}\n".format("\t".join([str(i) for i in feature])))
 
 
@@ -397,7 +398,7 @@ def get_genome_bed_from_fasta_index(features_bed, fasta_index, output_file):
     """
 
     # get all the chromosomes required
-    first_column = [i for i in list(set(gen.run_process(["awk", "{print $1}"], file_for_input=features_bed).split('\n'))) if len(i)]
+    first_column = [i.strip("chr") for i in list(set(gen.run_process(["awk", "{print $1}"], file_for_input=features_bed).split('\n'))) if len(i)]
     # get index lines
     index = gen.read_many_fields(fasta_index, "\t")
     with open(output_file, "w") as outfile:

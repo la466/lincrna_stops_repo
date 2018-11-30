@@ -15,6 +15,7 @@ from useful_motif_sets import dinucleotides, nucleotides
 from itertools import zip_longest
 
 
+
 def get_temp_filelist(outputs):
     filelist = []
     for output in outputs:
@@ -56,6 +57,27 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, par
         outputs = function_to_run(simulations, *sim_args)
 
     return outputs
+
+
+def generate_gc_controls(input_file, untranslated_sequence_file, output_directory, required_simulations = None):
+
+    if not required_simulations:
+        required_simulations = 1000
+
+    output_directory = "{0}/clean_coding_exons_gc_controls".format(output_directory)
+    gen.create_output_directories(output_directory)
+    # get a list of the sequences
+    sequence_names, sequences = gen.read_fasta(input_file)
+    sequence_names = [i.split("(")[0] for i in sequence_names]
+    sequence_list = {name: sequences[i] for i, name in enumerate(sequence_names)}
+    # get the untranslated regions and join
+    untranslated_sequences = [i for i in gen.read_fasta(untranslated_sequence_file)[1] if "N" not in i]
+    unstranslated_sequence = "".join(untranslated_sequences)
+    # set up to generate sequences
+    args = [sequence_list, unstranslated_sequence, output_directory, required_simulations]
+    run_simulation_function(sequence_names, args, simo.get_gc_matched_seqs, sim_run = False)
+
+
 
 
 def sim_coding_exon_stop_counts_regions(genome_fasta, gtf, output_directory, output_file, simulations, clean_run=None):

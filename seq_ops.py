@@ -6,6 +6,32 @@ import itertools as it
 import re
 import collections
 import os
+from useful_motif_sets import stops
+
+def get_exon_reading_frame(seq):
+    """
+    Given a sequence, get the reading frame, i.e. the frame containing no
+    stop codons.
+    """
+
+    codons0 = re.findall(".{3}", seq)
+    if list(set(stops) & set(codons0)):
+        return 0
+    else:
+        codons1 = re.findall(".{3}", seq[1:])
+        if list(set(stops) & set(codons1)):
+            return 1
+        else:
+            return 2
+
+def calc_seq_stop_density(seq, exclude_frame = None):
+
+    count = 0
+    for frame in list(range(3)):
+        if frame != exclude_frame:
+            count += len(list(set(stops) & set(re.findall(".{3}", seq[frame:]))))
+    return np.divide(count*3, len(seq))
+
 
 def calc_codon_density_in_seqs(codons, seqs):
     """
@@ -185,13 +211,13 @@ def get_non_transcribed_regions(input_gtf, input_fasta, output_features_bed, out
     # get all features in a bed file
     if not os.path.isfile(output_features_bed):
         print("Getting all genome features...")
-        ops.extract_gtf_features_all(input_gtf, output_features_bed, exclude_XY=True)
+        ops.extract_gtf_features_all(input_gtf, output_features_bed)
     # create genome bed from fasta
-    genome_bed = "{0}/genome.bed".format(output_directory)
+    genome_bed = "{0}/index_genome.bed".format(output_directory)
     genome_index = "{0}.fai".format(input_fasta)
-    if not os.path.isfile(genome_bed):
-        print("Getting genome coordinates...")
-        ops.get_genome_bed_from_fasta_index(output_features_bed, genome_index, genome_bed)
+    # if not os.path.isfile(genome_bed):
+    print("Getting genome coordinates...")
+    ops.get_genome_bed_from_fasta_index(output_features_bed, genome_index, genome_bed)
     # subtract the features from a bed file that simpy contains the whole genome coordinates
     if not os.path.isfile(output_bed):
         print("Getting genome regions where there are no features...")

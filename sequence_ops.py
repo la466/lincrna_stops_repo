@@ -473,7 +473,6 @@ def extract_multi_exons_entries_to_bed(input_bed, output_bed = None):
         gen.remove_file(output_bed_file)
 
 
-
 def build_sequences_from_exon_fasta(input_fasta, output_fasta):
     names, seqs = gen.read_fasta(input_fasta)
     outputs = collections.defaultdict(lambda: collections.defaultdict())
@@ -487,81 +486,6 @@ def build_sequences_from_exon_fasta(input_fasta, output_fasta):
             seq = []
             [seq.append(outputs[id][exon]) for exon in sorted(outputs[id])]
             outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
-
-
-def intersect_non_coding_exons(full_bed, cds_bed, output_file):
-    """
-
-    """
-    args = ["bedtools", "intersect", "-a", full_bed, "-b", reduced_bed, "-wo", "-r", "-s", "-v"]
-    gen.run_process(args, file_for_output = output_file)
-
-
-def get_non_coding_exons(full_bed, reduced_bed, output_file):
-    """
-    Get all non coding exons
-    """
-
-    gen.create_output_directories("temp_files")
-    temp_file = "temp_files/{0}.bed".format(random.random())
-    # intersect the files, keeping only those entries in the full bed that
-    # arent in the reduced bed
-    intersect_non_coding_exons(full_bed, reduced_bed, temp_file)
-    sort_bed_file(temp_file, output_file)
-
-
-def get_intron_coordinates(input_bed, output_bed):
-    """
-    Given a bed file of exon coordinates, extract the intron coordinates
-
-    Args:
-        input_bed (str): path to bed file containing exon coordinates
-        output_bed (str): path to output file
-    """
-
-    exons = gen.read_many_fields(input_bed, "\t")
-    exon_list = collections.defaultdict(lambda: collections.defaultdict())
-    for i, exon in enumerate(exons):
-        id = exon[3].split(".")[0]
-        exon_no = int(exon[3].split(".")[1])
-        exon_list[id][exon_no] = exon
-
-    with open(output_bed, "w") as outfile:
-        for id in exon_list:
-            for exon_no in exon_list[id]:
-                # check if there is another exon afterwards
-                if exon_no + 1 in exon_list[id]:
-                    entry = copy.deepcopy(exon_list[id][exon_no])
-                    strand = exon_list[id][exon_no][5]
-                    if strand == "-":
-                        entry[1] = exon_list[id][exon_no+1][2]
-                        entry[2] = exon_list[id][exon_no][1]
-                        entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
-                    else:
-                        entry[1] = exon_list[id][exon_no][2]
-                        entry[2] = exon_list[id][exon_no+1][1]
-                        entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
-                    outfile.write("{0}\n".format("\t".join(entry)))
-
-
-def extract_introns(exon_bed, intron_bed, intron_fasta, genome_fasta, clean_run = None):
-    """
-    Given a bed file containing exon coordinates, get the intron sequences of the introns
-
-    Args:
-        exon_bed (str): path to file containing exon coordinates
-        intron_bed (str): path to file containing output intron coordinates
-        intron_fasta (str): path to file containing output intron sequences
-        genome_fasta (str): path to genome sequence
-        clean_run (str): if set, run the extraction
-    """
-
-    print("Extracting introns...")
-    # get the coordinates of introns
-    if not os.path.isfile(intron_bed) or not os.path.isfile(intron_fasta) or clean_run:
-        get_intron_coordinates(exon_bed, intron_bed)
-        # now write to fasta
-        fo.fasta_from_intervals(intron_bed, intron_fasta, genome_fasta, names = True)
 
 
 def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):
@@ -772,6 +696,86 @@ def get_clean_genes(input_fasta, input_bed, output_bed):
         [outfile.write("{0}\t{1}\n".format(i, clean_genes[i])) for i in clean_genes]
 
 
+def get_coding_exon_coordinates(full_bed, cds_bed, output_file):
+    """
+    Given a list of exons that make up the cds, and a list of all exons,
+    filter to only include fully coding exonsself.
+
+    Args:
+        full_bed (str): path to file containing all exons
+        cds_bed (str): path to file containing cds exons
+        output_file (str): path to output_file
+    """
+
+    print("Getting coding exon coordinates...")
+
+    gen.create_output_directories("temp_files")
+    temp_file1 = "temp_files/{0}.bed".format(random.random())
+    temp_file2 = "temp_files/{0}.bed".format(random.random())
+    # intersect the bed file to get all 100% hits
+    intersect_coding_exons(full_bed, cds_bed, temp_file1)
+    # now remove any potential lingering terminal exons
+    remove_terminal_exons(full_bed, temp_file1, temp_file2)
+    # sort and clean up output
+    sort_bed_file(temp_file2, output_file)
+    gen.remove_file(temp_file1)
+    gen.remove_file(temp_file2)
+
+
+def get_intron_coordinates(input_bed, output_bed):
+    """
+    Given a bed file of exon coordinates, extract the intron coordinates
+
+    Args:
+        input_bed (str): path to bed file containing exon coordinates
+        output_bed (str): path to output file
+    """
+
+    exons = gen.read_many_fields(input_bed, "\t")
+    exon_list = collections.defaultdict(lambda: collections.defaultdict())
+    for i, exon in enumerate(exons):
+        id = exon[3].split(".")[0]
+        exon_no = int(exon[3].split(".")[1])
+        exon_list[id][exon_no] = exon
+
+    with open(output_bed, "w") as outfile:
+        for id in exon_list:
+            for exon_no in exon_list[id]:
+                # check if there is another exon afterwards
+                if exon_no + 1 in exon_list[id]:
+                    entry = copy.deepcopy(exon_list[id][exon_no])
+                    strand = exon_list[id][exon_no][5]
+                    if strand == "-":
+                        entry[1] = exon_list[id][exon_no+1][2]
+                        entry[2] = exon_list[id][exon_no][1]
+                        entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
+                    else:
+                        entry[1] = exon_list[id][exon_no][2]
+                        entry[2] = exon_list[id][exon_no+1][1]
+                        entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
+                    outfile.write("{0}\n".format("\t".join(entry)))
+
+
+def get_non_coding_exon_coordinates(full_bed, reduced_bed, output_file):
+    """
+    Get all non coding exons
+
+    Args:
+        full_bed (str): path to bed file containing full exon entries
+        reduced_bed (str): path to bed file containing cds exon entries
+        output_file (str): path to output file
+    """
+
+    print("Getting non coding exon coordinates...")
+
+    gen.create_output_directories("temp_files")
+    temp_file = "temp_files/{0}.bed".format(random.random())
+    # intersect the files, keeping only those entries in the full bed that
+    # arent in the reduced bed
+    intersect_non_coding_exons(full_bed, reduced_bed, temp_file)
+    sort_bed_file(temp_file, output_file)
+
+
 def get_ortholog_transcript_pairings(input_file1, input_file2, ortholog_pairs_file, ortholog_fasta, output_file):
     """
     Give two files containing transcript-gene pairings, link the transcripts in the first
@@ -874,6 +878,14 @@ def get_transcript_and_orthologs(input_file1, input_file2, ortholog_transcript_l
 def group_family_results(result_list, families):
     """
     Group the results of sequences in paralagous family together
+
+    Args:
+        result_list (dict): dictionary of results with transcript ids a keys
+        families (list): list of lists containing families
+
+    Returns:
+        outputs (dict): dictionary containing list of outputs sorted by families,
+            dict[id] = [result]
     """
 
     family_ids = []
@@ -890,32 +902,6 @@ def group_family_results(result_list, families):
     return outputs
 
 
-def get_coding_exons(full_bed, cds_bed, output_file):
-    """
-    Given a list of exons that make up the cds, and a list of all exons,
-    filter to only include fully coding exonsself.
-
-    Args:
-        full_bed (str): path to file containing all exons
-        cds_bed (str): path to file containing cds exons
-        output_file (str): path to output_file
-    """
-
-    print("Getting coding exons...")
-
-    gen.create_output_directories("temp_files")
-    temp_file1 = "temp_files/{0}.bed".format(random.random())
-    temp_file2 = "temp_files/{0}.bed".format(random.random())
-    # intersect the bed file to get all 100% hits
-    intersect_coding_exons(full_bed, cds_bed, temp_file1)
-    # now remove any potential lingering terminal exons
-    remove_terminal_exons(full_bed, temp_file1, temp_file2)
-    # sort and clean up output
-    sort_bed_file(temp_file2, output_file)
-    gen.remove_file(temp_file1)
-    gen.remove_file(temp_file2)
-
-
 def intersect_coding_exons(full_bed, reduced_bed, output_file):
     """
     Intersect the two files, only keep those entries that have 100% hits for both
@@ -927,6 +913,21 @@ def intersect_coding_exons(full_bed, reduced_bed, output_file):
     """
 
     args = ["bedtools", "intersect", "-a", full_bed, "-b", reduced_bed, "-wo", "-f", "1", "-r", "-s"]
+    gen.run_process(args, file_for_output = output_file)
+
+
+def intersect_non_coding_exons(full_bed, reduced_bed, output_file):
+    """
+    Given a bed file and reudced file, return entries in the full bed file
+    that do not appear in the reduced file
+
+    Args:
+        full_bed (str): path to bed file containing full entries
+        reduced_bed (str): path to bed file containing reduced entries
+        output_file (str): path to output file
+    """
+
+    args = ["bedtools", "intersect", "-a", full_bed, "-b", reduced_bed, "-wo", "-r", "-s", "-v"]
     gen.run_process(args, file_for_output = output_file)
 
 

@@ -6,6 +6,27 @@ import random
 import re
 import collections
 from useful_motif_sets import dinucleotides, nucleotides
+import multiprocessing as mp
+
+
+def get_gc_matched_seqs(sequence_ids, sequence_list, untranslated_sequence, output_directory, required_simulations):
+
+    temp_dir = "temp_files"
+    gen.create_output_directories(temp_dir)
+
+    for i, id in enumerate(sequence_ids[:30]):
+        print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(sequence_ids), id))
+        output_file = "{0}/{1}.txt".format(output_directory, id)
+        temp_file = "{0}/{1}.txt".format(temp_dir, random.random())
+        seq = sequence_list[id]
+        # set the number of simulation for each seq to do
+        input_seqs = {"{0}_{1}".format(id, i+1): seq for i in range(required_simulations)}
+        seqo.get_gc_matched_seqs(input_seqs, untranslated_sequence, 0.05, temp_file)
+        with open(output_file, "w") as outfile:
+            outfile.write("{0}".format(",".join(gen.read_fasta(temp_file)[1])))
+        gen.remove_file(temp_file)
+
+    return []
 
 def get_seq_seed(seq_seeds, simulation_number, sequence_number):
     """
