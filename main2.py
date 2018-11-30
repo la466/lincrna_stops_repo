@@ -33,16 +33,19 @@ def main():
         if not os.path.isfile(full_exon_file) or clean_run:
             sequo.clean_feature_file(full_exon_file)
 
-    full_intron_bed = "{0}/genome_sequences/human/human.introns.bed".format(output_directory)
-    full_intron_fasta = "{0}/genome_sequences/human/human.introns.fasta".format(output_directory)
-    if extract_introns:
-        sequo.extract_introns(full_exon_file, full_intron_bed, full_intron_fasta, genome_fasta, clean_run = clean_run)
-
-    coding_exons_bed = "{0}/genome_sequences/{1}/{1}.cds.coding_exons.bed".format(output_directory, "human")
-    single_exons_bed = "{0}/genome_sequences/{1}/{1}.cds.single_exons.bed".format(output_directory, "human")
-    mutli_exons_bed = "{0}/genome_sequences/{1}/{1}.cds.multi_exons.bed".format(output_directory, "human")
+    exons_bed = "{0}/genome_sequences/{1}/{1}.cds.clean_filtered_exons.bed".format(output_directory, "human")
+    coding_exons_bed = "{0}/genome_sequences/{1}/{1}.cds.clean_coding_exons.bed".format(output_directory, "human")
     if extract_coding_exons:
-        sequo.extract_coding_non_coding_exons(full_exons_file, single_exons_bed, mutli_exons_bed, coding_exons_bed, non_coding_exons_bed)
+        sequo.get_coding_exons(full_exon_file, exons_bed, coding_exons_bed)
+
+    non_coding_exons_bed = "{0}/genome_sequences/{1}/{1}.cds.clean_non_coding_exons.bed".format(output_directory, "human")
+    if extract_non_coding_exons:
+        sequo.get_non_coding_exons(full_exon, exons_bed, non_coding_exons_bed)
+
+    intron_bed = "{0}/genome_sequences/human/human.introns.bed".format(output_directory)
+    intron_fasta = "{0}/genome_sequences/human/human.introns.fasta".format(output_directory)
+    if extract_introns:
+        sequo.extract_introns(coding_exons_bed, intron_bed, intron_fasta, genome_fasta, clean_run = clean_run)
 
 
 if __name__ == "__main__":

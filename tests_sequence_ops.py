@@ -177,6 +177,17 @@ class Tests(unittest.TestCase):
         observed = list_transcript_ids_from_features(input_file)
         self.assertEqual(expected, observed)
 
+    def test_remove_terminal_exons(self):
+        input_full = "test_data/sequence_ops/test_remove_terminal_exons/input_full.bed"
+        input_intersect = "test_data/sequence_ops/test_remove_terminal_exons/input_intersect.bed"
+        expected_file = "test_data/sequence_ops/test_remove_terminal_exons/expected.bed"
+        observed_file = "test_data/sequence_ops/test_remove_terminal_exons/observed.bed"
+        gen.remove_file(observed_file)
+        remove_terminal_exons(input_full, input_intersect, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
     def test_quality_filter_cds_sequences(self):
         input_file = "test_data/sequence_ops/test_quality_filter_cds_sequences/input.fasta"
         expected_file = "test_data/sequence_ops/test_quality_filter_cds_sequences/expected.fasta"

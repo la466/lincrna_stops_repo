@@ -275,55 +275,6 @@ def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
     gen.remove_directory(temp_dir)
 
 
-def check_coding(exons_file, CDSs_file, outfile, remove_overlapping = False):
-    '''
-    Given a bed file of exon coordinates and a bed file of CDS coordinates,
-    writes a new bed file that only contains those exon coordinates form the former file that
-    1) are fully coding
-    2) are internal
-    NB! Assumes that all the coordinates are from non-overlapping transcripts.
-    If this is not the case, set remove_overlaps to True and it'll remove overlapping
-    intervals.
-    '''
-    if remove_overlapping:
-        sort_bed(exons_file, exons_file)
-        remove_overlaps(exons_file, exons_file)
-    #filter out anything that isn't fully coding
-    #you have to write_both because you want to make sure that they
-    #haven't been kept because of an overlap to a transcript that doesn't appear in the exons file
-    temp_file = "temp_data/temp{0}.txt".format(random.random())
-    intersect_bed(exons_file, CDSs_file, overlap = 1, overlap_rec = True, output_file = temp_file, force_strand = True, write_both = True, no_dups = False, no_name_check = False)
-    #filter out terminal exons
-    #in theory, there shouldn't be any left after the previous step
-    #in practice, there may be unannotated UTRs, so it looks like we have a fully coding terminal exon,
-    #whereas in reality, the exon is only partially coding
-    temp_file2 = "temp_data/temp{0}.txt".format(random.random())
-    with open(temp_file2, "w") as o_file:
-        #figure out the rank of the last exon for each transcript
-        filt_exons = gen.read_many_fields(exons_file, "\t")
-        filt_exons = [i for i in filt_exons if len(i) > 3]
-        names = [i[3].split(".") for i in filt_exons]
-        names = gen.list_to_dict(names, 0, 1, as_list = True)
-        names = {i: max([int(j) for j in names[i]]) for i in names}
-        coding_exons = gen.read_many_fields(temp_file, "\t")
-        for exon in coding_exons:
-            overlap_name = exon[9].split(".")
-            if overlap_name[0] in names:
-                name = exon[3].split(".")
-                if name[-1] != "1":
-                    last_exon = names[name[0]]
-                    if int(name[-1]) != last_exon:
-                        exon = [str(i) for i in exon[:6]]
-                        o_file.write("\t".join(exon))
-                        o_file.write("\n")
-        sort_bed(temp_file2, temp_file2)
-        gen.run_process(["mergeBed", "-i", temp_file2, "-c", "4,5,6", "-o", "distinct,distinct,distinct"], file_for_output = outfile)
-        gen.remove_file(temp_file)
-        gen.remove_file(temp_file2)
-
-
-
-
 def clean_feature_file(bed_file):
     """
     After extracting features, may want to make it in a more usable format
@@ -538,19 +489,42 @@ def build_sequences_from_exon_fasta(input_fasta, output_fasta):
             outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
 
 
+def intersect_non_coding_exons(full_bed, cds_bed, output_file):
+    """
+
+    """
+    args = ["bedtools", "intersect", "-a", full_bed, "-b", reduced_bed, "-wo", "-r", "-s", "-v"]
+    gen.run_process(args, file_for_output = output_file)
+
+
+def get_non_coding_exons(full_bed, reduced_bed, output_file):
+    """
+    Get all non coding exons
+    """
+
+    gen.create_output_directories("temp_files")
+    temp_file = "temp_files/{0}.bed".format(random.random())
+    # intersect the files, keeping only those entries in the full bed that
+    # arent in the reduced bed
+    intersect_non_coding_exons(full_bed, reduced_bed, temp_file)
+    sort_bed_file(temp_file, output_file)
+
 
 def get_intron_coordinates(input_bed, output_bed):
     """
     Given a bed file of exon coordinates, extract the intron coordinates
+
+    Args:
+        input_bed (str): path to bed file containing exon coordinates
+        output_bed (str): path to output file
     """
 
     exons = gen.read_many_fields(input_bed, "\t")
     exon_list = collections.defaultdict(lambda: collections.defaultdict())
-    for exon in exons:
+    for i, exon in enumerate(exons):
         id = exon[3].split(".")[0]
         exon_no = int(exon[3].split(".")[1])
         exon_list[id][exon_no] = exon
-
 
     with open(output_bed, "w") as outfile:
         for id in exon_list:
@@ -568,8 +542,6 @@ def get_intron_coordinates(input_bed, output_bed):
                         entry[2] = exon_list[id][exon_no+1][1]
                         entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
                     outfile.write("{0}\n".format("\t".join(entry)))
-
-
 
 
 def extract_introns(exon_bed, intron_bed, intron_fasta, genome_fasta, clean_run = None):
@@ -918,32 +890,81 @@ def group_family_results(result_list, families):
     return outputs
 
 
+def get_coding_exons(full_bed, cds_bed, output_file):
+    """
+    Given a list of exons that make up the cds, and a list of all exons,
+    filter to only include fully coding exonsself.
+
+    Args:
+        full_bed (str): path to file containing all exons
+        cds_bed (str): path to file containing cds exons
+        output_file (str): path to output_file
+    """
+
+    print("Getting coding exons...")
+
+    gen.create_output_directories("temp_files")
+    temp_file1 = "temp_files/{0}.bed".format(random.random())
+    temp_file2 = "temp_files/{0}.bed".format(random.random())
+    # intersect the bed file to get all 100% hits
+    intersect_coding_exons(full_bed, cds_bed, temp_file1)
+    # now remove any potential lingering terminal exons
+    remove_terminal_exons(full_bed, temp_file1, temp_file2)
+    # sort and clean up output
+    sort_bed_file(temp_file2, output_file)
+    gen.remove_file(temp_file1)
+    gen.remove_file(temp_file2)
+
+
 def intersect_coding_exons(full_bed, reduced_bed, output_file):
-    # intersect the two files, only keep those entries that have 100% hits for both
+    """
+    Intersect the two files, only keep those entries that have 100% hits for both
+
+    Args:
+        full_bed (str): path to file containing all exons
+        reduced_bed (str): path to file containing filtered cds exons
+        output_file (str): path to output file
+    """
+
     args = ["bedtools", "intersect", "-a", full_bed, "-b", reduced_bed, "-wo", "-f", "1", "-r", "-s"]
     gen.run_process(args, file_for_output = output_file)
 
+
 def remove_terminal_exons(full_bed, intersect_bed, output_file):
-    # remove cases where the terminal exon might in fact have been included in the intersect
-    temp_file2 = "temp_data/temp{0}.txt".format(random.random())
-    with open(temp_file2, "w") as o_file:
-        #figure out the rank of the last exon for each transcript
-        filt_exons = gen.read_many_fields(exons_file, "\t")
-        filt_exons = [i for i in filt_exons if len(i) > 3]
-        names = [i[3].split(".") for i in filt_exons]
-        names = gen.list_to_dict(names, 0, 1, as_list = True)
-        names = {i: max([int(j) for j in names[i]]) for i in names}
-        coding_exons = gen.read_many_fields(temp_file, "\t")
-        for exon in coding_exons:
-            overlap_name = exon[9].split(".")
-            if overlap_name[0] in names:
-                name = exon[3].split(".")
-                if name[-1] != "1":
-                    last_exon = names[name[0]]
-                    if int(name[-1]) != last_exon:
-                        exon = [str(i) for i in exon[:6]]
-                        o_file.write("\t".join(exon))
-                        o_file.write("\n")
+    """
+    Remove cases where the last exon might be the terminal exon or there are
+    incorrectly annotated items.
+
+    Args:
+        full_bed (str): path to bed file containing all exons
+        intersect_bed (str): path to bed file containing an intersect output
+        output_file (str): path to output file
+    """
+
+    # get a list of exons, ensure it is a correct entry and get the last one
+    full_exons = [i for i in gen.read_many_fields(full_bed, "\t") if len(i) > 3]
+    exon_list = collections.defaultdict(lambda: [])
+    [exon_list[i[3].split(".")[0]].append(int(i[3].split(".")[1])) for i in full_exons]
+    transcript_terminal_exons = {id: max(exon_list[id]) for id in exon_list}
+    # read in the intersect cases
+    intersect_cases = gen.read_many_fields(intersect_bed, "\t")
+    # now filter out any remaining terminal exons
+    with open(output_file, "w") as outfile:
+        for intersect in intersect_cases:
+            intersect_id = intersect[9].split(".")[0]
+            intersect_exon_id = int(intersect[9].split(".")[1])
+            if intersect_id in transcript_terminal_exons:
+                original_id = intersect[3].split(".")[0]
+                original_exon_id = int(intersect[3].split(".")[1])
+
+                # ensure a match to the same transcript
+                if intersect_id == original_id and intersect_exon_id == original_exon_id:
+                    # ensure this is not the first exon
+                    if original_exon_id != 1:
+                        final_exon = transcript_terminal_exons[original_id]
+                        # if the intersect case is not the final case in the full exons file
+                        if original_exon_id != final_exon:
+                            outfile.write("{0}\n".format("\t".join(gen.stringify(intersect[:6]))))
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
@@ -1044,3 +1065,20 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
                 pass_count += 1
 
     print("{0} sequences after filtering...".format(pass_count))
+
+
+def sort_bed_file(input_bed, output_bed):
+    """
+    Sort bed file
+
+    Args:
+        input_bed (str): path to bed file to be sorted
+        output_bed (str): path to sorted output file
+    """
+
+    sort_output = "temp_files/{0}.bed".format(random.random())
+    # sort the bed files
+    gen.run_process(["sort-bed", input_bed], file_for_output = sort_output)
+    # move to the required output file
+    gen.run_process(["mv", sort_output, output_bed])
+    gen.remove_file(sort_output)

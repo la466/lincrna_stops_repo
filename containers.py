@@ -75,8 +75,10 @@ def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_g
     # check orthologs conservation
     human_ids_after_conservation_file = "{0}/genome_sequences/{1}.{2}.conservation_filtering.step3.bed".format(output_directory, human_dataset_name, ortholog_dataset_name)
     human_cds_after_ortholog_filter_fasta = "{0}/genome_sequences/{1}/{1}.cds.conservation_filtered.step3.fasta".format(output_directory, human_dataset_name)
+    human_cds_cleaned_fasta = "{0}/genome_sequences/{1}/{1}.cds.clean.fasta".format(output_directory, human_dataset_name)
     if not os.path.isfile(human_ids_after_conservation_file) or not os.path.isfile(human_cds_after_ortholog_filter_fasta) or clean_run:
         check_conservation(human.cds_fasta, ortholog.cds_fasta, orthologs_transcript_links_file, human_ids_after_conservation_file, human_cds_after_ortholog_filter_fasta, max_dS_threshold = 0.2, max_omega_threshold = 0.5, clean_run = clean_run)
+    gen.run_process(["cp", human_cds_after_ortholog_filter_fasta, human_cds_cleaned_fasta])
 
     # filter the sequences into families
     human_blast_file = "{0}/genome_sequences/{1}/{1}.cds.blast_all_against_all.csv".format(output_directory, human_dataset_name)
@@ -85,12 +87,21 @@ def extract_clean_sequences(gtf_file, genome_file, ortholog_gtf_file, ortholog_g
     if not os.path.isfile(human_blast_file) or not os.path.isfile(human_families_file) or clean_run:
         cons.filter_families(human_cds_after_ortholog_filter_fasta, human_blast_file, human_families_file, database_path = human_blast_database_path, clean_run = clean_run)
 
+    # filter the exon entries to only include those from the resulting filters
+    human_cds_exons_file = "{0}/genome_sequences/{1}/{1}.cds.clean_filtered_exons.bed".format(output_directory, human_dataset_name)
+    if not os.path.isfile(human_cds_exons_file) or clean_run:
+        print("Filtering exons to only include those from filtered CDS...")
+        exon_entries = gen.read_many_fields(human_filelist["full_cds_features_bed"], "\t")
+        cds_names = gen.read_fasta(human_cds_cleaned_fasta)[0]
+        with open(human_cds_exons_file, "w") as outfile:
+            [outfile.write("{0}\n".format("\t".join(i))) for i in exon_entries if i[3].split(".")[0] in cds_names and i[7] != "stop_codon"]
+
     human_single_exon_bed = "{0}/genome_sequences/{1}/{1}.cds.single_exons.bed".format(output_directory, human_dataset_name)
     human_multi_exon_bed = "{0}/genome_sequences/{1}/{1}.cds.multi_exons.bed".format(output_directory, human_dataset_name)
     human_single_exon_fasta = "{0}/genome_sequences/{1}/{1}.cds.single_exons.fasta".format(output_directory, human_dataset_name)
     human_multi_exon_fasta = "{0}/genome_sequences/{1}/{1}.cds.multi_exons.fasta".format(output_directory, human_dataset_name)
     if not os.path.isfile(human_single_exon_bed) or not os.path.isfile(human_multi_exon_bed) or not os.path.isfile(human_single_exon_fasta) or not os.path.isfile(human_multi_exon_fasta) or clean_run:
-        sequo.filter_by_exon_number(human_filelist["full_cds_features_bed"], human_cds_after_ortholog_filter_fasta, human_single_exon_bed, human_multi_exon_bed, human_single_exon_fasta, human_multi_exon_fasta)
+        sequo.filter_by_exon_number(human_cds_exons_file, human_cds_after_ortholog_filter_fasta, human_single_exon_bed, human_multi_exon_bed, human_single_exon_fasta, human_multi_exon_fasta)
 
 
 def extract_exons(gtf_file, genome_file, output_directory, output_file, clean_run = None):
@@ -108,8 +119,8 @@ def extract_exons(gtf_file, genome_file, output_directory, output_file, clean_ru
         exons = sequo.extract_gtf_feature(human_filelist["dataset_features_bed"], "exon", ids_to_keep = ids_to_extract)
         with open(output_file, "w") as outfile:
             for id in exons:
-                [outfile.write("{0}\n".format("\t".join(i))) for i in exons[id]]
-    
+                [outfile.write("{0}\n".format("\t".join(i[:6]))) for i in exons[id]]
+
 
 
 def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_exon_bed, single_exon_fasta, multi_exon_fasta, single_exon_families, multi_exon_families, clean_run = None):
