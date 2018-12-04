@@ -188,6 +188,15 @@ class Tests(unittest.TestCase):
         observed = list_transcript_ids_from_features(input_file)
         self.assertEqual(expected, observed)
 
+    def test_keep_only_potential_stops(self):
+        input_bed_file = "test_data/sequence_ops/test_keep_only_potential_stops/input.bed"
+        expected_file = "test_data/sequence_ops/test_keep_only_potential_stops/expected.bed"
+        # observed_file = "test_data/sequence_ops/test_get_orthologous_pairs/observed.bed"
+        pairs = gen.read_many_fields(input_bed_file, "\t")
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = [keep_only_potential_stops(i[0], i[1]) for i in pairs]
+        self.assertEqual(expected, observed)
+
     def test_remove_terminal_exons(self):
         input_full = "test_data/sequence_ops/test_remove_terminal_exons/input_full.bed"
         input_intersect = "test_data/sequence_ops/test_remove_terminal_exons/input_intersect.bed"

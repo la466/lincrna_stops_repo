@@ -2,7 +2,7 @@ from seq_ops import *
 import numpy as np
 import unittest
 
-class Test_Seq_Ops(unittest.TestCase):
+class Tests(unittest.TestCase):
 
     def test_calc_codon_density_in_seqs(self):
         input_file = "test_data/seq_ops/test_calc_codon_density_in_seqs/input.fasta"
@@ -11,6 +11,16 @@ class Test_Seq_Ops(unittest.TestCase):
         expected = np.divide(11,40)
         observed = calc_codon_density_in_seqs(codons, seqs)
         self.assertEqual(expected, observed)
+
+    def test_calc_intron_seqs_stop_density(self):
+        input_file = "test_data/seq_ops/test_calc_intron_seqs_stop_density/input.bed"
+        seqs_list = gen.read_many_fields(input_file, "\t")
+        expected_remove_min = [np.divide(9,49), np.divide(33,116)]
+        observed_remove_min = [calc_intron_seqs_stop_density(i, remove_min = True) for i in seqs_list]
+        expected_remove_max = [np.divide(3,49), np.divide(15,116)]
+        observed_remove_max = [calc_intron_seqs_stop_density(i, remove_max = True) for i in seqs_list]
+        self.assertEqual(expected_remove_min, observed_remove_min)
+        self.assertEqual(expected_remove_max, observed_remove_max)
 
     def test_calc_seq_gc(self):
         input_file = "test_data/seq_ops/test_calc_seq_gc/input.fasta"
@@ -21,9 +31,9 @@ class Test_Seq_Ops(unittest.TestCase):
 
     def test_calc_seqs_stop_density(self):
         input_file = "test_data/seq_ops/test_calc_seqs_stop_density/input.bed"
-        seqs = [i[0] for i in gen.read_many_fields(input_file, "\t")]
-        expected = np.divide(6,30)
-        observed = calc_seqs_stop_density(seqs)
+        seqs_list = gen.read_many_fields(input_file, "\t")
+        expected = [np.divide(6,30), np.divide(12,92), np.divide(30,106)]
+        observed = [calc_seqs_stop_density(i) for i in seqs_list]
         self.assertEqual(expected, observed)
 
     def test_calc_stop_density(self):

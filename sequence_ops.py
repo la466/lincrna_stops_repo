@@ -6,8 +6,12 @@ import os
 import collections
 import random
 from Bio.Phylo.PAML import codeml
+from Bio.Seq import Seq
+from Bio.Alphabet import IUPAC
+from conservation import Alignment_Functions
 import copy
-
+import sys
+from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold
 
 def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None):
 
@@ -611,9 +615,6 @@ def filter_by_exon_number(input_bed, input_fasta, single_exon_bed, multi_exon_be
                             outfile3.write(">{0}\n{1}\n".format(id, seq_list[id]))
 
 
-
-
-
 def filter_one_transcript_per_gene(transcript_list):
     """
     If there is more than one transcript per gene, keep only the longest.
@@ -1083,3 +1084,109 @@ def sort_bed_file(input_bed, output_bed):
     # move to the required output file
     gen.run_process(["mv", sort_output, output_bed])
     gen.remove_file(sort_output)
+
+
+def extract_aligment_sequence_parts(cds_pairs):
+
+    # put the muscle executable in tools directory for your os
+    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
+    if not os.path.isfile(muscle_exe):
+        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
+        raise Exception
+
+    # setup the muscle alignment
+    alignment_functions = Alignment_Functions(muscle_exe)
+
+    for focal_seq in cds_pairs:
+        ortholog_seq = cds_pairs[focal_seq]
+
+        # get the alignments for the sequences
+        focal_iupac_protein = Seq(focal_seq, IUPAC.unambiguous_dna).translate()
+        ortholog_iupac_protein = Seq(ortholog_seq, IUPAC.unambiguous_dna).translate()
+        alignment_functions.align_seqs(focal_iupac_protein, ortholog_iupac_protein)
+        # extract the alignments
+        alignment_functions.extract_alignments()
+        # now we want to get the nucleotide sequences for the alignments
+        aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [focal_seq, ortholog_seq])
+        # clean up the files
+        alignment_functions.cleanup()
+
+        # extract the parts of the sequences that are distance from stop codon
+        # get_sequence_parts_near_stop(aligned_sequences)
+
+
+        print(aligned_sequences)
+
+
+# def get_potential_stops(codon):
+#
+#     stops = []
+#     nts_list = list(codon)
+#     for i, codon_nt in enumerate(nts_list):
+#         for nt in nucleotides:
+#             if nt != codon_nt:
+#                 query_list = copy.deepcopy(nts_list)
+#                 query_list[i] = nt
+#                 print(query_list)
+#                 if "".join(query_list) in stops:
+#                     stops.append("".join(query_list))
+#     print(stops)
+#     return stops
+
+def get_one_away_codons():
+
+    codon_list = [i for i in sorted(codon_map)]
+    codon_list.extend(stops)
+    one_away_codons = collections.defaultdict(lambda: [])
+
+    for codon in codon_list:
+        nt_list = list(codon)
+        for i, codon_nt in enumerate(nt_list):
+            for nt in nucleotides:
+                if nt != codon_nt:
+                    query_nts = copy.deepcopy(nt_list)
+                    query_nts[i] = nt
+                    one_away_codons[codon].append("".join(query_nts))
+
+    return one_away_codons
+
+
+def get_one_away_indicies(seq, one_away_codons):
+
+    kept = []
+    # for the first sequence
+    for i in range(0, len(seq), 3):
+        codon = seq[i:i+3]
+        # only do it for the codons that may have one that codes for it after
+        if i+3 < len(seq):
+            query_codon1 = seq[i+1:i+4]
+            query_codon2 = seq[i+2:i+5]
+            potential_stops1 = one_away_codons[query_codon1]
+            potential_stops2 = one_away_codons[query_codon2]
+            # only keep those that might overlap stop and are strictly twofold or fourfold degenerates
+            if len(set(potential_stops1) & set(stops)) or len(set(potential_stops2) & set(stops)) and codon in twofold or codon in fourfold:
+                kept.append(i)
+    return kept
+
+
+def keep_only_potential_stops(seq1, seq2):
+
+    one_away_codons = get_one_away_codons()
+    kept_seq1 = get_one_away_indicies(seq1, one_away_codons)
+    kept_seq2 = get_one_away_indicies(seq2, one_away_codons)
+    kept_all = sorted(list(set(kept_seq1 + kept_seq2)))
+
+    kept_seq1 = [seq1[i:i+3] for i in kept_all]
+    kept_seq2 = [seq2[i:i+3] for i in kept_all]
+
+    print("\n")
+    print(seq1)
+    print(seq2)
+    print("\n")
+    print(kept_seq1)
+    print(kept_seq2)
+
+    kept_seq1 = "".join(kept_seq1)
+    kept_seq2 = "".join(kept_seq2)
+
+    return [kept_seq1, kept_seq2]

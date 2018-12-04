@@ -8,21 +8,80 @@ import collections
 import os
 from useful_motif_sets import stops
 
-def get_exon_reading_frame(seq):
+# stops = ["TAT", "TAC", "TCA"]
+
+
+def get_exon_reading_frame(exon_seq, cds_seq):
     """
     Given a sequence, get the reading frame, i.e. the frame containing no
     stop codons.
     """
 
-    codons0 = re.findall(".{3}", seq)
-    if list(set(stops) & set(codons0)):
-        return 0
-    else:
-        codons1 = re.findall(".{3}", seq[1:])
-        if list(set(stops) & set(codons1)):
-            return 1
-        else:
-            return 2
+    exon_start_index = cds_seq.index(exon_seq)
+    return exon_start_index % 3
+
+
+def calc_seqs_stop_density(seq_list, exclude_frames = None):
+    """
+    For a list of sequences, calculate the combined stop density.
+
+    Args:
+        seqs (list): list of seqeunces
+        exclude_frames (list): list containing frames (0,1,2) to exclude from calculation
+
+    Returns:
+        stop_density (float): proportion of nucleotides contributing to stop codons
+    """
+    count = 0
+    for seq in seq_list:
+        for frame in list(range(3)):
+            # get the stop codons in that frame
+            stop_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in stops])
+            if exclude_frames and frame not in exclude_frames:
+                pass
+            else:
+                count += stop_count
+    nts = sum([len(i) for i in seq_list])
+    return np.divide(count*3, nts)
+
+
+def calc_intron_seqs_stop_density(seq_list, remove_max = None, remove_min = None):
+    """
+    For a list of sequences, calculate the combined stop density.
+
+    Args:
+        seqs (list): list of seqeunces
+        remove_max (bool): if set, don't include the frame with most stop codons
+        remove_min (bool): if set, don't include the frame with least stop codons
+
+    Returns:
+        stop_density (float): proportion of nucleotides contributing to stop codons
+    """
+
+    if not remove_max and not remove_min:
+        print("Please choose to remove either the frame containing the most or least stop codons...")
+        raise Exception
+
+    count = 0
+    for seq in seq_list:
+        frame_counts = []
+        for frame in list(range(3)):
+            # get the stop codons in that frame
+            stop_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in stops])
+            frame_counts.append(stop_count)
+        # remove the value that you want to remove
+        if remove_max:
+            remove_index = frame_counts.index(max(frame_counts))
+        if remove_min:
+            remove_index = frame_counts.index(min(frame_counts))
+        # remove from the counts list
+        del frame_counts[remove_index]
+        # now add the remaining counts to the total count
+        count += sum(frame_counts)
+
+    nts = sum([len(i) for i in seq_list])
+    return np.divide(count*3, nts)
+
 
 def calc_seq_stop_density(seq, exclude_frame = None):
 
@@ -31,6 +90,8 @@ def calc_seq_stop_density(seq, exclude_frame = None):
         if frame != exclude_frame:
             count += len(list(set(stops) & set(re.findall(".{3}", seq[frame:]))))
     return np.divide(count*3, len(seq))
+
+
 
 
 def calc_codon_density_in_seqs(codons, seqs):
@@ -62,6 +123,21 @@ def calc_codon_density_in_seqs(codons, seqs):
     density = np.divide(contribution_count, nt_count)
     return density
 
+def calc_gc_seqs_combined(seq_list):
+    """
+    Given a list of sequences, calculate the combined GC content
+
+    Arg:
+        seq_list (list): list of sequences
+
+    Returns:
+        combined_gc (float): combined GC content
+    """
+
+    seq_string = "".join(seq_list)
+    combined_gc = np.divide(sum([1 for i in list(seq_string) if i in ["G", "C"]]), len(seq_string))
+    return combined_gc
+
 
 def calc_seq_gc(seq):
     """
@@ -81,26 +157,6 @@ def calc_seqs_gc(seqs):
         return [calc_seq_gc(seq) for seq in seqs]
     if isinstance(seqs, dict):
         return {name: calc_seq_gc(seqs[name]) for name in seqs}
-
-def calc_seqs_stop_density(seqs):
-    """
-    For a list of sequences, calculate the combined stop density.
-
-    Args:
-        seqs (list): list of seqeunces
-
-    Returns:
-        stop_density (float): proportion of nucleotides contributing to stop codons
-    """
-
-    stop_nt_count = 0
-    nt_count = 0
-    for seq in seqs:
-        stop_nt_count += (len(re.findall("(TAA|TAG|TGA)", seq))*3)
-        nt_count += len(seq)
-    stop_density = np.divide(stop_nt_count, nt_count)
-    return stop_density
-
 
 def calc_stop_density(seq):
     """

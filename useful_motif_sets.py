@@ -7,7 +7,11 @@ codon_map = {"GGA": "G", "GGC": "G", "TTA": "L", "CTG": "L", "TTC": "F", "GAA": 
  "TTT": "F", "TCT": "S", "GTT": "V", "GAG": "E", "CGG": "R", "GAT": "D"}
 # dinucleotides
 dinucleotides = ["AA", "AC", "AG", "AT", "CA", "CC", "CG", "CT", "GA", "GC", "GG", "GT", "TA", "TC", "TG", "TT"]
+# strict fourfold degenerate codons
+fourfold = ["GTT", "GTC", "GTA", "GTG", "CCT", "CCC", "CCA", "CCG", "ACT", "ACC", "ACA", "ACG", "GCT", "GCC", "GCA", "GCG", "GGT", "GGC", "GGA", "GGG"]
 # nucleotides
 nucleotides = ["A", "C", "G", "T"]
+# strict twofold degenerate codons
+twofold = ["TTT", "TTC", "TAT", "TAC", "CAT", "CAC", "CAA", "CAG", "AAA", "AAG", "GAT", "GAC", "TGT", "TGC"]
 # stop codons
 stops = ["TAA", "TAG", "TGA"]
