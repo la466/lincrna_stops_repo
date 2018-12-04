@@ -35,15 +35,16 @@ def main():
     if generate_gc_controls_introns:
         simopc.generate_gc_controls(introns_fasta, non_transcribed_fasta, gc_control_intron_output_directory)
 
-    dint_control_exon_output_directory = "{0}/clean_exon_dint_controls".format(output_directory)
+    dint_control_cds_output_directory = "{0}/clean_cds_dint_controls".format(output_directory)
     if generate_dint_exon_controls:
-        simopc.generate_dint_controls(exons_fasta, dint_control_exon_output_directory)
+        simopc.generate_dint_controls(cds_fasta, dint_control_cds_output_directory)
 
     # get the stop density
     output_file = "{0}/compare_exon_intron_density.csv".format(output_directory)
     if compare_stop_density:
         mto.compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = families_file)
 
+    
 
 
     # if coding_exons:

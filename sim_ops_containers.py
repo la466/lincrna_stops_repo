@@ -949,16 +949,12 @@ def generate_dint_controls(input_fasta, output_directory):
 
     gen.create_output_directories(output_directory)
     names, seqs = gen.read_fasta(input_fasta)
-    names = names[:1]
+    names = names[:10]
 
-    seq_list = {name.split("(")[0]: seqs[i] for i, name in enumerate(names)}
-    transcript_seq_list = collections.defaultdict(lambda: [])
-    [transcript_seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
+    seq_list = {name: seqs[i] for i, name in enumerate(names)}
 
+    dinucleotide_content = seqo.get_dinucleotide_content([seq_list[i] for i in seq_list])
+    nucleotide_content = seqo.get_nucleotide_content([seq_list[i] for i in seq_list])
 
-    dinucleotide_content = {i: seqo.get_dinucleotide_content(transcript_seq_list[i]) for i in transcript_seq_list}
-    nucleotide_content = {i: seqo.get_nucleotide_content(transcript_seq_list[i]) for i in transcript_seq_list}
-
-    ids = [i.split("(")[0] for i in names]
     args = [seq_list, dinucleotide_content, nucleotide_content, output_directory]
-    run_simulation_function(ids, args, simo.generate_dint_controls, parallel = False, sim_run = False)
+    run_simulation_function(names, args, simo.generate_dint_controls, sim_run = False)

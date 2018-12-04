@@ -11,7 +11,7 @@ import multiprocessing as mp
 
 def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory):
 
-    required_simulations = 1000
+    required_simulations = 5000
 
     temp_output_directory = "temp_dint_sims"
     gen.create_output_directories(temp_output_directory)
@@ -21,10 +21,8 @@ def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleoti
     for i, id in enumerate(input_ids):
         print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(input_ids), id))
         simulations = list(range(1))
-        input_seqs = [input_seqs[id]] * required_simulations
-        query_dinucleotide_content = dinucleotide_content[id.split(".")[0]]
-        query_nucleotide_content = nucleotide_content[id.split(".")[0]]
-        temp_file = generate_dinucleotide_matched_seqs(simulations, input_seqs, query_dinucleotide_content, query_nucleotide_content, temp_output_directory)[0]
+        inputs = [input_seqs[id]] * required_simulations
+        temp_file = generate_dinucleotide_matched_seqs(simulations, inputs, dinucleotide_content, nucleotide_content, temp_output_directory)[0]
 
         output_file = "{0}/{1}.txt".format(output_directory, id)
         outputs.append(output_file)
