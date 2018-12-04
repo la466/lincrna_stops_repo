@@ -67,7 +67,7 @@ def generate_gc_controls(input_file, untranslated_sequence_file, output_director
     gen.create_output_directories(output_directory)
     # get a list of the sequences
     sequence_names, sequences = gen.read_fasta(input_file)
-    sequence_names = [i.split("(")[0] for i in sequence_names[:100]]
+    sequence_names = [i.split("(")[0] for i in sequence_names]
     sequence_list = {name: sequences[i] for i, name in enumerate(sequence_names)}
     # get the untransribed regions and join
     untransribed_sequences = [i for i in gen.read_fasta(untranslated_sequence_file)[1] if "N" not in i]
