@@ -9,6 +9,32 @@ from useful_motif_sets import dinucleotides, nucleotides
 import multiprocessing as mp
 
 
+def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory):
+
+    required_simulations = 1000
+
+    temp_output_directory = "temp_dint_sims"
+    gen.create_output_directories(temp_output_directory)
+
+    outputs = []
+
+    for i, id in enumerate(input_ids):
+        print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(input_ids), id))
+        simulations = list(range(1))
+        input_seqs = [input_seqs[id]] * required_simulations
+        query_dinucleotide_content = dinucleotide_content[id.split(".")[0]]
+        query_nucleotide_content = nucleotide_content[id.split(".")[0]]
+        temp_file = generate_dinucleotide_matched_seqs(simulations, input_seqs, query_dinucleotide_content, query_nucleotide_content, temp_output_directory)[0]
+
+        output_file = "{0}/{1}.txt".format(output_directory, id)
+        outputs.append(output_file)
+        seqs = gen.read_fasta(temp_file)[1]
+        with open(output_file, "w") as outfile:
+            outfile.write("{0}\n".format(",".join(seqs)))
+        gen.remove_file(temp_file)
+
+    return []
+
 def get_gc_matched_seqs(sequence_ids, sequence_list, untranscribed_sequence, output_directory, required_simulations):
 
     temp_dir = "temp_files"
@@ -27,6 +53,7 @@ def get_gc_matched_seqs(sequence_ids, sequence_list, untranscribed_sequence, out
         gen.remove_file(temp_file)
 
     return []
+
 
 def get_seq_seed(seq_seeds, simulation_number, sequence_number):
     """
@@ -69,7 +96,7 @@ def sim_exon_flank_counts(simulations, seqs, seq_frames, dinucleotide_content, n
     temp_files = []
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -102,7 +129,7 @@ def sim_exon_flank_counts(simulations, seqs, seq_frames, dinucleotide_content, n
                         seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
                         while not generated:
-                            sim_seq, failed = seqo.generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
+                            sim_seq, failed = seqo.generate_nt_matched_seq_frame(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
                             if failed:
                                 generated = True
                                 exons_to_exclude.append(query_name)
@@ -125,7 +152,7 @@ def sim_exon_region_counts(simulations, seqs, seq_frames, dinucleotide_content, 
     temp_files = []
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -154,7 +181,7 @@ def sim_exon_region_counts(simulations, seqs, seq_frames, dinucleotide_content, 
                     seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
                     while not generated:
-                        sim_seq, failed = seqo.generate_nt_matched_seq_frame(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
+                        sim_seq, failed = seqo.generate_nt_matched_seq_frame(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seq_frame=frame, seed=seq_seed)
                         if failed:
                             generated = True
                             exons_to_exclude.append(name)
@@ -175,7 +202,7 @@ def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content,
     Args:
         simulations (list): list of simluations to iterate over
         seqs (dict): a dictionary of sequences
-        dicnucleotide_content (dict): dictionary containing dinucleotide proportions
+        dinucleotide_content (dict): dictionary containing dinucleotide proportions
         temp_dir (str): a temporary directory to hold the outputs of the simulations
         seeds (list): list of seeds to be used for the randomisations
 
@@ -186,7 +213,7 @@ def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content,
     temp_files = []
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -207,7 +234,7 @@ def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content,
             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
             while not generated:
-                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
                     simulated_seqs[name] = sim_seq
@@ -230,7 +257,7 @@ def sim_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_content,
     Args:
         simulations (list): list of simluations to iterate over
         seqs (dict): a dictionary of sequences
-        dicnucleotide_content (dict): dictionary containing dinucleotide proportions
+        dinucleotide_content (dict): dictionary containing dinucleotide proportions
         temp_dir (str): a temporary directory to hold the outputs of the simulations
         seeds (list): list of seeds to be used for the randomisations
 
@@ -241,7 +268,7 @@ def sim_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_content,
     temp_files = []
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -262,7 +289,7 @@ def sim_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_content,
             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
             while not generated:
-                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
                     simulated_seqs[name] = sim_seq
@@ -285,7 +312,7 @@ def sim_motif_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_co
     Args:
         simulations (list): list of simluations to iterate over
         seqs (dict): a dictionary of sequences
-        dicnucleotide_content (dict): dictionary containing dinucleotide proportions
+        dinucleotide_content (dict): dictionary containing dinucleotide proportions
         temp_dir (str): a temporary directory to hold the outputs of the simulations
         seeds (list): list of seeds to be used for the randomisations
 
@@ -296,7 +323,7 @@ def sim_motif_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_co
     temp_files = []
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -315,7 +342,7 @@ def sim_motif_stop_counts(simulations, seqs, dinucleotide_content, nucleotide_co
             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
             while not generated:
-                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
                     simulated_seqs.append(sim_seq)
@@ -334,7 +361,7 @@ def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotid
     sim_densities = []
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -351,7 +378,7 @@ def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotid
             generated = False
             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
             while not generated:
-                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
                     simulated_seqs.append(sim_seq)
@@ -364,7 +391,7 @@ def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotid
 def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, nucleotide_content, output_directory, seeds=None, seq_seeds=None):
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     nucleotide_choices = [n for n in sorted(nucleotide_content)]
     nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
@@ -384,7 +411,7 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
                 generated = False
                 seq_seed = get_seq_seed(seq_seeds, sim_no, i)
                 while not generated:
-                    sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                    sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                     if sim_seq not in simulated_seqs:
                         generated = True
                         simulated_seqs.append(sim_seq)
@@ -816,7 +843,7 @@ def simulate_sequence_stop_density(simulations, sequences, nucleotide_probabilit
 
 
     # dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    # dicnucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    # dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
     # nucleotide_choices = [n for n in sorted(nucleotide_content)]
     # nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
     #
@@ -836,7 +863,7 @@ def simulate_sequence_stop_density(simulations, sequences, nucleotide_probabilit
     #             generated = False
     #             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
     #             while not generated:
-    #                 sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+    #                 sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
     #                 if sim_seq not in simulated_seqs:
     #                     generated = True
     #                     simulated_seqs.append(sim_seq)

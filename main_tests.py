@@ -8,11 +8,11 @@ import time
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_stop_density_limit_frames", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "cds_ds", "cds_density_nd"]
+    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_stop_density_limit_frames", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "cds_ds", "cds_density_nd"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8], ints=[])
-    input_directory, output_directory, compare_stop_density, compare_stop_density_limit_frames, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, cds_ds, cds_density_nd = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_stop_density_limit_frames, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.cds_ds, args.cds_density_nd
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9], ints=[])
+    input_directory, output_directory, compare_stop_density, compare_stop_density_limit_frames, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, cds_ds, cds_density_nd = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_stop_density_limit_frames, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.cds_ds, args.cds_density_nd
 
     # set a start time
     start = time.time()
@@ -35,15 +35,15 @@ def main():
     if generate_gc_controls_introns:
         simopc.generate_gc_controls(introns_fasta, non_transcribed_fasta, gc_control_intron_output_directory)
 
+    dint_control_exon_output_directory = "{0}/clean_exon_dint_controls".format(output_directory)
+    if generate_dint_exon_controls:
+        simopc.generate_dint_controls(exons_fasta, dint_control_exon_output_directory)
+
     # get the stop density
     output_file = "{0}/compare_exon_intron_density.csv".format(output_directory)
     if compare_stop_density:
         mto.compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = families_file)
 
-    # get the stop density but remove the frame with the least number of stop codons
-    output_file = "{0}/compare_exon_intron_density_limit_frames.csv".format(output_directory)
-    if compare_stop_density_limit_frames:
-        mto.compare_stop_density_limit_frames(exons_fasta, introns_fasta, cds_fasta, output_file, families_file = families_file)
 
 
     # if coding_exons:
