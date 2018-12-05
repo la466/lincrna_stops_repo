@@ -10,6 +10,7 @@ import numpy as np
 import collections
 import zipfile
 import os
+import multiprocessing as mp
 
 def compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = None):
 
@@ -195,8 +196,39 @@ def cds_density_nd(exons_fasta, families_file, gc_controls_zip, output_directory
         [outfile.write("{0},{1}\n".format(i, np.median(grouped_nd_scores[i]))) for i in grouped_nd_scores]
 
 
+def calc_stop_densities(id_list, exon_list, cds_list, filelist):
 
-def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory):
+    outputs = []
+
+    for i, id in enumerate(id_list):
+        exons = [i for i in exon_list if id in i]
+        if len(exons):
+            print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(id_list), id))
+            cds_seq = cds_list[id]
+            # get the start index and length of each exon in the cds
+            exon_info = [[cds_seq.index(exon_list[i]), len(exon_list[i])] for i in exons]
+            # read in the simulated cds seqs
+            sim_cds_seqs = gen.read_many_fields(filelist[id], ",")[0]
+            # create an empty list to hold the simulated exons
+            sim_list = []
+            # for each of the simulated sequences, get the simulated exon sequences
+
+            for sim_cds in sim_cds_seqs:
+                sim_exon_sequences = [sim_cds[i[0]:i[0] + i[1]] for i in exon_info]
+                sim_list.append(sim_exon_sequences)
+
+            real_exons = [exon_list[i] for i in exons]
+            gc = seqo.calc_gc_seqs_combined(real_exons)
+
+            real_density = seqo.calc_seqs_stop_density(real_exons)
+            sim_densities = [seqo.calc_seqs_stop_density(i) for i in sim_list]
+
+            nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
+            outputs.append([id, gc, nd])
+
+    return outputs
+
+def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory, output_file, families_file = None):
 
     exon_names, exon_seqs = gen.read_fasta(exons_fasta)
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
@@ -206,32 +238,26 @@ def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory):
     exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names) if name.split(".")[0] in filelist}
     cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names) if name.split(".")[0] in filelist}
 
+    # calculate the nd scores for each data point
+    id_list = [i for i in filelist]
+    args = [exon_list, cds_list, filelist]
+    outputs = simoc.run_simulation_function(id_list, args, calc_stop_densities, sim_run = False)
 
-    nds = []
+    gc_list = {}
+    nd_list = {}
+    for output in outputs:
+        gc_list[output[0]] = output[1]
+        nd_list[output[0]] = output[2]
 
-    for cds in cds_list:
-        exons = [i for i in exon_list if cds in i]
-        if len(exons):
-            cds_seq = cds_list[cds]
-            # get the start index and length of each exon in the cds
-            exon_info = [[cds_seq.index(exon_list[i]), len(exon_list[i])] for i in exons]
-            # read in the simulated cds seqs
-            sim_cds_seqs = gen.read_many_fields(filelist[cds], ",")[0]
-            # create an empty list to hold the simulated exons
-            sim_list = []
-            # for each of the simulated sequences, get the simulated exon sequences
+    # group by family if exists
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        gc_list = sequo.group_family_results(gc_list, families)
+        nd_list = sequo.group_family_results(nd_list, families)
 
-
-            for sim_cds in sim_cds_seqs:
-                sim_exon_sequences = [sim_cds[i[0]:i[0] + i[1]] for i in exon_info]
-                sim_list.append(sim_exon_sequences)
-
-            real_exons = [exon_list[i] for i in exons]
-            real_density = seqo.calc_seqs_stop_density(real_exons)
-            sim_densities = [seqo.calc_seqs_stop_density(i) for i in sim_list]
-
-            nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
-            nds.append(nd)
-
-
-    print(len([i for i in nds if i < 0]), len(nds))
+    # write to file
+    with open(output_file, "w") as outfile:
+        outfile.write("id,gc,nd\n")
+        for id in nd_list:
+            args = [id, np.median(gc_list[id]), np.median(nd_list[id])]
+            outfile.write("{0}\n".format(",".join(gen.stringify(args))))
