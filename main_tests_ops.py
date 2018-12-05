@@ -138,7 +138,7 @@ def get_transcript_exons_and_introns(exons_fasta, introns_fasta):
     print("Getting exons and introns...")
     # get a list of introns
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
-    intron_list = {name.split("(")[0]: intron_seqs[i] for i, name in enumerate(intron_names[:1000])}
+    intron_list = {name.split("(")[0]: intron_seqs[i] for i, name in enumerate(intron_names)}
     # get a list of introns grouped by transcript
     transcript_intron_list = collections.defaultdict(lambda: [])
     [transcript_intron_list[name.split(".")[0]].append(intron_list[name]) for name in intron_list]
