@@ -965,7 +965,7 @@ def generate_dint_intron_controls(input_fasta, output_directory):
     # need to concatenate introns to make it easier to simulate
     intron_names, intron_seqs = gen.read_fasta(input_fasta)
     intron_list = collections.defaultdict(lambda: [])
-    for i, name in enumerate(intron_names[:10]):
+    for i, name in enumerate(intron_names):
         intron_list[name.split(".")[0]].append(intron_seqs[i])
     print(intron_list)
 
