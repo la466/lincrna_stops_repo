@@ -967,7 +967,6 @@ def generate_dint_intron_controls(input_fasta, output_directory):
     intron_list = collections.defaultdict(lambda: [])
     for i, name in enumerate(intron_names):
         intron_list[name.split(".")[0]].append(intron_seqs[i])
-    print(intron_list)
 
     temp_dir = "temp_files"
     gen.create_output_directories(temp_dir)
