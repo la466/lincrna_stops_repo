@@ -228,15 +228,18 @@ def calc_stop_densities(id_list, exon_list, cds_list, filelist):
 
     return outputs
 
-def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory, output_file, families_file = None):
+def stop_density_nd(exons_fasta, cds_fasta, introns_fasta, dint_control_cds_output_directory, output_file, families_file = None):
 
     exon_names, exon_seqs = gen.read_fasta(exons_fasta)
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
+    intron_names, intron_seqs = gen.read_fasta(introns_fasta)
 
     filelist = {i.split(".")[0]: "{0}/{1}".format(dint_control_cds_output_directory, i) for i in os.listdir(dint_control_cds_output_directory) if len(i.split(".")[0])}
 
-    exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names) if name.split(".")[0] in filelist}
-    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names) if name.split(".")[0] in filelist}
+    intron_list = {name.split("(")[0]: intron_seqs[i] for i, name in enumerate(intron_names) if name.split(".")[0] in filelist}
+    intron_ids = [i.split(".")[0] for i in intron_list]
+    exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names) if name.split(".")[0] in filelist and name.split(".")[0] in intron_ids}
+    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names) if name.split(".")[0] in filelist and name.split(".")[0] in intron_ids}
 
     # calculate the nd scores for each data point
     id_list = [i for i in filelist]
@@ -249,15 +252,39 @@ def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory, o
         gc_list[output[0]] = output[1]
         nd_list[output[0]] = output[2]
 
+    grouped_exons = collections.defaultdict(lambda: [])
+    [grouped_exons[i.split(".")[0]].append(exon_list[i]) for i in exon_list]
+    grouped_introns = collections.defaultdict(lambda: [])
+    [grouped_introns[i.split(".")[0]].append(intron_list[i]) for i in intron_list]
+
+
+    intron_numbers = {}
+    intron_sizes = {}
+    intron_density = {}
+    intron_ratio = {}
+    for id in nd_list:
+        intron_number = len(grouped_introns[id])
+        exon_bp = sum([len(i) for i in grouped_exons[id]])
+        intron_bp = sum([len(i) for i in grouped_introns[id]])
+        intron_numbers[id] = intron_number
+        intron_sizes[id] = np.mean([len(i) for i in grouped_introns[id]])
+        intron_density[id] = np.divide(intron_number, exon_bp)
+        intron_ratio[id] = np.divide(exon_bp, intron_bp)
+
+
     # group by family if exists
     if families_file:
         families = gen.read_many_fields(families_file, "\t")
         gc_list = sequo.group_family_results(gc_list, families)
         nd_list = sequo.group_family_results(nd_list, families)
+        intron_numbers = sequo.group_family_results(intron_numbers, families)
+        intron_sizes = sequo.group_family_results(intron_sizes, families)
+        intron_density = sequo.group_family_results(intron_density, families)
+        intron_ratio = sequo.group_family_results(intron_ratio, families)
 
     # write to file
     with open(output_file, "w") as outfile:
-        outfile.write("id,gc,nd\n")
+        outfile.write("id,gc,nd,intron_count,mean_intron_size,intron_density,intron_ratio\n")
         for id in nd_list:
-            args = [id, np.median(gc_list[id]), np.median(nd_list[id])]
+            args = [id, np.median(gc_list[id]), np.median(nd_list[id]), np.median(intron_numbers[id]), np.median(intron_sizes[id]), np.median(intron_density[id]), np.median(intron_ratio[id])]
             outfile.write("{0}\n".format(",".join(gen.stringify(args))))

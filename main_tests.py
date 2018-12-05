@@ -50,7 +50,7 @@ def main():
 
     output_file = "{0}/exonic_stop_density_nd.csv".format(output_directory)
     if stop_density_nd:
-        mto.stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory, output_file, families_file = families_file)
+        mto.stop_density_nd(exons_fasta, cds_fasta, introns_fasta, dint_control_cds_output_directory, output_file, families_file = families_file)
 
 
     # if coding_exons:
