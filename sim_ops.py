@@ -11,7 +11,7 @@ import multiprocessing as mp
 
 def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory):
 
-    required_simulations = 5000
+    required_simulations = 1000
 
     temp_output_directory = "temp_dint_sims"
     gen.create_output_directories(temp_output_directory)

@@ -949,7 +949,7 @@ def generate_dint_controls(input_fasta, output_directory):
 
     gen.create_output_directories(output_directory)
     names, seqs = gen.read_fasta(input_fasta)
-    names = names[:10]
+    # names = names[:10]
 
     seq_list = {name: seqs[i] for i, name in enumerate(names)}
 

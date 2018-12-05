@@ -9,7 +9,7 @@ import random
 import numpy as np
 import collections
 import zipfile
-
+import os
 
 def compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = None):
 
@@ -193,3 +193,45 @@ def cds_density_nd(exons_fasta, families_file, gc_controls_zip, output_directory
     with open(output_file, "w") as outfile:
         outfile.write("id,nd\n")
         [outfile.write("{0},{1}\n".format(i, np.median(grouped_nd_scores[i]))) for i in grouped_nd_scores]
+
+
+
+def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory):
+
+    exon_names, exon_seqs = gen.read_fasta(exons_fasta)
+    cds_names, cds_seqs = gen.read_fasta(cds_fasta)
+
+    filelist = {i.split(".")[0]: "{0}/{1}".format(dint_control_cds_output_directory, i) for i in os.listdir(dint_control_cds_output_directory)[:1]}
+
+    exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names) if name.split(".")[0] in filelist}
+    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names) if name.split(".")[0] in filelist}
+
+    for cds in cds_list:
+        exons = [i for i in exon_list if cds in i]
+        if len(exons):
+            sim_cds_seqs = gen.read_many_fields(filelist[cds], ",")
+            sim_cds_seqs = sim_cds_seqs[0][:20]
+            sims = [[None]]*len(sim_cds_seqs)
+
+            cds_seq = cds_list[cds]
+            for exon in exons:
+                exon_seq = exon_list[exon]
+                start_index = cds_seq.index(exon_seq)
+
+                simulated_exons = [i[start_index:start_index + len(exon_seq)] for i in sim_cds_seqs]
+                for i in range(len(sims)):
+                    print(i)
+                    sims[i].append(simulated_exons[i])
+
+
+
+            #
+            #
+            # for i in sim_cds_exons:
+            #     print(len(i))
+
+    # for exon in exon_list:
+    #     cds_seq = cds_list[exon.split(".")[0]]
+    #     start_index = cds_seq.index(exon_list[exon])
+    #
+    #     sim_exons = [i[start_index:start_index + len(exon_list[exon])] for i in sims]
