@@ -201,37 +201,37 @@ def stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory):
     exon_names, exon_seqs = gen.read_fasta(exons_fasta)
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
 
-    filelist = {i.split(".")[0]: "{0}/{1}".format(dint_control_cds_output_directory, i) for i in os.listdir(dint_control_cds_output_directory)[:1]}
+    filelist = {i.split(".")[0]: "{0}/{1}".format(dint_control_cds_output_directory, i) for i in os.listdir(dint_control_cds_output_directory) if len(i.split(".")[0])}
 
     exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names) if name.split(".")[0] in filelist}
     cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names) if name.split(".")[0] in filelist}
 
+
+    nds = []
+
     for cds in cds_list:
         exons = [i for i in exon_list if cds in i]
         if len(exons):
-            sim_cds_seqs = gen.read_many_fields(filelist[cds], ",")
-            sim_cds_seqs = sim_cds_seqs[0][:20]
-            sims = [[None]]*len(sim_cds_seqs)
-
             cds_seq = cds_list[cds]
-            for exon in exons:
-                exon_seq = exon_list[exon]
-                start_index = cds_seq.index(exon_seq)
-
-                simulated_exons = [i[start_index:start_index + len(exon_seq)] for i in sim_cds_seqs]
-                for i in range(len(sims)):
-                    print(i)
-                    sims[i].append(simulated_exons[i])
-
+            # get the start index and length of each exon in the cds
+            exon_info = [[cds_seq.index(exon_list[i]), len(exon_list[i])] for i in exons]
+            # read in the simulated cds seqs
+            sim_cds_seqs = gen.read_many_fields(filelist[cds], ",")[0]
+            # create an empty list to hold the simulated exons
+            sim_list = []
+            # for each of the simulated sequences, get the simulated exon sequences
 
 
-            #
-            #
-            # for i in sim_cds_exons:
-            #     print(len(i))
+            for sim_cds in sim_cds_seqs:
+                sim_exon_sequences = [sim_cds[i[0]:i[0] + i[1]] for i in exon_info]
+                sim_list.append(sim_exon_sequences)
 
-    # for exon in exon_list:
-    #     cds_seq = cds_list[exon.split(".")[0]]
-    #     start_index = cds_seq.index(exon_list[exon])
-    #
-    #     sim_exons = [i[start_index:start_index + len(exon_list[exon])] for i in sims]
+            real_exons = [exon_list[i] for i in exons]
+            real_density = seqo.calc_seqs_stop_density(real_exons)
+            sim_densities = [seqo.calc_seqs_stop_density(i) for i in sim_list]
+
+            nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
+            nds.append(nd)
+
+
+    print(len([i for i in nds if i < 0]), len(nds))

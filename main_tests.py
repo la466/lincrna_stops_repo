@@ -44,7 +44,7 @@ def main():
     if compare_stop_density:
         mto.compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = families_file)
 
-    # mto.stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory)
+    mto.stop_density_nd(exons_fasta, cds_fasta, dint_control_cds_output_directory)
 
 
     # if coding_exons:
