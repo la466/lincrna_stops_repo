@@ -44,8 +44,38 @@ def calc_seqs_stop_density(seq_list, exclude_frames = None):
     nts = sum([len(i) for i in seq_list])
     return np.divide(count*3, nts)
 
+def calc_seqs_codon_set_density(seq_list, codon_set = None, exclude_frames = None):
+    """
+    For a list of sequences, calculate the combined stop density.
 
-def calc_intron_seqs_stop_density(seq_list, remove_max = None, remove_min = None):
+    Args:
+        seqs (list): list of seqeunces
+        codon_set (list): list of codons to include in count
+        exclude_frames (list): list containing frames (0,1,2) to exclude from calculation
+
+    Returns:
+        codon_density (float): proportion of nucleotides contributing to stop codons
+    """
+
+    if not codon_set:
+        print("Please provide a set of codons to test...")
+        raise Exception
+
+    count = 0
+    for seq in seq_list:
+        for frame in list(range(3)):
+            # get the stop codons in that frame
+            codon_hit_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in codon_set])
+            if exclude_frames and frame not in exclude_frames:
+                pass
+            else:
+                count += codon_hit_count
+    nts = sum([len(i) for i in seq_list])
+    codon_density = np.divide(count*3, nts)
+    return codon_density
+
+
+def calc_intron_seqs_stop_density(seq_list):
     """
     For a list of sequences, calculate the combined stop density.
 
@@ -58,9 +88,9 @@ def calc_intron_seqs_stop_density(seq_list, remove_max = None, remove_min = None
         stop_density (float): proportion of nucleotides contributing to stop codons
     """
 
-    if not remove_max and not remove_min:
-        print("Please choose to remove either the frame containing the most or least stop codons...")
-        raise Exception
+    # if not remove_max and not remove_min:
+    #     print("Please choose to remove either the frame containing the most or least stop codons...")
+    #     raise Exception
 
     count = 0
     for seq in seq_list:
@@ -69,11 +99,7 @@ def calc_intron_seqs_stop_density(seq_list, remove_max = None, remove_min = None
             # get the stop codons in that frame
             stop_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in stops])
             frame_counts.append(stop_count)
-        # remove the value that you want to remove
-        if remove_max:
-            remove_index = frame_counts.index(max(frame_counts))
-        if remove_min:
-            remove_index = frame_counts.index(min(frame_counts))
+        remove_index = frame_counts.index(min(frame_counts))
         # remove from the counts list
         del frame_counts[remove_index]
         # now add the remaining counts to the total count
@@ -81,6 +107,39 @@ def calc_intron_seqs_stop_density(seq_list, remove_max = None, remove_min = None
 
     nts = sum([len(i) for i in seq_list])
     return np.divide(count*3, nts)
+
+def calc_intron_seqs_codon_set_density(seq_list, codon_set = None):
+    """
+    For a list of sequences, calculate the combined stop density.
+
+    Args:
+        seqs (list): list of seqeunces
+        codon_set (list): list of codons to count
+
+    Returns:
+        codon_density (float): proportion of nucleotides contributing to set of codons
+    """
+
+    if not codon_set:
+        print("Please provide a set of codons to test...")
+        raise Exception
+
+    count = 0
+    for seq in seq_list:
+        frame_counts = []
+        for frame in list(range(3)):
+            # get the stop codons in that frame
+            codon_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in codon_set])
+            frame_counts.append(codon_count)
+        remove_index = frame_counts.index(min(frame_counts))
+        # remove from the counts list
+        del frame_counts[remove_index]
+        # now add the remaining counts to the total count
+        count += sum(frame_counts)
+
+    nts = sum([len(i) for i in seq_list])
+    codon_density = np.divide(count*3, nts)
+    return codon_density
 
 
 def calc_seq_stop_density(seq, exclude_frame = None):

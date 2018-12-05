@@ -11,49 +11,170 @@ import collections
 import zipfile
 import os
 import multiprocessing as mp
+from useful_motif_sets import stops
 
-def compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = None):
 
-    exon_names, exon_seqs = gen.read_fasta(exons_fasta)
-    exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names)}
+def calc_codon_set_density(exon_list, intron_list, codon_set = None):
+    """
+    Given a set of codons, calculate their density in exons and introns
 
-    transcript_exon_list = collections.defaultdict(lambda: [])
-    [transcript_exon_list[name.split(".")[0]].append(exon_list[name]) for name in exon_list]
+    Args:
+        exon_list (dict): dict containing exon sequences for each transcript
+        intron_list (dict): dict containing intron sequences for each transcript
+        codon_set (list): list of codons to test
 
-    transcript_exon_densities = {name: seqo.calc_seqs_stop_density(transcript_exon_list[name]) for name in transcript_exon_list}
+    Returns:
+        exon_densities (dict): density of codon set in exons
+        intron_densities (dict): density of codon set in introns
+        intron_densities_scaled (dict): density of codon set in introns but scaled to remove reading frame
+    """
 
-    intron_names, intron_seqs = gen.read_fasta(introns_fasta)
-    intron_list = {name.split("(")[0]: intron_seqs[i] for i, name in enumerate(intron_names)}
+    if not codon_set:
+        print("Please define a set of codons to test...")
+        raise Exception
 
-    transcript_intron_list = collections.defaultdict(lambda: [])
-    [transcript_intron_list[name.split(".")[0]].append(intron_list[name]) for name in intron_list]
+    exon_densities = {name: seqo.calc_seqs_codon_set_density(exon_list[name], codon_set = codon_set) for name in exon_list}
+    intron_densities = {name: seqo.calc_seqs_codon_set_density(intron_list[name], codon_set = codon_set) for name in intron_list}
+    intron_densities_scaled = {name: seqo.calc_intron_seqs_codon_set_density(intron_list[name], codon_set = codon_set) for name in intron_list}
 
-    transcript_intron_densities =  {name: seqo.calc_seqs_stop_density(transcript_intron_list[name]) for name in transcript_intron_list}
-    transcript_intron_densities_min_removed =  {}
-    transcript_intron_densities_max_removed =  {}
-    for id in transcript_intron_list:
-        transcript_intron_densities_min_removed[id] = seqo.calc_intron_seqs_stop_density(transcript_intron_list[id], remove_min = True)
-        transcript_intron_densities_max_removed[id] = seqo.calc_intron_seqs_stop_density(transcript_intron_list[id], remove_max = True)
+    return exon_densities, intron_densities, intron_densities_scaled
 
-    exons_gc = {name: seqo.calc_gc_seqs_combined(transcript_exon_list[name]) for name in transcript_exon_list}
-    introns_gc = {name: seqo.calc_gc_seqs_combined(transcript_intron_list[name]) for name in transcript_intron_list}
+
+def compare_codon_density(exons_fasta, introns_fasta, output_directory, families_file = None):
+    """
+    Calculate the density of sets of codons with similar GC content to stop codons
+    in exons and introns
+
+    Args:
+        exons_fasta (str): path to fasta containing exon sequences
+        introns_fasta (str): path to fasta containing intron sequences
+        output_directory (str): path to output directory
+        families_file (str): if set, group results into paralagous_families
+    """
+
+    # create the output directory
+    gen.create_output_directories(output_directory)
+
+
+    # get the exons and introns for each transcript
+    exon_list, intron_list = get_transcript_exons_and_introns(exons_fasta, introns_fasta)
+    # calculate the gc contents of the sets
+    exons_gc = {name: seqo.calc_gc_seqs_combined(exon_list[name]) for name in exon_list}
+    introns_gc = {name: seqo.calc_gc_seqs_combined(intron_list[name]) for name in intron_list}
+
+    # get the set of codons with the same gc content as stop codons
+    gc_matched_motifs_file = "{0}/gc_matched_motifs.bed".format("/".join(output_directory.split("/")[:-1]))
+    if not os.path.isfile(gc_matched_motifs_file):
+        seqo.get_gc_matched_motifs(stops, gc_matched_motifs_file)
+    motif_sets = gen.read_many_fields(gc_matched_motifs_file, "\t")
+
+    args = [len(motif_sets), exons_gc, introns_gc, exon_list, intron_list, output_directory, families_file]
+    simoc.run_simulation_function(motif_sets, args, calculate_densities, sim_run = False)
+
+
+
+def calculate_densities(codon_sets, codon_set_count, exons_gc, introns_gc, exons_list, introns_list, output, families_file):
+    """
+    For each set of codons provided, calculate the density of that set in exons,
+    introns and introns when scaled to account for only 2 reading frames.
+
+    Args:
+        codon_sets (list): list containing lists of codons
+        codon_set_count (int): get global number of codon sets
+        exons_gc (dict): dict containig the gc content for each exon set
+        introns_gc (dict): dict containig the gc content for each intron set
+        exons_list (dict): dict containing the sequences for each exon in a transcript
+        introns_list (dict): dict containing the sequences for each intron in a transcript
+        output (str): either 1) path to output file or 2) path to output directory
+        families_file (str): if set, group results by paralagous families
+    """
 
     if families_file:
         families = gen.read_many_fields(families_file, "\t")
-        transcript_exon_densities = sequo.group_family_results(transcript_exon_densities, families)
-        transcript_intron_densities = sequo.group_family_results(transcript_intron_densities, families)
-        transcript_intron_densities_min_removed = sequo.group_family_results(transcript_intron_densities_min_removed, families)
-        transcript_intron_densities_max_removed = sequo.group_family_results(transcript_intron_densities_max_removed, families)
         exons_gc = sequo.group_family_results(exons_gc, families)
         introns_gc = sequo.group_family_results(introns_gc, families)
 
-    with open(output_file, "w") as outfile:
-        outfile.write("id,exon_gc,intron_gc,exon_density,intron_density,intron_density_min_removed,intron_density_max_removed\n")
-        for id in transcript_exon_densities:
-            if id in transcript_intron_densities:
-                args = [id, np.median(exons_gc[id]), np.median(introns_gc[id]), np.median(transcript_exon_densities[id]), np.median(transcript_intron_densities[id]), np.median(transcript_intron_densities_min_removed[id]), np.median(transcript_intron_densities_max_removed[id])]
+    for i, codon_set in enumerate(codon_sets):
+        print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(codon_sets), "_".join(sorted(codon_set))))
+
+        if codon_set_count > 1:
+            output_file = "{0}/{1}.csv".format(output, "_".join(sorted(codon_set)))
+        else:
+            output_file = output
+
+        # get the densities
+        exon_densities, intron_densities, intron_densities_scaled = calc_codon_set_density(exons_list, introns_list, codon_set = codon_set)
+
+        # group by family
+        if families_file:
+            exon_densities = sequo.group_family_results(exon_densities, families)
+            intron_densities = sequo.group_family_results(intron_densities, families)
+            intron_densities_scaled = sequo.group_family_results(intron_densities_scaled, families)
+
+        # write to file
+        with open(output_file, "w") as outfile:
+            outfile.write("id,exon_gc,intron_gc,exon_density,intron_density,intron_density_scaled\n")
+            for id in exon_densities:
+                args = [id, np.median(exons_gc[id]), np.median(introns_gc[id]), np.median(exon_densities[id]), np.median(intron_densities[id]), np.median(intron_densities_scaled[id])]
                 outfile.write("{0}\n".format(",".join(gen.stringify(args))))
 
+    return []
+
+def get_transcript_exons_and_introns(exons_fasta, introns_fasta):
+    """
+    Given a file containing exon and intron sequences, return two lists
+    grouped by transcript of those that for transcripts that only occur in both files
+
+    Args:
+        exons_fasta (str): path to exons fasta
+        introns_fasta (str): path to introns fasta
+
+    Returns:
+        transcript_exon_list (dict): dict containing exon sequences for each transcript
+        transcript_intron_list (dict): dict containing intron sequences for each transcript
+    """
+
+
+    print("Getting exons and introns...")
+    # get a list of introns
+    intron_names, intron_seqs = gen.read_fasta(introns_fasta)
+    intron_list = {name.split("(")[0]: intron_seqs[i] for i, name in enumerate(intron_names[:1000])}
+    # get a list of introns grouped by transcript
+    transcript_intron_list = collections.defaultdict(lambda: [])
+    [transcript_intron_list[name.split(".")[0]].append(intron_list[name]) for name in intron_list]
+    # get a list of exons that have given introns
+    exon_names, exon_seqs = gen.read_fasta(exons_fasta)
+    exon_list = {name.split("(")[0]: exon_seqs[i] for i, name in enumerate(exon_names) if name.split(".")[0] in transcript_intron_list}
+    # get a list of exons grouped by transcript
+    transcript_exon_list = collections.defaultdict(lambda: [])
+    [transcript_exon_list[name.split(".")[0]].append(exon_list[name]) for name in exon_list]
+
+    # unpickle
+    transcript_exon_list = {i: transcript_exon_list[i] for i in transcript_exon_list}
+    transcript_intron_list = {i: transcript_intron_list[i] for i in transcript_intron_list}
+
+    return transcript_exon_list, transcript_intron_list
+
+def compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = None):
+    """
+    Calculate the stop codon density in exons and introns
+
+    Args:
+        exons_fasta (str): path to fasta containing exon sequences
+        introns_fasta (str): path to fasta containing intron sequences
+        output_file (str): path to output file
+        families_file (str): if set, group results into paralagous_families
+    """
+
+    # get the exons and introns for each transcript
+    exon_list, intron_list = get_transcript_exons_and_introns(exons_fasta, introns_fasta)
+    # calculate the gc contents of the sets
+    exons_gc = {name: seqo.calc_gc_seqs_combined(exon_list[name]) for name in exon_list}
+    introns_gc = {name: seqo.calc_gc_seqs_combined(intron_list[name]) for name in intron_list}
+
+    codon_sets = [stops]
+    args = [exons_gc, len(codon_sets), introns_gc, exon_list, intron_list, output_file, families_file]
+    simoc.run_simulation_function(codon_sets, args, calculate_densities, parallel = False, sim_run = False)
 
 
 def coding_exons(input_file, families_file, output_directory):
