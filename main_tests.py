@@ -8,11 +8,11 @@ import time
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_stop_density_limit_frames", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "cds_ds", "cds_density_nd", "stop_density_nd"]
+    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_stop_density_limit_frames", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10], ints=[])
-    input_directory, output_directory, compare_stop_density, compare_stop_density_limit_frames, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, cds_ds, cds_density_nd, stop_density_nd = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_stop_density_limit_frames, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11], ints=[])
+    input_directory, output_directory, compare_stop_density, compare_stop_density_limit_frames, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_stop_density_limit_frames, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd
 
     # set a start time
     start = time.time()
@@ -38,6 +38,10 @@ def main():
     dint_control_cds_output_directory = "{0}/clean_cds_dint_controls".format(output_directory)
     if generate_dint_exon_controls:
         simopc.generate_dint_controls(cds_fasta, dint_control_cds_output_directory)
+
+    dint_control_intron_output_directory = "{0}/clean_intron_dint_controls".format(output_directory)
+    if generate_dint_intron_controls:
+        simopc.generate_dint_intron_controls(introns_fasta, dint_control_intron_output_directory)
 
     # get the stop density
     output_file = "{0}/compare_exon_intron_density.csv".format(output_directory)

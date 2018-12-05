@@ -958,3 +958,22 @@ def generate_dint_controls(input_fasta, output_directory):
 
     args = [seq_list, dinucleotide_content, nucleotide_content, output_directory]
     run_simulation_function(names, args, simo.generate_dint_controls, sim_run = False)
+
+
+def generate_dint_intron_controls(input_fasta, output_directory):
+
+    # need to concatenate introns to make it easier to simulate
+    intron_names, intron_seqs = gen.read_fasta(input_fasta)
+    intron_list = collections.defaultdict(lambda: [])
+    for i, name in enumerate(intron_names[:10]):
+        intron_list[name.split(".")[0]].append(intron_seqs[i])
+    print(intron_list)
+
+    temp_dir = "temp_files"
+    gen.create_output_directories(temp_dir)
+    temp_fasta = "{0}/temp_introns.fasta".format(temp_dir)
+    with open(temp_fasta, "w") as temp:
+        [temp.write(">{0}\n{1}\n".format(i, "".join(intron_list[i]))) for i in intron_list]
+
+    generate_dint_controls(temp_fasta, output_directory)
+    gen.remove_file(temp_fasta)
