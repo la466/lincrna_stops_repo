@@ -74,6 +74,35 @@ def calc_seqs_codon_set_density(seq_list, codon_set = None, exclude_frames = Non
     codon_density = np.divide(count*3, nts)
     return codon_density
 
+def calc_seq_replaced_codon_set_density(seq_list, codon_set = None):
+    """
+    For a list of sequences, calculate the combined stop density.
+
+    Args:
+        seqs (list): list of seqeunces
+        codon_set (list): list of codons to include in count
+        exclude_frames (list): list containing frames (0,1,2) to exclude from calculation
+
+    Returns:
+        codon_density (float): proportion of nucleotides contributing to stop codons
+    """
+
+    if not codon_set:
+        print("Please provide a set of codons to test...")
+        raise Exception
+
+    count = 0
+    for seq in seq_list:
+        for frame in list(range(3)):
+            # get the stop codons in that frame
+            codons = re.findall(".{3}", seq[frame:])
+            codon_hit_count = len([i for i in codons if i in stops])
+            count += codon_hit_count
+            # codon_hit_count = len([i for i in ) if i in codon_set])
+    nts = sum([len(i) for i in seq_list if i != "X"])
+    codon_density = np.divide(count*3, nts)
+    return codon_density
+
 
 def calc_intron_seqs_stop_density(seq_list):
     """

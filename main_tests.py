@@ -8,11 +8,11 @@ import time
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd"]
+    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd", "without_ese"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11], ints=[])
-    input_directory, output_directory, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12], ints=[])
+    input_directory, output_directory, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd, without_ese = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese
 
     # set a start time
     start = time.time()
@@ -25,6 +25,8 @@ def main():
     introns_fasta = "{0}/genome_sequences/human/human.clean_introns.fasta".format(input_directory)
     non_transcribed_fasta = "{0}/genome_sequences/human/human.non_transcribed.fasta".format(input_directory)
     families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
+
+    ese_file = "source_data/motif_sets/int3.txt"
 
 
     gc_control_exon_output_directory = "{0}/clean_exon_gc_controls".format(output_directory)
@@ -57,6 +59,9 @@ def main():
     if stop_density_nd:
         mto.stop_density_nd(exons_fasta, cds_fasta, introns_fasta, dint_control_cds_output_directory, output_file, families_file = families_file)
 
+
+    if without_ese:
+        mto.compare_density_no_ese(exons_fasta, cds_fasta, ese_file, families_file = families_file)
 
     # if coding_exons:
     #     mto.coding_exons(input_file1, input_file2, output_directory)

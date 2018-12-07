@@ -129,6 +129,17 @@ def extract_head_of_file(file_path, lines):
             for line in head:
                 output_file.write(line)
 
+
+def fasta_to_list(fasta_file, split = None):
+    fasta_names, fasta_seqs = read_fasta(fasta_file)
+    fasta_list = {}
+    for i, name in enumerate(fasta_names):
+        if split:
+            name = name.split(split)[0]
+        fasta_list[name] = fasta_seqs[i]
+    return fasta_list
+
+
 def find_families(fasta_file_name, output_prefix, blast_db_path, descriptions_file):
     '''
     Given a fasta file, group the sequences into paralogous families.

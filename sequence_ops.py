@@ -747,8 +747,16 @@ def get_intron_coordinates(input_bed, output_bed):
                     entry = copy.deepcopy(exon_list[id][exon_no])
                     strand = exon_list[id][exon_no][5]
                     if strand == "-":
-                        entry[1] = exon_list[id][exon_no+1][2]
-                        entry[2] = exon_list[id][exon_no][1]
+                        temp_start = exon_list[id][exon_no+1][2]
+                        temp_end = exon_list[id][exon_no][1]
+                        if temp_start > temp_end:
+                            start = temp_end
+                            end = temp_start
+                        else:
+                            start = temp_start
+                            end = temp_end
+                        entry[1] = start
+                        entry[2] = end
                         entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
                     else:
                         entry[1] = exon_list[id][exon_no][2]
@@ -1190,3 +1198,38 @@ def keep_only_potential_stops(seq1, seq2):
     kept_seq2 = "".join(kept_seq2)
 
     return [kept_seq1, kept_seq2]
+
+
+def replace_motifs_in_seq(seq, motifs):
+
+    motif_hits = []
+
+
+    nt_hits = []
+    for motif in motifs:
+        hits = re.finditer("(?=({0}))".format(motif), seq)
+        hits = [i for i in hits]
+        for i in hits:
+            nt_hits.extend(list(range(i.start(), i.start() + len(motif))))
+    # clean up hits
+    nt_hits = sorted(list(set(nt_hits)))
+    seq_nts = list(seq)
+    for hit in nt_hits:
+        seq_nts[hit] = "X"
+    replaced_seq = "".join(seq_nts)
+    return replaced_seq
+
+
+def replace_motifs_in_seqs(seq_list, motif_set = None):
+
+    if not motif_set:
+        print("Please provide a motif set...")
+        raise Exception
+
+    replaced_seq_list = {}
+    for id in seq_list:
+        seq = seq_list[id]
+        removed_motifs_seq = replace_motifs_in_seq(seq, motif_set)
+        replaced_seq_list[id] = removed_motifs_seq
+
+    return replaced_seq_list

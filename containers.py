@@ -123,7 +123,7 @@ def extract_exons(gtf_file, genome_file, output_directory, output_file, clean_ru
 
 
 
-def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_exon_bed, single_exon_fasta, multi_exon_fasta, single_exon_families, multi_exon_families, clean_run = None):
+def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_exon_bed, single_exon_fasta, multi_exon_fasta, multi_exon_intron_bed, multi_exon_intron_fasta, single_exon_families, multi_exon_families, clean_run = None):
     """
     Wrapper to extract lincRNA sequences
 
@@ -141,7 +141,7 @@ def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_ex
 
     print("Extracting lincRNA sequences...")
 
-    if not os.path.isfile(single_exon_bed) or not os.path.isfile(multi_exon_bed) or not os.path.isfile(single_exon_fasta) or not os.path.isfile(multi_exon_fasta) or clean_run:
+    if not os.path.isfile(single_exon_bed) or not os.path.isfile(multi_exon_bed) or not os.path.isfile(single_exon_fasta) or not os.path.isfile(multi_exon_fasta) or not os.path.isfile(multi_exon_intron_bed) or not os.path.isfile(multi_exon_intron_fasta) or clean_run:
         # filter bed file to only containing those with strand information and then by number of exons
         sequo.filter_bed_file(input_bed, filter_columns = [5,9], filter_values = [["+", "-"], ["1"]], inclusive = [True, True], output_file = single_exon_bed)
         sequo.filter_bed_file(input_bed, filter_columns = [5,9], filter_values = [["+", "-"], ["1"]], inclusive = [True, False], output_file = multi_exon_bed)
@@ -158,6 +158,10 @@ def extract_lincRNA_sequences(input_bed, genome_fasta, single_exon_bed, multi_ex
         fo.fasta_from_intervals(multi_exon_exons_bed, multi_exon_exons_fasta, genome_fasta, names = True)
         # build sequences from exons
         sequo.build_sequences_from_exon_fasta(multi_exon_exons_fasta, multi_exon_fasta)
+        # get introns for multi exon sequences
+        sequo.get_intron_coordinates(multi_exon_exons_bed, multi_exon_intron_bed)
+        fo.fasta_from_intervals(multi_exon_intron_bed, multi_exon_intron_fasta, genome_fasta, names = True)
+
 
     single_exon_blast_file = "{0}.blast_all_against_all.csv".format(".".join(single_exon_families.split(".")[:-1]))
     single_exon_blast_database = "{0}/single_exon_blast_all_against_all".format("/".join(single_exon_families.split("/")[:-1]))

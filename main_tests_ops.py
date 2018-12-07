@@ -69,7 +69,7 @@ def compare_codon_density(exons_fasta, introns_fasta, output_directory, families
     motif_sets = gen.read_many_fields(gc_matched_motifs_file, "\t")
 
     args = [len(motif_sets), exons_gc, introns_gc, exon_list, intron_list, output_directory, families_file]
-    simoc.run_simulation_function(motif_sets, args, calculate_densities, sim_run = False)
+    simoc.run_simulation_function(motif_sets, args, calculate_densities, sim_run = False, workers = int(os.cpu_count()/2))
 
 
 
@@ -321,31 +321,42 @@ def calc_stop_densities(id_list, exon_list, cds_list, filelist):
 
     outputs = []
 
+
+
     for i, id in enumerate(id_list):
-        exons = [i for i in exon_list if id in i]
+        # exons = [i for i in exon_list if id in i]
+        exons = []
+        for i in exon_list:
+            if id in i:
+                exons.append(i)
+
         if len(exons):
-            print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], i+1, len(id_list), id))
+            print(id)
             cds_seq = cds_list[id]
+
             # get the start index and length of each exon in the cds
             exon_info = [[cds_seq.index(exon_list[i]), len(exon_list[i])] for i in exons]
             # read in the simulated cds seqs
-            sim_cds_seqs = gen.read_many_fields(filelist[id], ",")[0]
-            # create an empty list to hold the simulated exons
-            sim_list = []
-            # for each of the simulated sequences, get the simulated exon sequences
+            if id in filelist:
+                sim_cds_seqs = gen.read_many_fields(filelist[id], ",")
+                if sim_cds_seqs[0] and len(sim_cds_seqs[0]) > 0:
+                    sim_cds_seqs = sim_cds_seqs[0]
+                    # create an empty list to hold the simulated exons
+                    sim_list = []
+                    # for each of the simulated sequences, get the simulated exon sequences
 
-            for sim_cds in sim_cds_seqs:
-                sim_exon_sequences = [sim_cds[i[0]:i[0] + i[1]] for i in exon_info]
-                sim_list.append(sim_exon_sequences)
+                    for sim_cds in sim_cds_seqs:
+                        sim_exon_sequences = [sim_cds[i[0]:i[0] + i[1]] for i in exon_info]
+                        sim_list.append(sim_exon_sequences)
 
-            real_exons = [exon_list[i] for i in exons]
-            gc = seqo.calc_gc_seqs_combined(real_exons)
+                    real_exons = [exon_list[i] for i in exons]
+                    gc = seqo.calc_gc_seqs_combined(real_exons)
 
-            real_density = seqo.calc_seqs_stop_density(real_exons)
-            sim_densities = [seqo.calc_seqs_stop_density(i) for i in sim_list]
+                    real_density = seqo.calc_seqs_stop_density(real_exons)
+                    sim_densities = [seqo.calc_seqs_stop_density(i) for i in sim_list]
 
-            nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
-            outputs.append([id, gc, nd])
+                    nd = np.divide(real_density - np.mean(sim_densities), np.mean(sim_densities))
+                    outputs.append([id, gc, nd])
 
     return outputs
 
@@ -409,3 +420,33 @@ def stop_density_nd(exons_fasta, cds_fasta, introns_fasta, dint_control_cds_outp
         for id in nd_list:
             args = [id, np.median(gc_list[id]), np.median(nd_list[id]), np.median(intron_numbers[id]), np.median(intron_sizes[id]), np.median(intron_density[id]), np.median(intron_ratio[id])]
             outfile.write("{0}\n".format(",".join(gen.stringify(args))))
+
+
+
+def compare_density_no_ese(exons_fasta, cds_fasta, ese_file, families_file = None):
+
+    # get eses
+    eses = [i[0] for i in gen.read_many_fields(ese_file, "\t") if "#" not in i[0]]
+    # get cds sequences
+    cds_seqs = gen.fasta_to_list(cds_fasta)
+
+    cds_ids = list(cds_seqs.keys())[:30]
+    cds_seqs = {i: cds_seqs[i] for i in cds_ids}
+
+    exon_list = gen.fasta_to_list(exons_fasta, split = "(")
+    transcript_exon_list = collections.defaultdict(lambda: [])
+    [transcript_exon_list[i.split(".")[0]].append(exon_list[i]) for i in exon_list if i.split(".")[0] in cds_seqs]
+
+    # remove all nucleotides that overlap with an intron_densities_scaled
+    ese_removed_seqs = sequo.replace_motifs_in_seqs(cds_seqs, motif_set = eses)
+
+    for id in transcript_exon_list:
+        cds_seq = cds_seqs[id]
+        exon_coordinates = [[cds_seq.index(exon), cds_seq.index(exon) + len(exon)] for exon in transcript_exon_list[id]]
+        removed_ese_seq = ese_removed_seqs[id]
+        removed_ese_exons = [removed_ese_seq[i[0]:i[1]] for i in exon_coordinates]
+        densities = seqo.calc_seqs_codon_set_density(transcript_exon_list[id], codon_set = stops)
+        repl_densities = seqo.calc_seq_replaced_codon_set_density(removed_ese_exons, codon_set = stops)
+        print(densities, repl_densities)
+
+    # for
