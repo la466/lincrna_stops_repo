@@ -11,7 +11,10 @@ from Bio.Alphabet import IUPAC
 from conservation import Alignment_Functions
 import copy
 import sys
-from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold
+from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold, one_away_codons
+from progressbar import ProgressBar
+
+pbar = ProgressBar()
 
 def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None):
 
@@ -233,6 +236,165 @@ class PAML_Functions(object):
         else:
             cml_dict = cml.run()
         return cml_dict
+
+
+def extract_motif_sequences_from_alignment(alignment_seqs, motif_set):
+
+    """
+    Keep anything that looks like it belongs in the motif set
+    from the alignment sequences
+    """
+
+    # motif_set = motif_set[:3]
+
+    indices_to_keep = []
+    for motif in motif_set:
+        for seq in alignment_seqs:
+            hits = re.finditer('(?=({0}))'.format(motif), seq)
+            [indices_to_keep.extend(list(range(i.start(), i.start() + len(motif)))) for i in hits]
+    indices_to_keep = sorted(list(set(indices_to_keep)))
+
+    kept_sequences = [[],[]]
+
+    for i in range(0, len(alignment_seqs[0]), 3):
+        positions = list(range(i, i+3))
+        # if any of the nucleotides are in one of the motifs
+        if list(set(positions) & set(indices_to_keep)):
+            # now determine which nucleotides to keep
+            # add C to positions not of interest because it strictly cannot encode stop
+
+            # 1) if all nucleotides are in the overlap, we can keep all
+            #   then have to ensure that if the motif finishes in frame, and there is not another
+            #    motif next to it, we add a buffer codon because otherwise we might accidently create
+            #    motifs we dont want
+            if positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
+                if "-" not in alignment_seqs[0][i:i+3]:
+                    kept_sequences[0].append(alignment_seqs[0][i:i+3])
+                else:
+                    kept_sequences[0].append("---")
+                if "-" not in alignment_seqs[1][i:i+3]:
+                    kept_sequences[1].append(alignment_seqs[1][i:i+3])
+                else:
+                    kept_sequences[1].append("---")
+                # if the next codon doesnt contain one of the indices, we need to add a buffer
+                if i+4 not in indices_to_keep:
+                    kept_sequences[0].append("CCC")
+                    kept_sequences[1].append("CCC")
+
+            # 2) if only the first two nucleotides are in the overlap, the
+            #    synonymous site will not need to count, but they could add to previous codon
+            #    so keep just the first two nucleotides
+            #    e.g. |GTC|[(GC)N] => GCC
+            # 3) if there is only the first nucleotide in the codon that overlaps, still
+            #    need first two sites of sequence because synonymous site from previous codon
+            #    could encode stop using first two of next codon, which includes the focal site
+            #    e.g. |GTC|[(T)TN] => TTC
+            elif positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep or positions[0] in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep:
+                if "-" not in alignment_seqs[0][i:i+3]:
+                    kept_sequences[0].append(alignment_seqs[0][i:i+2] + "C")
+                else:
+                    kept_sequences[0].append("---")
+                if "-" not in alignment_seqs[1][i:i+3]:
+                    kept_sequences[1].append(alignment_seqs[1][i:i+2] + "C")
+                else:
+                    kept_sequences[1].append("---")
+
+            # 4) if only the last nucleotide overlaps, it means it is the first of the
+            #    motif overlap and the synonymous site, but need the nucleotide before too
+            #    e.g. [NG(T)]|TAC => CGT
+            # 5) if the last two overlap, then it is the first two nucleotides of the motif,
+            #    so keep both
+            #    e.g. [N(AT)]|GTA => CAT
+        elif positions[0] not in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep or positions[0] not in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep:
+                if "-" not in alignment_seqs[0][i:i+3]:
+                    kept_sequences[0].append("C" + alignment_seqs[0][i+1:i+2])
+                else:
+                    kept_sequences[0].append("---")
+                if "-" not in alignment_seqs[1][i:i+3]:
+                    kept_sequences[1].append("C" + alignment_seqs[1][i+1:i+2])
+                else:
+                    kept_sequences[1].append("---")
+
+    kept_sequences = ["".join(i) for i in kept_sequences]
+
+    return kept_sequences
+
+
+
+
+def list_alignments_to_strings(seq_list):
+
+    alignments = [[],[]]
+    [alignments[0].append(seq_list[i][0]) for i in seq_list]
+    [alignments[1].append(seq_list[i][1]) for i in seq_list]
+    alignments = ["".join(i) for i in alignments]
+    return alignments
+
+def extract_alignments(seq1, seq2, muscle_exe = None):
+    """
+    Given 2 sequences, align protein sequences and convert back to nucleotide sequences
+
+    Args:
+        seq1 (str): sequence 1
+        seq2 (str): sequence 2
+        muscle_ext (str): path to muscle exe file
+
+    Returns:
+        aligned_sequences (list): list containing the aligned sequences
+    """
+
+    if not muscle_exe:
+        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
+        raise Exception
+
+    # setup the muscle alignment
+    alignment_functions = Alignment_Functions(muscle_exe)
+    # get the alignments for the sequences
+    seq1_iupac_protein = Seq(seq1, IUPAC.unambiguous_dna).translate()
+    seq2_iupac_protein = Seq(seq2, IUPAC.unambiguous_dna).translate()
+    alignment_functions.align_seqs(seq1_iupac_protein, seq2_iupac_protein)
+    # extract the alignments
+    alignment_functions.extract_alignments()
+    # now we want to get the nucleotide sequences for the alignments
+    aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [seq1, seq2])
+    # clean up the files
+    alignment_functions.cleanup()
+
+    return aligned_sequences
+
+
+def extract_alignments_from_file(cds_fasta, ortholog_fasta, ortholog_transcript_links, output_file):
+    """
+    Given a file of CDSs, extract the alignment as given by a link file with
+    the orthologous sequence
+
+    Args:
+        cds_fasta (str): path to cds fasta file
+        ortholog_fasta (str): path to ortholog fasta file
+        ortholog_transcript_links (str): path to file defining the ortholog sequence to use (lowest dS)
+        output_file (str): path to output file
+    """
+
+    print("Extracting sequence alignments to file...")
+
+    # get a list of the links
+    links = {i[0]: i[1] for i in gen.read_many_fields(ortholog_transcript_links, "\t")}
+    # get a list of cds
+    cds_names, cds_seqs = gen.read_fasta(cds_fasta)
+    cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names)}
+    # get a list of the orthologs
+    ortholog_names, ortholog_seqs = gen.read_fasta(ortholog_fasta)
+    ortholog_cds_list = {links[name]: ortholog_seqs[ortholog_names.index(links[name])] for name in cds_list if links[name] in ortholog_names}
+    # pair the sequences
+    cds_pairs = {id: [cds_list[id], ortholog_cds_list[links[id]]] for id in cds_list}
+
+    # put the muscle executable in tools directory for your os
+    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
+
+    with open(output_file, "w") as outfile:
+        for id in pbar(cds_pairs):
+            alignments = extract_alignments(cds_pairs[id][0], cds_pairs[id][1], muscle_exe = muscle_exe)
+            outfile.write(">{0}\n{1},{2}\n".format(id, alignments[0], alignments[1]))
 
 
 def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
@@ -492,6 +654,7 @@ def build_sequences_from_exon_fasta(input_fasta, output_fasta):
             outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
 
 
+
 def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):
     """
     Get all the features that match stop codon
@@ -642,6 +805,67 @@ def filter_one_transcript_per_gene(transcript_list):
         else:
             longest_transcripts[gene_list[gene_id][0][3]] = gene_list[gene_id][0]
     return longest_transcripts
+
+
+def get_alignment_one_synonymous_from_stop(aligned_sequences):
+
+    seq1, seq2 = aligned_sequences[0], aligned_sequences[1]
+    kept_seq1, kept_seq2 = [], []
+    removed_seq1, removed_seq2 = [],[]
+
+    # for each codon in the alignment
+    for i in range(0, len(seq1)-3, 3):
+        one_away_stop_list = []
+        # get the codons in the +1 reading frame
+        query_codons_f1 = [seq1[i+1:i+4], seq2[i+1:i+4]]
+        query_codons_f1 = [i for i in query_codons_f1 if "-" not in i]
+        # get the codons in the +2 reading frame
+        query_codons_f2 = [seq1[i+2:i+5], seq2[i+2:i+5]]
+        query_codons_f2 = [i for i in query_codons_f2 if "-" not in i]
+        # now get all the codons that are 1 away from the query codon in both frames, and keep if its a stop
+        one_away_stop_list.extend([[j for j in i if j in stops] for i in [one_away_codons[i][1] for i in query_codons_f1]])
+        one_away_stop_list.extend([[j for j in i if j in stops] for i in [one_away_codons[i][0] for i in query_codons_f2]])
+        # get the number of stops for the set of query codons
+        one_away_stop_count = sum([len(i) for i in one_away_stop_list])
+        # add codons to list if one stop exists in either frame
+        if one_away_stop_count > 0:
+            kept_seq1.append(seq1[i:i+3])
+            kept_seq2.append(seq2[i:i+3])
+        else:
+            removed_seq1.append(seq1[i:i+3])
+            removed_seq2.append(seq2[i:i+3])
+
+    return [["".join(kept_seq1), "".join(kept_seq2)], ["".join(removed_seq1), "".join(removed_seq2)]]
+
+# def get_alignment_synonymous_stop(aligned_sequences):
+#
+#     seq1, seq2 = aligned_sequences[0], aligned_sequences[1]
+#     kept_seq1, kept_seq2 = [], []
+#     removed_seq1, removed_seq2 = [],[]
+#
+#     # for each codon in the alignment
+#     for i in range(0, len(seq1)-3, 3):
+#         one_away_stop_list = []
+#         # get the codons in the +1 reading frame
+#         query_codons_f1 = [seq1[i+1:i+4], seq2[i+1:i+4]]
+#         query_codons_f1 = [i for i in query_codons_f1 if "-" not in i]
+#         # get the codons in the +2 reading frame
+#         query_codons_f2 = [seq1[i+2:i+5], seq2[i+2:i+5]]
+#         query_codons_f2 = [i for i in query_codons_f2 if "-" not in i]
+#         # now get all the codons that are 1 away from the query codon in both frames, and keep if its a stop
+#         one_away_stop_list.extend([[j for j in i if j in stops] for i in [one_away_codons[i][1] for i in query_codons_f1]])
+#         one_away_stop_list.extend([[j for j in i if j in stops] for i in [one_away_codons[i][0] for i in query_codons_f2]])
+#         # get the number of stops for the set of query codons
+#         one_away_stop_count = sum([len(i) for i in one_away_stop_list])
+#         # add codons to list if one stop exists in either frame
+#         if one_away_stop_count > 0:
+#             kept_seq1.append(seq1[i:i+3])
+#             kept_seq2.append(seq2[i:i+3])
+#         else:
+#             removed_seq1.append(seq1[i:i+3])
+#             removed_seq2.append(seq2[i:i+3])
+#
+#     return [["".join(kept_seq1), "".join(kept_seq2)], ["".join(removed_seq1), "".join(removed_seq2)]]
 
 
 def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_features_output_bed, input_list = None, filter_by_transcript = None, filter_by_gene = None):
@@ -1094,7 +1318,7 @@ def sort_bed_file(input_bed, output_bed):
     gen.remove_file(sort_output)
 
 
-def extract_aligment_sequence_parts(cds_pairs):
+def extract_aligment_sequence_parts(cds_pairs, reverse = False):
 
     # put the muscle executable in tools directory for your os
     muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
@@ -1104,6 +1328,9 @@ def extract_aligment_sequence_parts(cds_pairs):
 
     # setup the muscle alignment
     alignment_functions = Alignment_Functions(muscle_exe)
+
+    kept_sequence1 = []
+    kept_sequence2 = []
 
     for focal_seq in cds_pairs:
         ortholog_seq = cds_pairs[focal_seq]
@@ -1123,8 +1350,11 @@ def extract_aligment_sequence_parts(cds_pairs):
         # get_sequence_parts_near_stop(aligned_sequences)
 
 
-        print(aligned_sequences)
+        keep_only_one_synonymous_from_stop = get_alignment_one_synonymous_from_stop(aligned_sequences, reverse = reverse)
+        kept_sequence1.append(keep_only_one_synonymous_from_stop[0])
+        kept_sequence2.append(keep_only_one_synonymous_from_stop[1])
 
+    return "".join(kept_sequence1), "".join(kept_sequence2)
 
 # def get_potential_stops(codon):
 #

@@ -4,6 +4,7 @@ import file_ops as fo
 import seq_ops as seqo
 import sequence_ops as sequo
 import sim_ops_containers as simoc
+import conservation as cons
 import time
 import random
 import numpy as np
@@ -11,8 +12,9 @@ import collections
 import zipfile
 import os
 import multiprocessing as mp
-from useful_motif_sets import stops
+from progressbar import ProgressBar
 
+pbar = ProgressBar()
 
 def calc_codon_set_density(exon_list, intron_list, codon_set = None):
     """
@@ -239,32 +241,6 @@ def coding_exons(input_file, families_file, output_directory):
             outfile.write("{0},{1},{2},{3},{4},{5},{6}\n".format(i, np.mean(coding_exon_five_prime[i]), np.mean(coding_exon_cores[i]), np.mean(coding_exon_three_prime[i]), np.mean(five_gc[i]), np.mean(core_gc[i]), np.mean(three_gc[i])))
 
 
-# def position_ds(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, output_directory):
-#
-#     output_directory = "{0}/position_ds".format(output_directory)
-#     gen.create_output_directories(output_directory)
-#
-#     # get a list of the links
-#     links = {i[0]: i[1] for i in gen.read_many_fields(ortholog_transcript_links, "\t")}
-#
-#     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
-#     cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names[:5])}
-#
-#     ortholog_names, ortholog_seqs = gen.read_fasta(ortholog_cds_fasta)
-#     ortholog_cds_list = {links[name]: ortholog_seqs[ortholog_names.index(links[name])] for name in cds_list if links[name] in ortholog_names}
-#
-#     cds_pairs = {cds_list[id]: ortholog_cds_list[links[id]] for id in cds_list}
-#
-#     sequo.extract_aligment_sequence_parts(cds_pairs)
-#
-#
-#     # # TODO: get all positions in each cds where if there was a 1 nt mutation at a 4 fold degenerate site, it would create a stop
-#     # # check_conservation(human.cds_fasta, ortholog.cds_fasta, orthologs_transcript_links_file, human_ids_after_conservation_file, human_cds_after_ortholog_filter_fasta, max_dS_threshold = 0.2, max_omega_threshold = 0.5, clean_run = clean_run)
-#     # # sequo.get_cds_parts_close_to_stop(cds_file, ortholog_fasta, ortholog_transcript_links, 1)
-#     # # TODO: concatenate all the sequences together
-#     # # TODO: calculate ds for the sequence parts
-#     # # TODO: do the same for those needing 2 mutations
-
 
 def calc_nds(transcript_ids, transcript_list, gc_controls_zip):
 
@@ -450,3 +426,58 @@ def compare_density_no_ese(exons_fasta, cds_fasta, ese_file, families_file = Non
         print(densities, repl_densities)
 
     # for
+
+
+
+def position_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory):
+
+    if not os.path.isfile(alignment_file):
+        sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
+
+    sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names[:1])}
+
+
+    motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0]]
+
+    pbar = ProgressBar()
+
+    kept_stops_seqs = {}
+    removed_stops_seqs = {}
+
+    for i in pbar(sequence_alignments):
+        kept_sequence = sequo.extract_motif_sequences_from_alignment(sequence_alignments[i], motif_set)
+        print(kept_sequence)
+    #     # results = sequo.get_alignment_one_synonymous_from_stop(kept_sequence)
+    #     results = sequo.get_alignment_one_synonymous_from_stop(sequence_alignments[i])
+    #     kept_stops_seqs[i] = results[0]
+    #     removed_stops_seqs[i] = results[1]
+    #
+    # kept_stops_alignment_strings = sequo.list_alignments_to_strings(kept_stops_seqs)
+    # removed_stops_alignment_strings = sequo.list_alignments_to_strings(removed_stops_seqs)
+    #
+    # print("Calculating ds")
+    # ds = cons.calc_ds(kept_stops_alignment_strings)
+    # print(ds)
+
+
+
+
+    # ds = cons.calc_ds(removed_stops_alignment_strings)
+    # print(ds)
+
+    # pbar = ProgressBar()
+    #
+    # kept_stops_seqs = {}
+    # removed_stops_seqs = {}
+    #
+    # for i in pbar(sequence_alignments):
+    #     results = sequo.get_alignment_one_synonymous_from_stop(sequence_alignments[i])
+    #     kept_stops_seqs[i] = results[0]
+    #     removed_stops_seqs[i] = results[1]
+    #
+    # kept_stops_alignment_strings = sequo.list_alignments_to_strings(kept_stops_seqs)
+    # removed_stops_alignment_strings = sequo.list_alignments_to_strings(removed_stops_seqs)
+    #
+    # ds = cons.calc_ds(kept_stops_alignment_strings)
+    # ds = cons.calc_ds(removed_stops_alignment_strings)

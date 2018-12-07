@@ -98,6 +98,14 @@ class Tests(unittest.TestCase):
         observed = filter_one_transcript_per_gene(inputs)
         self.assertEqual(expected, observed)
 
+    def test_get_alignment_one_synonymous_from_stop(self):
+        input_file = "test_data/sequence_ops/test_get_alignment_one_synonymous_from_stop/input.bed"
+        expected_file = "test_data/sequence_ops/test_get_alignment_one_synonymous_from_stop/expected.bed"
+        inputs = gen.read_many_fields(input_file, "\t")
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = [get_alignment_one_synonymous_from_stop(i) for i in inputs]
+        self.assertEqual(expected, observed)
+
     def test_get_clean_genes(self):
         input_bed_file = "test_data/sequence_ops/test_get_clean_genes/input.bed"
         input_fasta_file = "test_data/sequence_ops/test_get_clean_genes/input.fasta"

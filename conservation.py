@@ -212,6 +212,28 @@ def blast_sequences(fasta_file, database_path, output_file, evalue = None):
     gen.run_process(args)
 
 
+
+def calc_ds(aligned_sequences):
+    aligned_sequences_iupac = [Seq("".join(i),IUPAC.unambiguous_dna) for i in aligned_sequences]
+    alignment = MultipleSeqAlignment([SeqRecord(aligned_sequences_iupac[0], id = "seq"), SeqRecord(aligned_sequences_iupac[1], id = "orth_seq")])
+    gen.create_output_directories("temp_files")
+    random_instance = random.random()
+    temp_phylip_file = "temp_files/{0}.phy".format(random_instance)
+    temp_output_file = "temp_files/{0}.out".format(random_instance)
+    fo.write_to_phylip(alignment, temp_phylip_file)
+    # # run paml on sequences
+    paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file, working_dir = "temp_files")
+    # run codeml
+    codeml_output = paml.run_codeml()
+    ds = codeml_output["NSsites"][0]["parameters"]["dS"]
+    # clean up files
+    gen.remove_file(temp_phylip_file)
+    gen.remove_file(temp_output_file)
+
+    return ds
+
+
+
 def check_conservation(transcript_id, cds_seq, transcript_cds_orthologs, temp_dir, max_dS_threshold = None, max_omega_threshold = None):
     """
     Check the conservation of a sequence.

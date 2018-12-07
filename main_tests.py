@@ -66,11 +66,13 @@ def main():
     # if coding_exons:
     #     mto.coding_exons(input_file1, input_file2, output_directory)
 
-    # cds_fasta = "{0}/genome_sequences/human/human.cds.clean.fasta".format(input_directory)
-    # ortholog_cds_fasta = "{0}/genome_sequences/macaque/macaque.cds.quality_filtered.step1.fasta".format(input_directory)
-    # ortholog_transcript_links = "{0}/genome_sequences/human.macaque.conservation_filtering.step3.bed".format(input_directory)
-    # if cds_ds:
-    #     mto.position_ds(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, output_directory)
+    cds_fasta = "{0}/genome_sequences/human/human.cds.clean.fasta".format(input_directory)
+    ortholog_cds_fasta = "{0}/genome_sequences/macaque/macaque.cds.quality_filtered.step1.fasta".format(input_directory)
+    ortholog_transcript_links = "{0}/genome_sequences/human.macaque.conservation_filtering.step3.bed".format(input_directory)
+    alignments_file = "{0}/genome_sequences/human.macaque.alignments.fasta".format(input_directory)
+    ese_file = "source_data/motif_sets/int3.txt"
+    if cds_ds:
+        mto.position_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, output_directory)
     #
     #
     # gc_controls_zip = "{0}/clean_coding_exons_gc_controls.zip".format(input_directory)
