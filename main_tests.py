@@ -8,11 +8,11 @@ import time
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd", "without_ese"]
+    arguments = ["input_directory", "output_directory", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd", "without_ese"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12], ints=[])
-    input_directory, output_directory, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd, without_ese = args.input_directory, args.output_directory, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13], ints=[])
+    input_directory, output_directory, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd, without_ese = args.input_directory, args.output_directory, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese
 
     # set a start time
     start = time.time()
@@ -28,6 +28,9 @@ def main():
 
     ese_file = "source_data/motif_sets/int3.txt"
 
+    motif_simulations_directory = "{0}/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
+    if generate_motif_dinucleotide_controls:
+        simopc.generate_motif_dinucleotide_controls(ese_file, 1000, motif_simulations_directory)
 
     gc_control_exon_output_directory = "{0}/clean_exon_gc_controls".format(output_directory)
     if generate_gc_controls_exons:
@@ -51,9 +54,9 @@ def main():
         mto.compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = families_file)
 
     # get the stop density
-    output_directory = "{0}/tests/compare_exon_intron_codon_densities".format(output_directory)
+    output_codon_density_directory = "{0}/tests/compare_exon_intron_codon_densities".format(output_directory)
     if compare_codon_density:
-        mto.compare_codon_density(exons_fasta, introns_fasta, output_directory, families_file = families_file)
+        mto.compare_codon_density(exons_fasta, introns_fasta, output_codon_density_directory, families_file = families_file)
 
     output_file = "{0}/exonic_stop_density_nd.csv".format(output_directory)
     if stop_density_nd:
@@ -71,8 +74,10 @@ def main():
     ortholog_transcript_links = "{0}/genome_sequences/human.macaque.conservation_filtering.step3.bed".format(input_directory)
     alignments_file = "{0}/genome_sequences/human.macaque.alignments.fasta".format(input_directory)
     ese_file = "source_data/motif_sets/int3.txt"
+    ds_output_directory = "{0}/tests/ese_ds".format(output_directory)
+    output_file = "{0}/codon_ds.csv".format(ds_output_directory)
     if cds_ds:
-        mto.position_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, output_directory)
+        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, motif_simulations_directory, output_directory, output_file, families_file = families_file)
     #
     #
     # gc_controls_zip = "{0}/clean_coding_exons_gc_controls.zip".format(input_directory)

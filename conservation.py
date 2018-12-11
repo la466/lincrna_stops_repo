@@ -222,13 +222,15 @@ def calc_ds(aligned_sequences):
     temp_output_file = "temp_files/{0}.out".format(random_instance)
     fo.write_to_phylip(alignment, temp_phylip_file)
     # # run paml on sequences
-    paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file, working_dir = "temp_files")
+    working_dir = "temp_dir.{0}".format(random.random())
+    paml = sequo.PAML_Functions(input_file = temp_phylip_file, output_file = temp_output_file, working_dir = working_dir)
     # run codeml
     codeml_output = paml.run_codeml()
     ds = codeml_output["NSsites"][0]["parameters"]["dS"]
     # clean up files
     gen.remove_file(temp_phylip_file)
     gen.remove_file(temp_output_file)
+    paml.cleanup()
 
     return ds
 

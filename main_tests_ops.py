@@ -13,8 +13,7 @@ import zipfile
 import os
 import multiprocessing as mp
 from progressbar import ProgressBar
-
-pbar = ProgressBar()
+from useful_motif_sets import stops
 
 def calc_codon_set_density(exon_list, intron_list, codon_set = None):
     """
@@ -425,59 +424,86 @@ def compare_density_no_ese(exons_fasta, cds_fasta, ese_file, families_file = Non
         repl_densities = seqo.calc_seq_replaced_codon_set_density(removed_ese_exons, codon_set = stops)
         print(densities, repl_densities)
 
-    # for
 
 
 
-def position_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory):
+def calc_motif_sets_ds(motif_sets, codon_sets, sequence_alignments):
 
+    outputs = []
+
+    for i, motif_set in enumerate(motif_sets):
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(motif_sets)))
+
+        stops_ds, no_stops_ds = sequo.calc_ese_stop_ds(motif_set, codon_sets, sequence_alignments)
+        temp_file = "temp_files/{0}.txt".format(random.random())
+        outputs.append(temp_file)
+        with open(temp_file, "w") as temp:
+            temp.write("{0}\t{1}\n".format(stops_ds, no_stops_ds))
+
+    return outputs
+
+
+def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, motif_controls_directory, output_directory, output_file, families_file = None, run_number = None):
+
+    # if the sequence alignment file doesnt exist, create it
     if not os.path.isfile(alignment_file):
         sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
 
+    # set up the output directory
+    gen.create_output_directories(output_directory)
+    # get all the sequence alignments
     sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
-    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names[:1])}
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names[:30])}
+
+    # if families file, pick a random member of the family
+    if families_file:
+        if not run_number:
+            family_output_choices_file = "{0}/family_choices.txt".format(output_directory)
+        else:
+            family_output_choices_file = "{0}/family_choices_{1}.txt".format(output_directory, run_number)
+        sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
 
 
-    motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0]]
+    codon_sets = [["TAA", "TAG", "TGA"]]
 
-    pbar = ProgressBar()
+    # create a file for the real outputs
+    temp_dir = "temp_ds"
+    gen.create_output_directories(temp_dir)
+    real_results_output = "{0}/real_results.txt".format(temp_dir)
 
-    kept_stops_seqs = {}
-    removed_stops_seqs = {}
+    # calculate the ds for the real motif set
+    sequo.calc_motif_sets_codons_ds_wrapper([0], {0: motif_file}, codon_sets, sequence_alignments, output_file = real_results_output)
 
-    for i in pbar(sequence_alignments):
-        kept_sequence = sequo.extract_motif_sequences_from_alignment(sequence_alignments[i], motif_set)
-        print(kept_sequence)
-    #     # results = sequo.get_alignment_one_synonymous_from_stop(kept_sequence)
-    #     results = sequo.get_alignment_one_synonymous_from_stop(sequence_alignments[i])
-    #     kept_stops_seqs[i] = results[0]
-    #     removed_stops_seqs[i] = results[1]
-    #
-    # kept_stops_alignment_strings = sequo.list_alignments_to_strings(kept_stops_seqs)
-    # removed_stops_alignment_strings = sequo.list_alignments_to_strings(removed_stops_seqs)
-    #
-    # print("Calculating ds")
-    # ds = cons.calc_ds(kept_stops_alignment_strings)
-    # print(ds)
+    # now get all the control motifs
+    motif_sets = {i: "{0}/{1}".format(motif_controls_directory, file) for i, file in enumerate(os.listdir(motif_controls_directory)[:2])}
+    motif_set_list = [i for i in motif_sets]
 
+    # set up the control runs
+    kwargs_dict = {"output_directory": temp_dir}
+    args = [motif_sets, codon_sets, sequence_alignments]
+    # run on the controls
+    outputs = simoc.run_simulation_function(motif_set_list, args, sequo.calc_motif_sets_codons_ds_wrapper, kwargs_dict = kwargs_dict, sim_run = False, parallel = True)
 
+    # now write all the results to the output file
+    sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
+    with open(output_file, "w") as outfile:
+        sorted_names_hits_ds = [",".join(["{0}_hits_ds".format(i), "{0}_no_hits_ds".format(i), "{0}_hits_query_count".format(i), "{0}_no_hits_query_count".format(i)]) for i in sorted_codon_sets]
+        outfile.write("sim_id,{0}\n".format(",".join(sorted_names_hits_ds)))
+        real_results = gen.read_many_fields(real_results_output, ",")[1:]
+        real_results = {i[0]: i[1:] for i in real_results}
+        outfile.write("real")
+        for codon_set in sorted_codon_sets:
+            outfile.write(",{0}".format(",".join(gen.stringify(real_results[codon_set]))))
+        outfile.write("\n")
 
+        for i, sim_file in enumerate(outputs):
+            sim_results = gen.read_many_fields(sim_file, ",")[1:]
+            sim_results = {i[0]: i[1:] for i in sim_results}
+            outfile.write("sim_{0}".format(i+1))
+            for codon_set in sorted_codon_sets:
+                # print(codon_set, real_results[codon_set])
+                outfile.write(",{0}".format(",".join(gen.stringify(sim_results[codon_set]))))
+            outfile.write("\n")
 
-    # ds = cons.calc_ds(removed_stops_alignment_strings)
-    # print(ds)
-
-    # pbar = ProgressBar()
-    #
-    # kept_stops_seqs = {}
-    # removed_stops_seqs = {}
-    #
-    # for i in pbar(sequence_alignments):
-    #     results = sequo.get_alignment_one_synonymous_from_stop(sequence_alignments[i])
-    #     kept_stops_seqs[i] = results[0]
-    #     removed_stops_seqs[i] = results[1]
-    #
-    # kept_stops_alignment_strings = sequo.list_alignments_to_strings(kept_stops_seqs)
-    # removed_stops_alignment_strings = sequo.list_alignments_to_strings(removed_stops_seqs)
-    #
-    # ds = cons.calc_ds(kept_stops_alignment_strings)
-    # ds = cons.calc_ds(removed_stops_alignment_strings)
+    [gen.remove_file(i) for i in outputs]
+    [gen.remove_file(i) for i in real_results]

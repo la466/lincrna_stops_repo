@@ -15,7 +15,6 @@ from useful_motif_sets import dinucleotides, nucleotides
 from itertools import zip_longest
 
 
-
 def get_temp_filelist(outputs):
     filelist = []
     for output in outputs:
@@ -23,7 +22,7 @@ def get_temp_filelist(outputs):
     temp_filelist = fo.order_temp_files(outputs)
     return temp_filelist
 
-def run_simulation_function(required_simulations, sim_args, function_to_run, parallel = True, workers=None, sim_run=True):
+def run_simulation_function(required_simulations, sim_args, function_to_run, kwargs_dict = None, parallel = True, workers=None, sim_run=True):
     """
     Wrapper to run simulation function
 
@@ -49,12 +48,12 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, par
         sim_args.insert(0, "foo")
         if not workers:
             workers = os.cpu_count() - 2
-        processes = gen.run_in_parallel(simulations, sim_args, function_to_run, workers = workers)
+        processes = gen.run_in_parallel(simulations, sim_args, function_to_run, kwargs_dict = kwargs_dict, workers = workers)
         outputs = []
         for process in processes:
             outputs.extend(process.get())
     else:
-        outputs = function_to_run(simulations, *sim_args)
+        outputs = function_to_run(simulations, *sim_args, **kwargs_dict)
 
     return outputs
 
@@ -825,6 +824,25 @@ def sim_intron_density(coding_exons_bed, genome_fasta, required_simulations, out
 
     gen.remove_directory(temp_output_directory)
     gen.get_time(start_time)
+
+
+def generate_motif_dinucleotide_controls(motifs_file, required_simulations, output_directory):
+
+    motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t") if "#" not in i[0]]
+    dinucleotide_content = seqo.get_dinucleotide_content(motifs)
+    nucleotide_content = seqo.get_nucleotide_content(motifs)
+
+    if os.path.isdir(output_directory):
+        gen.remove_directory(output_directory)
+    gen.create_output_directories(output_directory)
+
+    start = time.time()
+
+    # create sets of motifs
+    print("Simluating sequences...")
+    args = [motifs, dinucleotide_content, nucleotide_content, output_directory]
+    simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_dinucleotide_matched_seqs)
+
 
 
 def sim_motif_codon_densities(seqs_file, required_simulations, output_directory):

@@ -7,7 +7,7 @@ import re
 import collections
 from useful_motif_sets import dinucleotides, nucleotides
 import multiprocessing as mp
-
+from progressbar import ProgressBar
 
 def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory):
 
@@ -395,13 +395,15 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
 
     output_files = []
 
+    pbar = ProgressBar()
+
     if len(simulations):
-        for sim_no, simulation in enumerate(simulations):
+        for sim_no, simulation in enumerate(pbar(simulations)):
             # set the seed
             set_seed(seeds, simulation)
 
             # print the simulation number out
-            gen.print_simulation(sim_no+1, simulations)
+            # print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], sim_no+1, len(simulations), id))
 
             simulated_seqs = []
             # Generate a list of nucleotide matched sequences

@@ -1,10 +1,12 @@
 import generic as gen
 import file_ops as fo
+import conservation as cons
 from regex_patterns import exon_number_pattern, gene_id_pattern, transcript_id_pattern
 import re
 import os
 import collections
 import random
+import numpy as np
 from Bio.Phylo.PAML import codeml
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
@@ -13,6 +15,7 @@ import copy
 import sys
 from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold, one_away_codons
 from progressbar import ProgressBar
+import multiprocessing as mp
 
 pbar = ProgressBar()
 
@@ -193,6 +196,8 @@ class PAML_Functions(object):
         output_files = ["2NG.dN", "2NG.dS", "2NG.t", "4fold.nuc", "codeml.ctl", "lnf", "rst", "rst1", "rub"]
         output_files = ["{0}/{1}".format(cwd, i) for i in output_files]
         [gen.remove_file(i) for i in output_files]
+        if cwd != self.working_dir:
+            gen.remove_directory(self.working_dir)
 
 
     def generate_tree_file(self):
@@ -202,7 +207,7 @@ class PAML_Functions(object):
 
         temp_dir = "temp_files"
         gen.create_output_directories(temp_dir)
-        tree_file = "{0}/temp_tree.tree".format(temp_dir)
+        tree_file = "{0}/temp_tree.{1}.tree".format(temp_dir, random.random())
         with open(tree_file, "w") as outfile:
             outfile.write("2 1\n(1,2);")
         self.tree_file = tree_file
@@ -238,95 +243,211 @@ class PAML_Functions(object):
         return cml_dict
 
 
-def extract_motif_sequences_from_alignment(alignment_seqs, motif_set):
-
+def pick_random_family_member(families_file, seqs_dict, output_file = None):
     """
-    Keep anything that looks like it belongs in the motif set
-    from the alignment sequences
+    Given a bed file containing families, pick a random member from the family
+    to keep and return the filtered dictionary.
+
+    Args:
+        families_file (str): path to bed file containing families
+        seqs_dict (dict): dictionary with transcript ids as keys
+
+    Returns:
+        seqs_dict (dict): dictionary but only containing one entry per family
     """
 
-    # motif_set = motif_set[:3]
+    families = gen.read_many_fields(families_file, "\t")
+    new_families = []
+    for fam in families:
+        fam = [i for i in fam if i in seqs_dict]
+        if len(fam):
+            new_families.append(fam)
+    families = new_families
+    # get a random member from each family
+    query_ids = [i for i in seqs_dict]
+    queried_ids = []
+    ids_to_keep = []
+    chosen_family_members = []
+    for i, id in enumerate(query_ids):
+        if id not in queried_ids:
+            group = [i for i in families if id in i]
+            if len(group):
+                group = group[0]
+                queried_ids.extend(group)
+                choice = np.random.choice(group)
+                ids_to_keep.append(choice)
+                chosen_family_members.append(choice)
+            else:
+                queried_ids.append(id)
+                ids_to_keep.append(id)
 
+    seqs_dict = {i: seqs_dict[i] for i in ids_to_keep}
+
+    if output_file:
+        with open(output_file, "w") as outfile:
+            [outfile.write("{0}\n".format(i)) for i in chosen_family_members]
+
+    return seqs_dict
+
+
+
+def calc_motif_sets_codons_ds_wrapper(motif_set_list, motif_sets, codon_sets, sequence_alignments, output_file = None, output_directory = None):
+
+    if not output_file and not output_directory:
+        print("Please provide output file or directory...")
+        raise Exception
+
+    outputs = []
+
+    # print(mp.current_process().name.split("-")[-1], motif_set_list)
+    for i, set_no in enumerate(motif_set_list):
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(motif_set_list)))
+
+        motif_set = [i[0] for i in gen.read_many_fields(motif_sets[set_no], "\t") if "#" not in i[0] and ">" not in i[0]]
+
+        # now get all the parts of the sequences where only the motif sets occur
+        restricted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
+
+        if output_file:
+            output_file = output_file
+        if output_directory:
+            output_file = "{0}/{1}.txt".format(output_directory, random.random())
+        outputs.append(output_file)
+        calc_motif_set_codons_ds(codon_sets, restricted_sequences, output_file)
+
+    return outputs
+
+
+def get_sequences_synonymous_hits_to_codons(seqs, codon_set):
+    """
+    Given a sequence, return 1) all the parts of the sequence where the synonymous site in any frame makes a codon
+    in the codon_set, 2) all cases where it isnt
+
+    Args:
+        seq (str): sequence string
+        codon_set (list): list of codons to query
+
+    Returns:
+        sorted_seqs (list): [hits, no hits]
+    """
+
+    hits = [[],[]]
+    no_hits = [[],[]]
+    for i in range(0, len(seqs[0])-3, 3):
+        if seqs[0][i+1:i+4] in codon_set or seqs[0][i+2:i+5] in codon_set or seqs[1][i+1:i+4] in codon_set or seqs[1][i+2:i+5] in codon_set:
+            hits[0].append(seqs[0][i:i+3])
+            hits[1].append(seqs[1][i:i+3])
+        else:
+            no_hits[0].append(seqs[0][i:i+3])
+            no_hits[1].append(seqs[1][i:i+3])
+
+    hits = ["".join(i) for i in hits]
+    no_hits = ["".join(i) for i in no_hits]
+
+    return [hits, no_hits]
+
+
+
+
+def get_motifs_overlap_indices(seqs, motif_set):
     indices_to_keep = []
     for motif in motif_set:
-        for seq in alignment_seqs:
+        for seq in seqs:
             hits = re.finditer('(?=({0}))'.format(motif), seq)
             [indices_to_keep.extend(list(range(i.start(), i.start() + len(motif)))) for i in hits]
     indices_to_keep = sorted(list(set(indices_to_keep)))
 
-    kept_sequences = [[],[]]
-
-    for i in range(0, len(alignment_seqs[0]), 3):
-        positions = list(range(i, i+3))
-        # if any of the nucleotides are in one of the motifs
-        if list(set(positions) & set(indices_to_keep)):
-            # now determine which nucleotides to keep
-            # add C to positions not of interest because it strictly cannot encode stop
-
-            # 1) if all nucleotides are in the overlap, we can keep all
-            #   then have to ensure that if the motif finishes in frame, and there is not another
-            #    motif next to it, we add a buffer codon because otherwise we might accidently create
-            #    motifs we dont want
-            if positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
-                if "-" not in alignment_seqs[0][i:i+3]:
-                    kept_sequences[0].append(alignment_seqs[0][i:i+3])
-                else:
-                    kept_sequences[0].append("---")
-                if "-" not in alignment_seqs[1][i:i+3]:
-                    kept_sequences[1].append(alignment_seqs[1][i:i+3])
-                else:
-                    kept_sequences[1].append("---")
-                # if the next codon doesnt contain one of the indices, we need to add a buffer
-                if i+4 not in indices_to_keep:
-                    kept_sequences[0].append("CCC")
-                    kept_sequences[1].append("CCC")
-
-            # 2) if only the first two nucleotides are in the overlap, the
-            #    synonymous site will not need to count, but they could add to previous codon
-            #    so keep just the first two nucleotides
-            #    e.g. |GTC|[(GC)N] => GCC
-            # 3) if there is only the first nucleotide in the codon that overlaps, still
-            #    need first two sites of sequence because synonymous site from previous codon
-            #    could encode stop using first two of next codon, which includes the focal site
-            #    e.g. |GTC|[(T)TN] => TTC
-            elif positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep or positions[0] in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep:
-                if "-" not in alignment_seqs[0][i:i+3]:
-                    kept_sequences[0].append(alignment_seqs[0][i:i+2] + "C")
-                else:
-                    kept_sequences[0].append("---")
-                if "-" not in alignment_seqs[1][i:i+3]:
-                    kept_sequences[1].append(alignment_seqs[1][i:i+2] + "C")
-                else:
-                    kept_sequences[1].append("---")
-
-            # 4) if only the last nucleotide overlaps, it means it is the first of the
-            #    motif overlap and the synonymous site, but need the nucleotide before too
-            #    e.g. [NG(T)]|TAC => CGT
-            # 5) if the last two overlap, then it is the first two nucleotides of the motif,
-            #    so keep both
-            #    e.g. [N(AT)]|GTA => CAT
-        elif positions[0] not in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep or positions[0] not in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep:
-                if "-" not in alignment_seqs[0][i:i+3]:
-                    kept_sequences[0].append("C" + alignment_seqs[0][i+1:i+2])
-                else:
-                    kept_sequences[0].append("---")
-                if "-" not in alignment_seqs[1][i:i+3]:
-                    kept_sequences[1].append("C" + alignment_seqs[1][i+1:i+2])
-                else:
-                    kept_sequences[1].append("---")
-
-    kept_sequences = ["".join(i) for i in kept_sequences]
-
-    return kept_sequences
+    return indices_to_keep
 
 
+def extract_motif_sequences_from_alignment(alignment_seqs, motif_set):
+    """
+    Keep anything that looks like it belongs in the motif set
+    from either of the alignment sequences
+
+    Args:
+        alignment_seqs (list): list containing [seq1, seq2] of aligned sequences
+        motif_set (list): list of motifs to query the alignment sequences.
+        If the motif sits in frame, keep all sites, but if the next motif hit
+        isn't straight away, add a buffer of NNN to prevent any extra codons being created.
+        If the motif sits out of frame, if the first or first two are hits, then it is the last
+        codon of the motif. Take the first two nucleotides and add N to the end to remove the
+        synonymous site of the codon. If the last two or last nucleotides are hits, it is the
+        first codon of the motif. Take the last two nucleotides and add N to keep the synonymous
+        site. Then append all codons together.
+
+    Returns:
+        remaining_motif_sequences (list): list containing [seq1, seq1] but only
+        sites that overlap one of the motifs
+    """
+
+    remaining_motif_sequences = {}
+
+    for id in alignment_seqs:
+        alignment_set = alignment_seqs[id]
+        # get a list of all indices of all positions that overlap with something
+        # that looks like a motif in the set
+        indices_to_keep = get_motifs_overlap_indices(alignment_set, motif_set)
+
+        kept_sequences = [[],[]]
+        for i, sequence in enumerate(alignment_set):
+            for pos in range(0, len(sequence)-3, 3):
+                positions = range(pos, pos+3)
+                # if there is at least one of the nucleotides in the codon that overlaps with the motif set
+                if list(set(positions) & set(indices_to_keep)):
+                    # get a list of the codon nucleotides
+                    codon = sequence[pos:pos+3]
+                    # 1) if all nucleotides are in the overlap, we can keep all
+                    #   then have to ensure that if the motif finishes in frame, and there is not another
+                    #    motif next to it, we add a buffer codon because otherwise we might accidently create
+                    #    motifs we dont want
+                    if positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
+                        if "-" not in codon:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+                        else:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+                        # if the next codon doesnt contain one of the indices, we need to add a buffer codon
+                        if pos+3 not in indices_to_keep:
+                            kept_sequences[i].append("NNN")
+
+                    # 2) if only the first two nucleotides are in the overlap, the
+                    #    synonymous site will not need to count, but they could add to previous codon
+                    #    so keep just the first two nucleotides
+                    #    e.g. |GTC|[(GC)N] => GCC
+                    # 3) if there is only the first nucleotide in the codon that overlaps, still
+                    #    need first two sites of sequence because synonymous site from previous codon
+                    #    could encode stop using first two of next codon, which includes the focal site
+                    #    e.g. |GTC|[(T)TN] => TTC
+                    elif positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep or positions[0] in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep:
+                        if "-" not in codon:
+                            kept_sequences[i].append(sequence[pos:pos+2] + "N")
+                        else:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+                    # 4) if only the last nucleotide overlaps, it means it is the first of the
+                    #    motif overlap and the synonymous site, but need the nucleotide before too
+                    #    e.g. [NG(T)]|TAC => CGT
+                    # 5) if the last two overlap, then it is the first two nucleotides of the motif,
+                    #    so keep both
+                    #    e.g. [N(AT)]|GTA => CAT
+                    elif positions[0] not in indices_to_keep and positions[1] not in indices_to_keep and positions[2] in indices_to_keep or positions[0] not in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
+                        if "-" not in codon:
+                            kept_sequences[i].append("N" + sequence[pos+1:pos+3])
+                        else:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+
+
+        kept_sequences = ["".join(i) for i in kept_sequences]
+        remaining_motif_sequences[id] = kept_sequences
+
+
+    return remaining_motif_sequences
 
 
 def list_alignments_to_strings(seq_list):
 
     alignments = [[],[]]
-    [alignments[0].append(seq_list[i][0]) for i in seq_list]
-    [alignments[1].append(seq_list[i][1]) for i in seq_list]
+    [alignments[0].append(seq_list[i][0]) for i in sorted(seq_list)]
+    [alignments[1].append(seq_list[i][1]) for i in sorted(seq_list)]
     alignments = ["".join(i) for i in alignments]
     return alignments
 
@@ -439,6 +560,47 @@ def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
             outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
 
     gen.remove_directory(temp_dir)
+
+
+def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
+    """
+    Given sets of codons, 1) extract all the pieces of the sequence alignments
+    where the synonymous site creates the codon in either of the +1 or +2 frames
+    and for those sites that dont 2) calculate the ds score for the resulting cases
+
+    Args:
+        codon_sets (list): list of lists containing codon sets e.g. [["TAA", "TAG"], ["CAT", "TGG"]]
+        sequence_alignments (dict): dict containing sequence alignments
+        output_file (str): path to output file to write results to
+    """
+
+    codon_hits_ds = {}
+    no_codon_hits_ds = {}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("codon_set,hits_ds,no_hits_ds,hits_query_count,no_hits_query_count\n")
+        # for each of the codon sets provided
+        for codon_set in codon_sets:
+            hits_sequences = {}
+            no_hits_sequences = {}
+            # for each of the sequence alignments
+            for i, id in enumerate(sequence_alignments):
+                # split those sequences where the synonymous site has a hit to the current codon set
+                hit_seqs, no_hits_seqs = get_sequences_synonymous_hits_to_codons(sequence_alignments[id], codon_set)
+                hits_sequences[i] = hit_seqs
+                no_hits_sequences[i] = no_hits_seqs
+
+            # now calculate the ds scores for each set
+            hits_alignment_strings = list_alignments_to_strings(hits_sequences)
+            no_hits_alignment_strings = list_alignments_to_strings(no_hits_sequences)
+            # calculate the ds scores
+            hits_ds = cons.calc_ds(hits_alignment_strings)
+            no_hits_ds = cons.calc_ds(no_hits_alignment_strings)
+            # write to file
+            args = ["_".join(sorted(codon_set)), hits_ds, no_hits_ds, int(np.divide(len(hits_alignment_strings[0]), 3)), int(np.divide(len(no_hits_alignment_strings[0]), 3))]
+            outfile.write("{0}\n".format(",".join(gen.stringify(args))))
+
+
 
 
 def clean_feature_file(bed_file):

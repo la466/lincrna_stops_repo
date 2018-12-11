@@ -42,6 +42,17 @@ class Tests(unittest.TestCase):
         observed = extract_gtf_features(input_list, input_file, filter_by_transcript = True)
         self.assertEqual(expected, observed)
 
+    def test_extract_motif_sequences_from_alignment(self):
+        input_file = "test_data/sequence_ops/test_extract_motif_sequences_from_alignment/input.fasta"
+        expected_file = "test_data/sequence_ops/test_extract_motif_sequences_from_alignment/expected.fasta"
+        input_names, input_seqs = gen.read_fasta(input_file)
+        input_seqs = [{name: input_seqs[i].split("\t")} for i, name in enumerate(input_names)]
+        expected_names, expected_seqs = gen.read_fasta(expected_file)
+        expected = [{name: expected_seqs[i].split("\t")} for i, name in enumerate(expected_names)]
+        input_motif_sets = [["TTTTTT"],["AAAAAA"],["CAACAA", "AACAAG"]]
+        observed = [extract_motif_sequences_from_alignment(seqs, input_motif_sets[i]) for i, seqs in enumerate(input_seqs)]
+        self.assertEqual(expected, observed)
+
     def test_extract_stop_codon_features(self):
         input_file = "test_data/sequence_ops/test_extract_stop_codon_features/input.bed"
         expected_file = "test_data/sequence_ops/test_extract_stop_codon_features/expected.bed"
@@ -152,6 +163,18 @@ class Tests(unittest.TestCase):
         observed = gen.read_many_fields(observed_file, "\t")
         self.assertEqual(expected, observed)
         self.assertEqual(expected_entries, observed_entries)
+
+    def test_get_sequence_synonymous_hits_to_codons(self):
+        input_fasta = "test_data/sequence_ops/test_get_sequence_synonymous_hits_to_codons/input.fasta"
+        expected1 = "test_data/sequence_ops/test_get_sequence_synonymous_hits_to_codons/expected1.fasta"
+        expected2 = "test_data/sequence_ops/test_get_sequence_synonymous_hits_to_codons/expected2.fasta"
+        input_seqs = gen.read_fasta(input_fasta)[1]
+        expected1 = [i.split("\t") for i in gen.read_fasta(expected1)[1]]
+        observed1 = [get_sequence_synonymous_hits_to_codons(i, ["TAA", "TAG", "TGA"]) for i in input_seqs]
+        self.assertEqual(expected1, observed1)
+        expected2 = [i.split("\t") for i in gen.read_fasta(expected2)[1]]
+        observed2 = [get_sequence_synonymous_hits_to_codons(i, ["GCC", "TAT", "TAC"]) for i in input_seqs]
+        self.assertEqual(expected2, observed2)
 
     def test_get_transcript_and_orthologs(self):
         input_fasta1 = "test_data/sequence_ops/test_get_transcript_and_orthologs/input1.fasta"
