@@ -243,55 +243,121 @@ class PAML_Functions(object):
         return cml_dict
 
 
-def pick_random_family_member(families_file, seqs_dict, output_file = None):
+def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
     """
-    Given a bed file containing families, pick a random member from the family
-    to keep and return the filtered dictionary.
+    Build CDS sequences from the list of features.
 
     Args:
-        families_file (str): path to bed file containing families
-        seqs_dict (dict): dictionary with transcript ids as keys
-
-    Returns:
-        seqs_dict (dict): dictionary but only containing one entry per family
+        cds_features_bed (str): path to file containing cds features
+        genome_fasta (str): path to genome fasta file
+        output_file (str): path to output fasta file
     """
 
-    families = gen.read_many_fields(families_file, "\t")
-    new_families = []
-    for fam in families:
-        fam = [i for i in fam if i in seqs_dict]
-        if len(fam):
-            new_families.append(fam)
-    families = new_families
-    # get a random member from each family
-    query_ids = [i for i in seqs_dict]
-    queried_ids = []
-    ids_to_keep = []
-    chosen_family_members = []
-    for i, id in enumerate(query_ids):
-        if id not in queried_ids:
-            group = [i for i in families if id in i]
-            if len(group):
-                group = group[0]
-                queried_ids.extend(group)
-                choice = np.random.choice(group)
-                ids_to_keep.append(choice)
-                chosen_family_members.append(choice)
-            else:
-                queried_ids.append(id)
-                ids_to_keep.append(id)
+    print("Building cds...")
 
-    seqs_dict = {i: seqs_dict[i] for i in ids_to_keep}
+    stop_codons = ["TAA", "TAG", "TGA"]
 
-    if output_file:
-        with open(output_file, "w") as outfile:
-            [outfile.write("{0}\n".format(i)) for i in chosen_family_members]
+    temp_dir = "temp_dir"
+    gen.create_output_directories(temp_dir)
 
-    return seqs_dict
+    # create temp file to contain sequences
+    temp_file = "{0}/temp_cds_features.fasta".format(temp_dir)
+    fo.fasta_from_intervals(cds_features_bed, temp_file, genome_fasta, names=True)
 
+    # now build the sequences
+    sequence_parts = collections.defaultdict(lambda: collections.defaultdict())
+    sequence_names, seqs = gen.read_fasta(temp_file)
+    for i, name in enumerate(sequence_names):
+        transcript = name.split(".")[0]
+        exon_id = int(name.split(".")[1].split("(")[0])
+
+        seq = seqs[i]
+        # set the exon_id to an arbritrarily high number if it is the annotate stop codon
+        if len(seq) == 3 and seq in stop_codons:
+            exon_id = 9999999
+        sequence_parts[transcript][exon_id] = seq
+
+    with open(output_file, "w") as outfile:
+        for transcript in sequence_parts:
+            sequence = []
+            for exon_id in sorted(sequence_parts[transcript]):
+                sequence.append(sequence_parts[transcript][exon_id])
+            outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
+
+    gen.remove_directory(temp_dir)
+
+
+def build_sequences_from_exon_fasta(input_fasta, output_fasta):
+    names, seqs = gen.read_fasta(input_fasta)
+    outputs = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(names):
+        id = name.split(".")[0]
+        exon = int(name.split(".")[1].split("(")[0])
+        outputs[id][exon] = seqs[i]
+
+    with open(output_fasta, "w") as outfile:
+        for id in outputs:
+            seq = []
+            [seq.append(outputs[id][exon]) for exon in sorted(outputs[id])]
+            outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
+
+
+def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
+    """
+    Given sets of codons, 1) extract all the pieces of the sequence alignments
+    where the synonymous site creates the codon in either of the +1 or +2 frames
+    and for those sites that dont 2) calculate the ds score for the resulting cases
+
+    Args:
+        codon_sets (list): list of lists containing codon sets e.g. [["TAA", "TAG"], ["CAT", "TGG"]]
+        sequence_alignments (dict): dict containing sequence alignments
+        output_file (str): path to output file to write results to
+    """
+
+    codon_hits_ds = {}
+    no_codon_hits_ds = {}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("codon_set,hits_ds,no_hits_ds,hits_query_count,no_hits_query_count\n")
+        # for each of the codon sets provided
+        for codon_set in codon_sets:
+            hits_sequences = {}
+            no_hits_sequences = {}
+            # for each of the sequence alignments
+            for i, id in enumerate(sequence_alignments):
+                # split those sequences where the synonymous site has a hit to the current codon set
+                hit_seqs, no_hits_seqs = get_sequences_synonymous_hits_to_codons(sequence_alignments[id], codon_set)
+                hits_sequences[i] = hit_seqs
+                no_hits_sequences[i] = no_hits_seqs
+
+            # now calculate the ds scores for each set
+            hits_alignment_strings = list_alignments_to_strings(hits_sequences)
+            no_hits_alignment_strings = list_alignments_to_strings(no_hits_sequences)
+            # calculate the ds scores
+            hits_ds = cons.calc_ds(hits_alignment_strings)
+            no_hits_ds = cons.calc_ds(no_hits_alignment_strings)
+            # write to file
+            args = ["_".join(sorted(codon_set)), hits_ds, no_hits_ds, int(np.divide(len(hits_alignment_strings[0]), 3)), int(np.divide(len(no_hits_alignment_strings[0]), 3))]
+            outfile.write("{0}\n".format(",".join(gen.stringify(args))))
 
 
 def calc_motif_sets_codons_ds_wrapper(motif_set_list, motif_sets, codon_sets, sequence_alignments, output_file = None, output_directory = None):
+    """
+    Wrapper to calculate the ds score for the sequence parts where the synonymous
+    site can and cannot form on of the codons in a codon set in sequence parts that overlap
+    a set of given motifs
+
+    Args:
+        motif_set_list (list): list of integers to iterate over, corresponds to motif_sets
+        motif_sets (dict): dictionary containing paths to motif set files
+        codon_sets (list): a list of list containing codon sets to iterate over
+        sequence_alignments (dict): dictionary containing the aligned sequences for each transcript
+        output_file (str): if set, output to given file
+        output_directory (str): if set, save files to output directory
+
+    Returns:
+        outputs (list): list of output file paths
+    """
 
     if not output_file and not output_directory:
         print("Please provide output file or directory...")
@@ -307,149 +373,141 @@ def calc_motif_sets_codons_ds_wrapper(motif_set_list, motif_sets, codon_sets, se
 
         # now get all the parts of the sequences where only the motif sets occur
         restricted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
-
+        # set up the output filepath
         if output_file:
             output_file = output_file
         if output_directory:
-            output_file = "{0}/{1}.txt".format(output_directory, random.random())
+            output_file = "{0}/{1}.{2}.txt".format(output_directory, set_no, random.random())
         outputs.append(output_file)
+        # calculcate the ds score for the codon set
         calc_motif_set_codons_ds(codon_sets, restricted_sequences, output_file)
 
     return outputs
 
 
-def get_sequences_synonymous_hits_to_codons(seqs, codon_set):
+def calc_purine_content(seqs, reverse = None):
     """
-    Given a sequence, return 1) all the parts of the sequence where the synonymous site in any frame makes a codon
-    in the codon_set, 2) all cases where it isnt
+    Calculate the purine (or pyrimidine) content of a list of sequences
 
     Args:
-        seq (str): sequence string
-        codon_set (list): list of codons to query
-
+        seqs (list): list of sequences
+        reverse (bool): if set, calculate the pyrimidine content instead
     Returns:
-        sorted_seqs (list): [hits, no hits]
+        purine_content (float): purine content of sequences
     """
 
-    hits = [[],[]]
-    no_hits = [[],[]]
-    for i in range(0, len(seqs[0])-3, 3):
-        if seqs[0][i+1:i+4] in codon_set or seqs[0][i+2:i+5] in codon_set or seqs[1][i+1:i+4] in codon_set or seqs[1][i+2:i+5] in codon_set:
-            hits[0].append(seqs[0][i:i+3])
-            hits[1].append(seqs[1][i:i+3])
-        else:
-            no_hits[0].append(seqs[0][i:i+3])
-            no_hits[1].append(seqs[1][i:i+3])
+    query_set = ["A", "G"]
+    if reverse:
+        query_set = ["C", "T"]
 
-    hits = ["".join(i) for i in hits]
-    no_hits = ["".join(i) for i in no_hits]
-
-    return [hits, no_hits]
+    seq_nts = list("".join(seqs))
+    purine_content = np.divide(len([i for i in seq_nts if i in query_set]), len(seq_nts))
+    return purine_content
 
 
-
-
-def get_motifs_overlap_indices(seqs, motif_set):
-    indices_to_keep = []
-    for motif in motif_set:
-        for seq in seqs:
-            hits = re.finditer('(?=({0}))'.format(motif), seq)
-            [indices_to_keep.extend(list(range(i.start(), i.start() + len(motif)))) for i in hits]
-    indices_to_keep = sorted(list(set(indices_to_keep)))
-
-    return indices_to_keep
-
-
-def extract_motif_sequences_from_alignment(alignment_seqs, motif_set):
+def clean_feature_file(bed_file):
     """
-    Keep anything that looks like it belongs in the motif set
-    from either of the alignment sequences
+    After extracting features, may want to make it in a more usable format
 
     Args:
-        alignment_seqs (list): list containing [seq1, seq2] of aligned sequences
-        motif_set (list): list of motifs to query the alignment sequences.
-        If the motif sits in frame, keep all sites, but if the next motif hit
-        isn't straight away, add a buffer of NNN to prevent any extra codons being created.
-        If the motif sits out of frame, if the first or first two are hits, then it is the last
-        codon of the motif. Take the first two nucleotides and add N to the end to remove the
-        synonymous site of the codon. If the last two or last nucleotides are hits, it is the
-        first codon of the motif. Take the last two nucleotides and add N to keep the synonymous
-        site. Then append all codons together.
-
-    Returns:
-        remaining_motif_sequences (list): list containing [seq1, seq1] but only
-        sites that overlap one of the motifs
+        bed_file (str): path to bed file
     """
 
-    remaining_motif_sequences = {}
+    temp_file = "{0}.bed".format(random.random())
+    entries = gen.read_many_fields(bed_file, "\t")
+    with open(temp_file, "w") as outfile:
+        for entry in entries:
+            entry[3] = "{0}.{1}".format(entry[3], entry[4])
+            entry[4] = "."
+            outfile.write("{0}\n".format("\t".join(entry)))
 
-    for id in alignment_seqs:
-        alignment_set = alignment_seqs[id]
-        # get a list of all indices of all positions that overlap with something
-        # that looks like a motif in the set
-        indices_to_keep = get_motifs_overlap_indices(alignment_set, motif_set)
-
-        kept_sequences = [[],[]]
-        for i, sequence in enumerate(alignment_set):
-            for pos in range(0, len(sequence)-3, 3):
-                positions = range(pos, pos+3)
-                # if there is at least one of the nucleotides in the codon that overlaps with the motif set
-                if list(set(positions) & set(indices_to_keep)):
-                    # get a list of the codon nucleotides
-                    codon = sequence[pos:pos+3]
-                    # 1) if all nucleotides are in the overlap, we can keep all
-                    #   then have to ensure that if the motif finishes in frame, and there is not another
-                    #    motif next to it, we add a buffer codon because otherwise we might accidently create
-                    #    motifs we dont want
-                    if positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
-                        if "-" not in codon:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-                        else:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-                        # if the next codon doesnt contain one of the indices, we need to add a buffer codon
-                        if pos+3 not in indices_to_keep:
-                            kept_sequences[i].append("NNN")
-
-                    # 2) if only the first two nucleotides are in the overlap, the
-                    #    synonymous site will not need to count, but they could add to previous codon
-                    #    so keep just the first two nucleotides
-                    #    e.g. |GTC|[(GC)N] => GCC
-                    # 3) if there is only the first nucleotide in the codon that overlaps, still
-                    #    need first two sites of sequence because synonymous site from previous codon
-                    #    could encode stop using first two of next codon, which includes the focal site
-                    #    e.g. |GTC|[(T)TN] => TTC
-                    elif positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep or positions[0] in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep:
-                        if "-" not in codon:
-                            kept_sequences[i].append(sequence[pos:pos+2] + "N")
-                        else:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-                    # 4) if only the last nucleotide overlaps, it means it is the first of the
-                    #    motif overlap and the synonymous site, but need the nucleotide before too
-                    #    e.g. [NG(T)]|TAC => CGT
-                    # 5) if the last two overlap, then it is the first two nucleotides of the motif,
-                    #    so keep both
-                    #    e.g. [N(AT)]|GTA => CAT
-                    elif positions[0] not in indices_to_keep and positions[1] not in indices_to_keep and positions[2] in indices_to_keep or positions[0] not in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
-                        if "-" not in codon:
-                            kept_sequences[i].append("N" + sequence[pos+1:pos+3])
-                        else:
-                            kept_sequences[i].append(sequence[pos:pos+3])
+    gen.run_process(["mv", temp_file, bed_file])
+    gen.remove_file(temp_file)
 
 
-        kept_sequences = ["".join(i) for i in kept_sequences]
-        remaining_motif_sequences[id] = kept_sequences
+
+def extract_gtf_feature(input_file, required_feature, ids_to_keep = None, filter_by_gene = None):
+    """
+    Get a feature from a gtf file
+
+    Args:
+        input_file (str): path to file containing features
+        required_feature: (str): feature to keep
+        ids_to_keep (list): if set, list containing ids to keep
+        filter_by_gene (bool): if true, match gene ids rather than transcript ids
+
+    Returns:
+        features_list (dict): dict containing features, sorted according to
+            their position in the transcript. dict[transcript_id] = [cds_features]
+    """
+
+    print("Getting {0}s...".format(required_feature))
+
+    features = gen.read_many_fields(input_file, "\t")
+    features_list = collections.defaultdict(lambda: [])
+    # get a list of all that match
+    for feature in features:
+        if feature[-1] == required_feature:
+            # if filtering by gene, check that gene is in the input list, else
+            # check the transcript
+            if ids_to_keep:
+                if filter_by_gene and feature[6] in ids_to_keep:
+                    features_list[feature[3]].append(feature)
+                elif feature[3] in ids_to_keep:
+                    features_list[feature[3]].append(feature)
+            # otherwise keep all features
+            else:
+                features_list[feature[3]].append(feature)
+
+    for id in features_list:
+        # now we need to sort the exons in order, reversing if on the minus strand
+        strand = features_list[id][0][5]
+        if strand == "+":
+            features_list[id] = sorted(features_list[id], key = lambda x:x[1])
+        elif strand == "-":
+            features_list[id] = sorted(features_list[id], key = lambda x:x[2], reverse = True)
+
+    return features_list
 
 
-    return remaining_motif_sequences
+def extract_aligment_sequence_parts(cds_pairs, reverse = False):
+
+    # put the muscle executable in tools directory for your os
+    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
+    if not os.path.isfile(muscle_exe):
+        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
+        raise Exception
+
+    # setup the muscle alignment
+    alignment_functions = Alignment_Functions(muscle_exe)
+
+    kept_sequence1 = []
+    kept_sequence2 = []
+
+    for focal_seq in cds_pairs:
+        ortholog_seq = cds_pairs[focal_seq]
+
+        # get the alignments for the sequences
+        focal_iupac_protein = Seq(focal_seq, IUPAC.unambiguous_dna).translate()
+        ortholog_iupac_protein = Seq(ortholog_seq, IUPAC.unambiguous_dna).translate()
+        alignment_functions.align_seqs(focal_iupac_protein, ortholog_iupac_protein)
+        # extract the alignments
+        alignment_functions.extract_alignments()
+        # now we want to get the nucleotide sequences for the alignments
+        aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [focal_seq, ortholog_seq])
+        # clean up the files
+        alignment_functions.cleanup()
+
+        # extract the parts of the sequences that are distance from stop codon
+        # get_sequence_parts_near_stop(aligned_sequences)
 
 
-def list_alignments_to_strings(seq_list):
+        keep_only_one_synonymous_from_stop = get_alignment_one_synonymous_from_stop(aligned_sequences, reverse = reverse)
+        kept_sequence1.append(keep_only_one_synonymous_from_stop[0])
+        kept_sequence2.append(keep_only_one_synonymous_from_stop[1])
 
-    alignments = [[],[]]
-    [alignments[0].append(seq_list[i][0]) for i in sorted(seq_list)]
-    [alignments[1].append(seq_list[i][1]) for i in sorted(seq_list)]
-    alignments = ["".join(i) for i in alignments]
-    return alignments
+    return "".join(kept_sequence1), "".join(kept_sequence2)
+
 
 def extract_alignments(seq1, seq2, muscle_exe = None):
     """
@@ -516,156 +574,6 @@ def extract_alignments_from_file(cds_fasta, ortholog_fasta, ortholog_transcript_
         for id in pbar(cds_pairs):
             alignments = extract_alignments(cds_pairs[id][0], cds_pairs[id][1], muscle_exe = muscle_exe)
             outfile.write(">{0}\n{1},{2}\n".format(id, alignments[0], alignments[1]))
-
-
-def build_coding_sequences(cds_features_bed, genome_fasta, output_file):
-    """
-    Build CDS sequences from the list of features.
-
-    Args:
-        cds_features_bed (str): path to file containing cds features
-        genome_fasta (str): path to genome fasta file
-        output_file (str): path to output fasta file
-    """
-
-    print("Building cds...")
-
-    stop_codons = ["TAA", "TAG", "TGA"]
-
-    temp_dir = "temp_dir"
-    gen.create_output_directories(temp_dir)
-
-    # create temp file to contain sequences
-    temp_file = "{0}/temp_cds_features.fasta".format(temp_dir)
-    fo.fasta_from_intervals(cds_features_bed, temp_file, genome_fasta, names=True)
-
-    # now build the sequences
-    sequence_parts = collections.defaultdict(lambda: collections.defaultdict())
-    sequence_names, seqs = gen.read_fasta(temp_file)
-    for i, name in enumerate(sequence_names):
-        transcript = name.split(".")[0]
-        exon_id = int(name.split(".")[1].split("(")[0])
-
-        seq = seqs[i]
-        # set the exon_id to an arbritrarily high number if it is the annotate stop codon
-        if len(seq) == 3 and seq in stop_codons:
-            exon_id = 9999999
-        sequence_parts[transcript][exon_id] = seq
-
-    with open(output_file, "w") as outfile:
-        for transcript in sequence_parts:
-            sequence = []
-            for exon_id in sorted(sequence_parts[transcript]):
-                sequence.append(sequence_parts[transcript][exon_id])
-            outfile.write(">{0}\n{1}\n".format(transcript, "".join(sequence)))
-
-    gen.remove_directory(temp_dir)
-
-
-def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
-    """
-    Given sets of codons, 1) extract all the pieces of the sequence alignments
-    where the synonymous site creates the codon in either of the +1 or +2 frames
-    and for those sites that dont 2) calculate the ds score for the resulting cases
-
-    Args:
-        codon_sets (list): list of lists containing codon sets e.g. [["TAA", "TAG"], ["CAT", "TGG"]]
-        sequence_alignments (dict): dict containing sequence alignments
-        output_file (str): path to output file to write results to
-    """
-
-    codon_hits_ds = {}
-    no_codon_hits_ds = {}
-
-    with open(output_file, "w") as outfile:
-        outfile.write("codon_set,hits_ds,no_hits_ds,hits_query_count,no_hits_query_count\n")
-        # for each of the codon sets provided
-        for codon_set in codon_sets:
-            hits_sequences = {}
-            no_hits_sequences = {}
-            # for each of the sequence alignments
-            for i, id in enumerate(sequence_alignments):
-                # split those sequences where the synonymous site has a hit to the current codon set
-                hit_seqs, no_hits_seqs = get_sequences_synonymous_hits_to_codons(sequence_alignments[id], codon_set)
-                hits_sequences[i] = hit_seqs
-                no_hits_sequences[i] = no_hits_seqs
-
-            # now calculate the ds scores for each set
-            hits_alignment_strings = list_alignments_to_strings(hits_sequences)
-            no_hits_alignment_strings = list_alignments_to_strings(no_hits_sequences)
-            # calculate the ds scores
-            hits_ds = cons.calc_ds(hits_alignment_strings)
-            no_hits_ds = cons.calc_ds(no_hits_alignment_strings)
-            # write to file
-            args = ["_".join(sorted(codon_set)), hits_ds, no_hits_ds, int(np.divide(len(hits_alignment_strings[0]), 3)), int(np.divide(len(no_hits_alignment_strings[0]), 3))]
-            outfile.write("{0}\n".format(",".join(gen.stringify(args))))
-
-
-
-
-def clean_feature_file(bed_file):
-    """
-    After extracting features, may want to make it in a more usable format
-
-    Args:
-        bed_file (str): path to bed file
-    """
-
-    temp_file = "{0}.bed".format(random.random())
-    entries = gen.read_many_fields(bed_file, "\t")
-    with open(temp_file, "w") as outfile:
-        for entry in entries:
-            entry[3] = "{0}.{1}".format(entry[3], entry[4])
-            entry[4] = "."
-            outfile.write("{0}\n".format("\t".join(entry)))
-
-    gen.run_process(["mv", temp_file, bed_file])
-    gen.remove_file(temp_file)
-
-
-
-def extract_gtf_feature(input_file, required_feature, ids_to_keep = None, filter_by_gene = None):
-    """
-    Get a feature from a gtf file
-
-    Args:
-        input_file (str): path to file containing features
-        required_feature: (str): feature to keep
-        ids_to_keep (list): if set, list containing ids to keep
-        filter_by_gene (bool): if true, match gene ids rather than transcript ids
-
-    Returns:
-        features_list (dict): dict containing features, sorted according to
-            their position in the transcript. dict[transcript_id] = [cds_features]
-    """
-
-    print("Getting {0}s...".format(required_feature))
-
-    features = gen.read_many_fields(input_file, "\t")
-    features_list = collections.defaultdict(lambda: [])
-    # get a list of all that match
-    for feature in features:
-        if feature[-1] == required_feature:
-            # if filtering by gene, check that gene is in the input list, else
-            # check the transcript
-            if ids_to_keep:
-                if filter_by_gene and feature[6] in ids_to_keep:
-                    features_list[feature[3]].append(feature)
-                elif feature[3] in ids_to_keep:
-                    features_list[feature[3]].append(feature)
-            # otherwise keep all features
-            else:
-                features_list[feature[3]].append(feature)
-
-    for id in features_list:
-        # now we need to sort the exons in order, reversing if on the minus strand
-        strand = features_list[id][0][5]
-        if strand == "+":
-            features_list[id] = sorted(features_list[id], key = lambda x:x[1])
-        elif strand == "-":
-            features_list[id] = sorted(features_list[id], key = lambda x:x[2], reverse = True)
-
-    return features_list
 
 
 def extract_gtf_features(input_list, gtf_file_path, filter_by_transcript = None, filter_by_gene = None):
@@ -801,20 +709,87 @@ def extract_multi_exons_entries_to_bed(input_bed, output_bed = None):
         gen.remove_file(output_bed_file)
 
 
-def build_sequences_from_exon_fasta(input_fasta, output_fasta):
-    names, seqs = gen.read_fasta(input_fasta)
-    outputs = collections.defaultdict(lambda: collections.defaultdict())
-    for i, name in enumerate(names):
-        id = name.split(".")[0]
-        exon = int(name.split(".")[1].split("(")[0])
-        outputs[id][exon] = seqs[i]
+def extract_motif_sequences_from_alignment(alignment_seqs, motif_set):
+    """
+    Keep anything that looks like it belongs in the motif set
+    from either of the alignment sequences
 
-    with open(output_fasta, "w") as outfile:
-        for id in outputs:
-            seq = []
-            [seq.append(outputs[id][exon]) for exon in sorted(outputs[id])]
-            outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
+    Args:
+        alignment_seqs (list): list containing [seq1, seq2] of aligned sequences
+        motif_set (list): list of motifs to query the alignment sequences.
+        If the motif sits in frame, keep all sites, but if the next motif hit
+        isn't straight away, add a buffer of NNN to prevent any extra codons being created.
+        If the motif sits out of frame, if the first or first two are hits, then it is the last
+        codon of the motif. Take the first two nucleotides and add N to the end to remove the
+        synonymous site of the codon. If the last two or last nucleotides are hits, it is the
+        first codon of the motif. Take the last two nucleotides and add N to keep the synonymous
+        site. Then append all codons together.
 
+    Returns:
+        remaining_motif_sequences (list): list containing [seq1, seq1] but only
+        sites that overlap one of the motifs
+    """
+
+    remaining_motif_sequences = {}
+
+    for id in alignment_seqs:
+        alignment_set = alignment_seqs[id]
+        # get a list of all indices of all positions that overlap with something
+        # that looks like a motif in the set
+        indices_to_keep = get_motifs_overlap_indices(alignment_set, motif_set)
+
+        kept_sequences = [[],[]]
+        for i, sequence in enumerate(alignment_set):
+            for pos in range(0, len(sequence)-3, 3):
+                positions = range(pos, pos+3)
+                # if there is at least one of the nucleotides in the codon that overlaps with the motif set
+                if list(set(positions) & set(indices_to_keep)):
+                    # get a list of the codon nucleotides
+                    codon = sequence[pos:pos+3]
+                    # 1) if all nucleotides are in the overlap, we can keep all
+                    #   then have to ensure that if the motif finishes in frame, and there is not another
+                    #    motif next to it, we add a buffer codon because otherwise we might accidently create
+                    #    motifs we dont want
+                    if positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
+                        if "-" not in codon:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+                        else:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+                        # if the next codon doesnt contain one of the indices, we need to add a buffer codon
+                        if pos+3 not in indices_to_keep:
+                            kept_sequences[i].append("NNN")
+
+                    # 2) if only the first two nucleotides are in the overlap, the
+                    #    synonymous site will not need to count, but they could add to previous codon
+                    #    so keep just the first two nucleotides
+                    #    e.g. |GTC|[(GC)N] => GCC
+                    # 3) if there is only the first nucleotide in the codon that overlaps, still
+                    #    need first two sites of sequence because synonymous site from previous codon
+                    #    could encode stop using first two of next codon, which includes the focal site
+                    #    e.g. |GTC|[(T)TN] => TTC
+                    elif positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep or positions[0] in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep:
+                        if "-" not in codon:
+                            kept_sequences[i].append(sequence[pos:pos+2] + "N")
+                        else:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+                    # 4) if only the last nucleotide overlaps, it means it is the first of the
+                    #    motif overlap and the synonymous site, but need the nucleotide before too
+                    #    e.g. [NG(T)]|TAC => CGT
+                    # 5) if the last two overlap, then it is the first two nucleotides of the motif,
+                    #    so keep both
+                    #    e.g. [N(AT)]|GTA => CAT
+                    elif positions[0] not in indices_to_keep and positions[1] not in indices_to_keep and positions[2] in indices_to_keep or positions[0] not in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
+                        if "-" not in codon:
+                            kept_sequences[i].append("N" + sequence[pos+1:pos+3])
+                        else:
+                            kept_sequences[i].append(sequence[pos:pos+3])
+
+
+        kept_sequences = ["".join(i) for i in kept_sequences]
+        remaining_motif_sequences[id] = kept_sequences
+
+
+    return remaining_motif_sequences
 
 
 def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):
@@ -1151,6 +1126,29 @@ def get_intron_coordinates(input_bed, output_bed):
                     outfile.write("{0}\n".format("\t".join(entry)))
 
 
+def get_motifs_overlap_indices(seqs, motif_set):
+    """
+    For a set of sequences, get a list of all indices that overlap something
+    in the motif set
+
+    Args:
+        seqs (list): list of seqeunces
+        motif_set (list): list of motifs to query
+
+    Returns:
+        overlap_indices (list): list of indices that overlap
+    """
+
+    overlap_indices = []
+    for motif in motif_set:
+        for seq in seqs:
+            hits = re.finditer('(?=({0}))'.format(motif), seq)
+            [overlap_indices.extend(list(range(i.start(), i.start() + len(motif)))) for i in hits]
+    overlap_indices = sorted(list(set(overlap_indices)))
+
+    return overlap_indices
+
+
 def get_non_coding_exon_coordinates(full_bed, reduced_bed, output_file):
     """
     Get all non coding exons
@@ -1240,6 +1238,55 @@ def get_orthologous_pairs(input_bed, input_pairs_file, output_bed):
     return entries_kept
 
 
+def get_purine_matched_sets(focal_set, sets, reverse = None):
+    """
+    Given a set of sequences, retain those only with the same purine (or pyrimidine)
+    content of the focal set
+
+    Args:
+        focal_set (list): list of seqeunces
+        sets (list): list of lists of test sequences
+        reverse (bool): if set, calculate pyrimidine content
+
+    Returns:
+        kept_sets (list): list of lists keeping retained sets
+    """
+
+    kept_sets = []
+    purine_content = calc_purine_content(focal_set, reverse = reverse)
+    [kept_sets.append(i) for i in sets if calc_purine_content(i) == purine_content]
+    return kept_sets
+
+
+def get_sequences_synonymous_hits_to_codons(seqs, codon_set):
+    """
+    Given a sequence, return 1) all the parts of the sequence where the synonymous site in any frame makes a codon
+    in the codon_set, 2) all cases where it isnt
+
+    Args:
+        seq (str): sequence string
+        codon_set (list): list of codons to query
+
+    Returns:
+        sorted_seqs (list): [hits, no hits]
+    """
+
+    hits = [[],[]]
+    no_hits = [[],[]]
+    for i in range(0, len(seqs[0])-3, 3):
+        if seqs[0][i+1:i+4] in codon_set or seqs[0][i+2:i+5] in codon_set or seqs[1][i+1:i+4] in codon_set or seqs[1][i+2:i+5] in codon_set:
+            hits[0].append(seqs[0][i:i+3])
+            hits[1].append(seqs[1][i:i+3])
+        else:
+            no_hits[0].append(seqs[0][i:i+3])
+            no_hits[1].append(seqs[1][i:i+3])
+
+    hits = ["".join(i) for i in hits]
+    no_hits = ["".join(i) for i in no_hits]
+
+    return [hits, no_hits]
+
+
 def get_transcript_and_orthologs(input_file1, input_file2, ortholog_transcript_links):
     """
     Given the sequences for a genome and orthologous seqeunces, pair the sequences in a
@@ -1326,41 +1373,23 @@ def intersect_non_coding_exons(full_bed, reduced_bed, output_file):
     gen.run_process(args, file_for_output = output_file)
 
 
-def remove_terminal_exons(full_bed, intersect_bed, output_file):
+def list_alignments_to_strings(seq_list):
     """
-    Remove cases where the last exon might be the terminal exon or there are
-    incorrectly annotated items.
+    For a dictionary containing alignments for each transcript,
+    i.e. dict[id] = [seq1, seq2], join each id to form just 2 alignment strings
 
     Args:
-        full_bed (str): path to bed file containing all exons
-        intersect_bed (str): path to bed file containing an intersect output
-        output_file (str): path to output file
+        seq_list (dict): dictionary containing list of alignments, dict[id] = [seq1, seq2]
+
+    Returns:
+        alignments (list): list containing [joined_seqs1, joined_seqs2]
     """
 
-    # get a list of exons, ensure it is a correct entry and get the last one
-    full_exons = [i for i in gen.read_many_fields(full_bed, "\t") if len(i) > 3]
-    exon_list = collections.defaultdict(lambda: [])
-    [exon_list[i[3].split(".")[0]].append(int(i[3].split(".")[1])) for i in full_exons]
-    transcript_terminal_exons = {id: max(exon_list[id]) for id in exon_list}
-    # read in the intersect cases
-    intersect_cases = gen.read_many_fields(intersect_bed, "\t")
-    # now filter out any remaining terminal exons
-    with open(output_file, "w") as outfile:
-        for intersect in intersect_cases:
-            intersect_id = intersect[9].split(".")[0]
-            intersect_exon_id = int(intersect[9].split(".")[1])
-            if intersect_id in transcript_terminal_exons:
-                original_id = intersect[3].split(".")[0]
-                original_exon_id = int(intersect[3].split(".")[1])
-
-                # ensure a match to the same transcript
-                if intersect_id == original_id and intersect_exon_id == original_exon_id:
-                    # ensure this is not the first exon
-                    if original_exon_id != 1:
-                        final_exon = transcript_terminal_exons[original_id]
-                        # if the intersect case is not the final case in the full exons file
-                        if original_exon_id != final_exon:
-                            outfile.write("{0}\n".format("\t".join(gen.stringify(intersect[:6]))))
+    alignments = [[],[]]
+    [alignments[0].append(seq_list[i][0]) for i in sorted(seq_list)]
+    [alignments[1].append(seq_list[i][1]) for i in sorted(seq_list)]
+    alignments = ["".join(i) for i in alignments]
+    return alignments
 
 
 def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
@@ -1406,6 +1435,53 @@ def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, f
     unique_ids = sorted(list(set(ids)))
 
     return unique_ids
+
+
+def pick_random_family_member(families_file, seqs_dict, output_file = None):
+    """
+    Given a bed file containing families, pick a random member from the family
+    to keep and return the filtered dictionary.
+
+    Args:
+        families_file (str): path to bed file containing families
+        seqs_dict (dict): dictionary with transcript ids as keys
+
+    Returns:
+        seqs_dict (dict): dictionary but only containing one entry per family
+    """
+
+    families = gen.read_many_fields(families_file, "\t")
+    new_families = []
+    for fam in families:
+        fam = [i for i in fam if i in seqs_dict]
+        if len(fam):
+            new_families.append(fam)
+    families = new_families
+    # get a random member from each family
+    query_ids = [i for i in seqs_dict]
+    queried_ids = []
+    ids_to_keep = []
+    chosen_family_members = []
+    for i, id in enumerate(query_ids):
+        if id not in queried_ids:
+            group = [i for i in families if id in i]
+            if len(group):
+                group = group[0]
+                queried_ids.extend(group)
+                choice = np.random.choice(group)
+                ids_to_keep.append(choice)
+                chosen_family_members.append(choice)
+            else:
+                queried_ids.append(id)
+                ids_to_keep.append(id)
+
+    seqs_dict = {i: seqs_dict[i] for i in ids_to_keep}
+
+    if output_file:
+        with open(output_file, "w") as outfile:
+            [outfile.write("{0}\n".format(i)) for i in chosen_family_members]
+
+    return seqs_dict
 
 
 def quality_filter_cds_sequences(input_fasta, output_fasta):
@@ -1463,6 +1539,43 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
     print("{0} sequences after filtering...".format(pass_count))
 
 
+def remove_terminal_exons(full_bed, intersect_bed, output_file):
+    """
+    Remove cases where the last exon might be the terminal exon or there are
+    incorrectly annotated items.
+
+    Args:
+        full_bed (str): path to bed file containing all exons
+        intersect_bed (str): path to bed file containing an intersect output
+        output_file (str): path to output file
+    """
+
+    # get a list of exons, ensure it is a correct entry and get the last one
+    full_exons = [i for i in gen.read_many_fields(full_bed, "\t") if len(i) > 3]
+    exon_list = collections.defaultdict(lambda: [])
+    [exon_list[i[3].split(".")[0]].append(int(i[3].split(".")[1])) for i in full_exons]
+    transcript_terminal_exons = {id: max(exon_list[id]) for id in exon_list}
+    # read in the intersect cases
+    intersect_cases = gen.read_many_fields(intersect_bed, "\t")
+    # now filter out any remaining terminal exons
+    with open(output_file, "w") as outfile:
+        for intersect in intersect_cases:
+            intersect_id = intersect[9].split(".")[0]
+            intersect_exon_id = int(intersect[9].split(".")[1])
+            if intersect_id in transcript_terminal_exons:
+                original_id = intersect[3].split(".")[0]
+                original_exon_id = int(intersect[3].split(".")[1])
+
+                # ensure a match to the same transcript
+                if intersect_id == original_id and intersect_exon_id == original_exon_id:
+                    # ensure this is not the first exon
+                    if original_exon_id != 1:
+                        final_exon = transcript_terminal_exons[original_id]
+                        # if the intersect case is not the final case in the full exons file
+                        if original_exon_id != final_exon:
+                            outfile.write("{0}\n".format("\t".join(gen.stringify(intersect[:6]))))
+
+
 def sort_bed_file(input_bed, output_bed):
     """
     Sort bed file
@@ -1480,43 +1593,6 @@ def sort_bed_file(input_bed, output_bed):
     gen.remove_file(sort_output)
 
 
-def extract_aligment_sequence_parts(cds_pairs, reverse = False):
-
-    # put the muscle executable in tools directory for your os
-    muscle_exe = "../tools/muscle3.8.31_i86{0}64".format(sys.platform)
-    if not os.path.isfile(muscle_exe):
-        print("Could not find the MUSCLE exe {0}...".format(muscle_exe))
-        raise Exception
-
-    # setup the muscle alignment
-    alignment_functions = Alignment_Functions(muscle_exe)
-
-    kept_sequence1 = []
-    kept_sequence2 = []
-
-    for focal_seq in cds_pairs:
-        ortholog_seq = cds_pairs[focal_seq]
-
-        # get the alignments for the sequences
-        focal_iupac_protein = Seq(focal_seq, IUPAC.unambiguous_dna).translate()
-        ortholog_iupac_protein = Seq(ortholog_seq, IUPAC.unambiguous_dna).translate()
-        alignment_functions.align_seqs(focal_iupac_protein, ortholog_iupac_protein)
-        # extract the alignments
-        alignment_functions.extract_alignments()
-        # now we want to get the nucleotide sequences for the alignments
-        aligned_sequences = alignment_functions.revert_alignment_to_nucleotides(input_seqs = [focal_seq, ortholog_seq])
-        # clean up the files
-        alignment_functions.cleanup()
-
-        # extract the parts of the sequences that are distance from stop codon
-        # get_sequence_parts_near_stop(aligned_sequences)
-
-
-        keep_only_one_synonymous_from_stop = get_alignment_one_synonymous_from_stop(aligned_sequences, reverse = reverse)
-        kept_sequence1.append(keep_only_one_synonymous_from_stop[0])
-        kept_sequence2.append(keep_only_one_synonymous_from_stop[1])
-
-    return "".join(kept_sequence1), "".join(kept_sequence2)
 
 # def get_potential_stops(codon):
 #

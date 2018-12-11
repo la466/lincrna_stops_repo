@@ -3,16 +3,18 @@ import containers as cont
 import sim_ops_containers as simopc
 import main_tests_ops as mto
 import ops_containers as opsc
+import seq_ops as seqo
 import file_ops as fo
 import time
+from useful_motif_sets import stops
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd", "without_ese"]
+    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd", "without_ese"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13], ints=[])
-    input_directory, output_directory, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd, without_ese = args.input_directory, args.output_directory, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14], ints=[])
+    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd, without_ese = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese
 
     # set a start time
     start = time.time()
@@ -27,6 +29,11 @@ def main():
     families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
 
     ese_file = "source_data/motif_sets/int3.txt"
+
+    # get the set of codons with the same gc content as stop codons
+    gc_matched_stops_sets_file = "{0}/stops_gc_matched_motifs.bed".format(output_directory)
+    if generate_gc_matched_stop_sets:
+        seqo.get_gc_matched_motifs(stops, gc_matched_stops_sets_file)
 
     motif_simulations_directory = "{0}/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
     if generate_motif_dinucleotide_controls:

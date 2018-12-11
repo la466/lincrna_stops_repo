@@ -445,6 +445,8 @@ def calc_motif_sets_ds(motif_sets, codon_sets, sequence_alignments):
 
 def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, motif_controls_directory, output_directory, output_file, families_file = None, run_number = None):
 
+    start_time = time.time()
+
     # if the sequence alignment file doesnt exist, create it
     if not os.path.isfile(alignment_file):
         sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
@@ -453,7 +455,7 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
     gen.create_output_directories(output_directory)
     # get all the sequence alignments
     sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
-    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names[:30])}
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names)}
 
     # if families file, pick a random member of the family
     if families_file:
@@ -464,18 +466,18 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
         sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
 
 
-    codon_sets = [["TAA", "TAG", "TGA"]]
+    codon_sets = [stops]
+    # codon_sets.extend(purine_gc_matched_codon_sets)
 
     # create a file for the real outputs
     temp_dir = "temp_ds"
     gen.create_output_directories(temp_dir)
-    real_results_output = "{0}/real_results.txt".format(temp_dir)
 
-    # calculate the ds for the real motif set
-    sequo.calc_motif_sets_codons_ds_wrapper([0], {0: motif_file}, codon_sets, sequence_alignments, output_file = real_results_output)
-
-    # now get all the control motifs
-    motif_sets = {i: "{0}/{1}".format(motif_controls_directory, file) for i, file in enumerate(os.listdir(motif_controls_directory)[:2])}
+    # create a list containing sets to test
+    real_name = "real"
+    motif_sets = {real_name: motif_file}
+    for i, file in enumerate(os.listdir(motif_controls_directory)):
+        motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
     motif_set_list = [i for i in motif_sets]
 
     # set up the control runs
@@ -489,21 +491,21 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
     with open(output_file, "w") as outfile:
         sorted_names_hits_ds = [",".join(["{0}_hits_ds".format(i), "{0}_no_hits_ds".format(i), "{0}_hits_query_count".format(i), "{0}_no_hits_query_count".format(i)]) for i in sorted_codon_sets]
         outfile.write("sim_id,{0}\n".format(",".join(sorted_names_hits_ds)))
-        real_results = gen.read_many_fields(real_results_output, ",")[1:]
-        real_results = {i[0]: i[1:] for i in real_results}
-        outfile.write("real")
-        for codon_set in sorted_codon_sets:
-            outfile.write(",{0}".format(",".join(gen.stringify(real_results[codon_set]))))
-        outfile.write("\n")
-
-        for i, sim_file in enumerate(outputs):
-            sim_results = gen.read_many_fields(sim_file, ",")[1:]
-            sim_results = {i[0]: i[1:] for i in sim_results}
-            outfile.write("sim_{0}".format(i+1))
+        for file in outputs:
+            results = gen.read_many_fields(file, ",")[1:]
+            results = {i[0]: i[1:] for i in results}
+            # get the id of the results
+            sim_no = file.split("/")[-1].split(".")[0]
+            if sim_no == real_name:
+                id = "real"
+            else:
+                id = "sim_{0}".format(int(sim_no)+1)
+            outfile.write("{0}".format(id))
             for codon_set in sorted_codon_sets:
-                # print(codon_set, real_results[codon_set])
-                outfile.write(",{0}".format(",".join(gen.stringify(sim_results[codon_set]))))
+                outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
             outfile.write("\n")
 
+    # remove all the temp files
     [gen.remove_file(i) for i in outputs]
-    [gen.remove_file(i) for i in real_results]
+
+    gen.get_time(start_time)
