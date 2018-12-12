@@ -7,6 +7,7 @@ import re
 import collections
 import os
 from useful_motif_sets import stops
+import sequence_ops as sequo
 
 # stops = ["TAT", "TAC", "TCA"]
 
@@ -43,6 +44,13 @@ def calc_seqs_stop_density(seq_list, exclude_frames = None):
                 count += stop_count
     nts = sum([len(i) for i in seq_list])
     return np.divide(count*3, nts)
+
+    # # get all the positions that overlap a stop codon
+    # overlaps = [item for sublist in [sequo.get_motifs_overlap_indices([i], stops) for i in seq_list] for item in sublist]
+    # # calculate the density
+    # density = np.divide(len(overlaps), sum([len(i) for i in seq_list]))
+    # return density
+
 
 def calc_seqs_codon_set_density(seq_list, codon_set = None, exclude_frames = None):
     """

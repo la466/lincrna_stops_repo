@@ -443,7 +443,7 @@ def calc_motif_sets_ds(motif_sets, codon_sets, sequence_alignments):
     return outputs
 
 
-def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, motif_controls_directory, output_directory, output_file, families_file = None, run_number = None):
+def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
 
     start_time = time.time()
 
@@ -467,17 +467,22 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
 
 
     codon_sets = [stops]
-    # codon_sets.extend(purine_gc_matched_codon_sets)
+    if codon_sets_file:
+        gc_matched_sets = gen.read_many_fields(codon_sets_file, "\t")
+        purine_matched = sequo.get_purine_matched_sets(stops, gc_matched_sets)
+        extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
+        codon_sets = codon_sets + extra_sets
 
     # create a file for the real outputs
     temp_dir = "temp_ds"
     gen.create_output_directories(temp_dir)
-
-    # create a list containing sets to test
+    #
+    # # create a list containing sets to test
     real_name = "real"
     motif_sets = {real_name: motif_file}
-    for i, file in enumerate(os.listdir(motif_controls_directory)):
-        motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
+    if motif_controls_directory:
+        for i, file in enumerate(os.listdir(motif_controls_directory)):
+            motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
     motif_set_list = [i for i in motif_sets]
 
     # set up the control runs
@@ -485,6 +490,7 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
     args = [motif_sets, codon_sets, sequence_alignments]
     # run on the controls
     outputs = simoc.run_simulation_function(motif_set_list, args, sequo.calc_motif_sets_codons_ds_wrapper, kwargs_dict = kwargs_dict, sim_run = False, parallel = True)
+
 
     # now write all the results to the output file
     sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
@@ -505,7 +511,122 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
                 outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
             outfile.write("\n")
 
-    # remove all the temp files
+    # # remove all the temp files
     [gen.remove_file(i) for i in outputs]
 
     gen.get_time(start_time)
+
+
+def exon_region_density(cds_fasta, exons_fasta, gc_matched_stops_file, families_file = None):
+
+
+    cds_seqs = gen.fasta_to_list(cds_fasta)
+
+    exon_names, exon_seqs = gen.read_fasta(exons_fasta)
+    exons_list = collections.defaultdict(lambda: [])
+    [exons_list[name.split(".")[0]].append(exon_seqs[i]) for i, name in enumerate(exon_names)]
+
+    exon_seqs = {i: [seq for seq in exons_list[i] if len(seq) > 211] for i in exons_list}
+
+
+    # if families file, pick a random member of the family
+    if families_file:
+        exon_seqs = sequo.pick_random_family_member(families_file, exon_seqs)
+
+    # set up the dictionaries to hold info
+    upstream_flanks = collections.defaultdict(lambda: [])
+    downstream_flanks = collections.defaultdict(lambda: [])
+    cores = collections.defaultdict(lambda: [])
+
+
+    for o, id in enumerate(exon_seqs):
+        for i, seq in enumerate(exon_seqs[id]):
+            upstream_flanks[id].append(seq)
+            cds_index = cds_seqs[id].index(seq)
+            exon_start_frame = cds_index % 3
+
+            if exon_start_frame == 0:
+                upstream_start_index = 0
+            elif exon_start_frame == 1:
+                upstream_start_index = 2
+            elif exon_start_frame == 2:
+                upstream_start_index = 1
+            upstream_end_index = upstream_start_index + 69
+
+            exon_end_frame = (cds_index + len(seq)) % 3
+            if exon_end_frame == 2:
+                # +1 here becuase you want the full end codon
+                downstream_end_index = len(seq) + 1
+            elif exon_end_frame == 1:
+                downstream_end_index = len(seq) - 1
+            elif exon_end_frame == 0:
+                downstream_end_index = len(seq)
+            downstream_start_index = downstream_end_index - 69
+
+            core_region = seq[upstream_end_index:downstream_start_index]
+
+            remainder = len(core_region)-69
+            if remainder % 2 == 0:
+                core_start_index = upstream_end_index + int(np.divide(remainder,2))
+            else:
+                # to keep in frame, take distance of n nucleotides from end of upstream exon
+                # and n + 3 nucleotides from start of downstream exon
+                # this is the equivalent of (remainder - 3)/2
+                core_start_index = upstream_end_index + int(np.divide(remainder-3, 2))
+
+            core_end_index = core_start_index + 69
+
+
+            upstream_flanks[id].append(seq[upstream_start_index:upstream_end_index])
+            downstream_flanks[id].append(seq[downstream_start_index:downstream_end_index])
+            cores[id].append(seq[core_start_index:core_end_index])
+
+
+    gc_matched_stops = gen.read_many_fields(gc_matched_stops_file, "\t")
+    matched_stops = sequo.get_purine_matched_sets(stops, gc_matched_stops)
+
+    matched_stops = [i for i in matched_stops if len(list(set(stops) & set(i))) == 0]
+    codon_sets = [stops] + matched_stops
+    # codon_sets = [stops]
+
+    upstream_flanks = {i: upstream_flanks[i] for i in upstream_flanks}
+    cores = {i: cores[i] for i in cores}
+    downstream_flanks = {i: downstream_flanks[i] for i in downstream_flanks}
+
+    args = [upstream_flanks, cores, downstream_flanks]
+    outputs = simoc.run_simulation_function(codon_sets, args, calc_exon_region_densities, sim_run = False)
+
+    output_list = {i.split("/")[-1].split(".")[0]: i for i in outputs}
+
+    density_list = collections.defaultdict(lambda: [])
+    for codon_set in output_list:
+        densities = gen.read_many_fields(output_list[codon_set], ",")
+        [density_list[i[0]].extend(i[1:]) for i in densities]
+
+    with open("temp_files/exon_densities.csv", "w") as outfile:
+        outfile.write("id,{0}\n".format(",".join(["{0}_ud,{0}_cd,{0}_dd".format(i) for i in sorted(output_list)])))
+        [outfile.write("{0},{1}\n".format(id, ",".join(gen.stringify(density_list[id])))) for id in density_list]
+
+    [gen.remove_file(i) for i in outputs]
+
+def calc_exon_region_densities(codon_sets, upstream_flanks, cores, downstream_flanks):
+
+    temp_dir = "temp_files"
+    gen.create_output_directories(temp_dir)
+
+    outputs = []
+
+    for i, codon_set in enumerate(codon_sets):
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(codon_sets)))
+
+        temp_file = "{0}/{1}.txt".format(temp_dir, "_".join(sorted(codon_set)), random.random())
+        outputs.append(temp_file)
+        if not os.path.isfile(temp_file):
+            upstream_densities = {id: [seqo.calc_seqs_codon_set_density([i], codon_set = codon_set, exclude_frames = 0) for i in upstream_flanks[id]] for id in upstream_flanks}
+            downstream_densities = {id: [seqo.calc_seqs_codon_set_density([i], codon_set = codon_set, exclude_frames = 0) for i in downstream_flanks[id]] for id in downstream_flanks}
+            core_densities = {id: [seqo.calc_seqs_codon_set_density([i], codon_set = codon_set, exclude_frames = 0) for i in cores[id]] for id in cores}
+            with open(temp_file, "w") as outfile:
+                for id in sorted(upstream_densities):
+                    outfile.write("{0},{1},{2},{3}\n".format(id, np.median(upstream_densities[id]), np.median(core_densities[id]), np.median(downstream_densities[id])))
+
+    return outputs

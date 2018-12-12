@@ -10,11 +10,11 @@ from useful_motif_sets import stops
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_density_nd", "stop_density_nd", "without_ese"]
+    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14], ints=[])
-    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_density_nd, stop_density_nd, without_ese = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], ints=[])
+    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density
 
     # set a start time
     start = time.time()
@@ -27,6 +27,7 @@ def main():
     introns_fasta = "{0}/genome_sequences/human/human.clean_introns.fasta".format(input_directory)
     non_transcribed_fasta = "{0}/genome_sequences/human/human.non_transcribed.fasta".format(input_directory)
     families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
+    coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_coding_exons.fasta".format(input_directory)
 
     ese_file = "source_data/motif_sets/int3.txt"
 
@@ -83,14 +84,16 @@ def main():
     ese_file = "source_data/motif_sets/int3.txt"
     ds_output_directory = "{0}/tests/ese_ds".format(output_directory)
     output_file = "{0}/codon_ds.csv".format(ds_output_directory)
+    output_file1 = "{0}/codons_ds.csv".format(ds_output_directory)
     if cds_ds:
-        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, motif_simulations_directory, output_directory, output_file, families_file = families_file)
-    #
-    #
-    # gc_controls_zip = "{0}/clean_coding_exons_gc_controls.zip".format(input_directory)
-    #
-    # if cds_density_nd:
-    #     mto.cds_density_nd(exons_fasta, families_file, gc_controls_zip, output_directory)
+        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_simulations_directory = motif_simulations_directory, families_file = families_file)
+
+    if cds_codon_ds:
+        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)
+
+    if exon_region_density:
+        mto.exon_region_density(cds_fasta, coding_exons_fasta, gc_matched_stops_sets_file, families_file = families_file)
+
 
 if __name__ == "__main__":
     main()

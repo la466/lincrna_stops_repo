@@ -321,6 +321,7 @@ def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
         outfile.write("codon_set,hits_ds,no_hits_ds,hits_query_count,no_hits_query_count\n")
         # for each of the codon sets provided
         for codon_set in codon_sets:
+            print(codon_set)
             hits_sequences = {}
             no_hits_sequences = {}
             # for each of the sequence alignments
