@@ -86,7 +86,7 @@ def main():
     output_file = "{0}/codon_ds.csv".format(ds_output_directory)
     output_file1 = "{0}/codons_ds.csv".format(ds_output_directory)
     if cds_ds:
-        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_simulations_directory = motif_simulations_directory, families_file = families_file)
+        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
     if cds_codon_ds:
         mto.calc_codon_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)

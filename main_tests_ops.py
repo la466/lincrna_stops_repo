@@ -455,7 +455,7 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
     gen.create_output_directories(output_directory)
     # get all the sequence alignments
     sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
-    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names)}
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names[:3])}
 
     # if families file, pick a random member of the family
     if families_file:
