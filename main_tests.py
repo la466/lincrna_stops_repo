@@ -89,7 +89,7 @@ def main():
         mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_simulations_directory = motif_simulations_directory, families_file = families_file)
 
     if cds_codon_ds:
-        mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)
+        mto.calc_codon_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)
 
     if exon_region_density:
         mto.exon_region_density(cds_fasta, coding_exons_fasta, gc_matched_stops_sets_file, families_file = families_file)

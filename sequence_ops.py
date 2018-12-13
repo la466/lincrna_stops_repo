@@ -302,6 +302,47 @@ def build_sequences_from_exon_fasta(input_fasta, output_fasta):
             outfile.write(">{0}\n{1}\n".format(id, "".join(seq)))
 
 
+def calc_codon_sets_ds_wrapper(codon_sets, restricted_sequences, output_file = None, output_directory = None):
+    """
+    Wrapper to calculate the ds score for the sequence parts where the synonymous
+    site can and cannot form on of the codons in a codon set in sequence parts that overlap
+    a set of given motifs
+
+    Args:
+        motif_set_list (list): list of integers to iterate over, corresponds to motif_sets
+        motif_sets (dict): dictionary containing paths to motif set files
+        codon_sets (list): a list of list containing codon sets to iterate over
+        sequence_alignments (dict): dictionary containing the aligned sequences for each transcript
+        output_file (str): if set, output to given file
+        output_directory (str): if set, save files to output directory
+
+    Returns:
+        outputs (list): list of output file paths
+    """
+
+    if not output_file and not output_directory:
+        print("Please provide output file or directory...")
+        raise Exception
+
+    outputs = []
+
+    # print(mp.current_process().name.split("-")[-1], motif_set_list)
+    for i, codon_set in enumerate(codon_sets):
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(codon_sets)))
+        # set up the output filepath
+        if output_file:
+            output_file = output_file
+        if output_directory:
+            output_file = "{0}/{1}.txt".format(output_directory, "_".join(sorted(codon_set)))
+        outputs.append(output_file)
+        # calculcate the ds score for the codon set
+        calc_motif_set_codons_ds([codon_set], restricted_sequences, output_file)
+
+    return outputs
+
+
+
+
 def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
     """
     Given sets of codons, 1) extract all the pieces of the sequence alignments
@@ -321,7 +362,6 @@ def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
         outfile.write("codon_set,hits_ds,no_hits_ds,hits_query_count,no_hits_query_count\n")
         # for each of the codon sets provided
         for codon_set in codon_sets:
-            print(codon_set)
             hits_sequences = {}
             no_hits_sequences = {}
             # for each of the sequence alignments

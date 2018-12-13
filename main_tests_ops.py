@@ -470,8 +470,7 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
     if codon_sets_file:
         gc_matched_sets = gen.read_many_fields(codon_sets_file, "\t")
         purine_matched = sequo.get_purine_matched_sets(stops, gc_matched_sets)
-        # extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
-        extra_sets = purine_matched
+        extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
         codon_sets = codon_sets + extra_sets
 
     # create a file for the real outputs
@@ -511,6 +510,66 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
             for codon_set in sorted_codon_sets:
                 outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
             outfile.write("\n")
+
+    # # remove all the temp files
+    [gen.remove_file(i) for i in outputs]
+
+    gen.get_time(start_time)
+
+
+def calc_codon_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
+
+    start_time = time.time()
+
+    # if the sequence alignment file doesnt exist, create it
+    if not os.path.isfile(alignment_file):
+        sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
+
+    # set up the output directory
+    gen.create_output_directories(output_directory)
+    # get all the sequence alignments
+    sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names)}
+
+    # if families file, pick a random member of the family
+    if families_file:
+        if not run_number:
+            family_output_choices_file = "{0}/family_choices_codons.txt".format(output_directory)
+        else:
+            family_output_choices_file = "{0}/family_choices_codons_{1}.txt".format(output_directory, run_number)
+        sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
+
+
+    codon_sets = [stops]
+    if codon_sets_file:
+        gc_matched_sets = gen.read_many_fields(codon_sets_file, "\t")
+        purine_matched = sequo.get_purine_matched_sets(stops, gc_matched_sets)
+        # extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
+        extra_sets = purine_matched
+        codon_sets = codon_sets + extra_sets
+
+    # create a file for the real outputs
+    temp_dir = "temp_ds"
+    gen.create_output_directories(temp_dir)
+
+    motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0] and ">" not in i[0]]
+    # now get all the parts of the sequences where only the motif sets occur
+    restricted_sequences = sequo.extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
+
+    # set up the control runs
+    kwargs_dict = {"output_directory": temp_dir}
+    args = [restricted_sequences]
+    # run on the controls
+    outputs = simoc.run_simulation_function(codon_sets, args, sequo.calc_codon_sets_ds_wrapper, kwargs_dict = kwargs_dict, sim_run = False, parallel = True)
+
+
+    # now write all the results to the output file
+    with open(output_file, "w") as outfile:
+        outfile.write("codon_set,hits_ds,no_hits_ds,hits_query_count,no_hits_query_count\n")
+        for file in sorted(outputs):
+            results = gen.read_many_fields(file, ",")[1:]
+            results = {i[0]: i[1:] for i in results}
+            [outfile.write("{0},{1}\n".format(i, ",".join(gen.stringify(results[i])))) for i in sorted(results)]
 
     # # remove all the temp files
     [gen.remove_file(i) for i in outputs]
