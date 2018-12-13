@@ -470,7 +470,8 @@ def calc_ds(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_l
     if codon_sets_file:
         gc_matched_sets = gen.read_many_fields(codon_sets_file, "\t")
         purine_matched = sequo.get_purine_matched_sets(stops, gc_matched_sets)
-        extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
+        # extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
+        extra_sets = purine_matched
         codon_sets = codon_sets + extra_sets
 
     # create a file for the real outputs
