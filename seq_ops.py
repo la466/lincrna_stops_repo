@@ -110,7 +110,7 @@ def calc_seq_replaced_codon_set_density(seq_list, codon_set = None):
     return codon_density
 
 
-def calc_intron_seqs_stop_density(seq_list):
+def calc_intron_seqs_stop_density(seq_list, codon_set = None):
     """
     For a list of sequences, calculate the combined stop density.
 
@@ -127,12 +127,15 @@ def calc_intron_seqs_stop_density(seq_list):
     #     print("Please choose to remove either the frame containing the most or least stop codons...")
     #     raise Exception
 
+    if not codon_set:
+        codon_set = stops
+
     count = 0
     for seq in seq_list:
         frame_counts = []
         for frame in list(range(3)):
             # get the stop codons in that frame
-            stop_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in stops])
+            stop_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in codon_set])
             frame_counts.append(stop_count)
         remove_index = frame_counts.index(min(frame_counts))
         # remove from the counts list
@@ -140,7 +143,7 @@ def calc_intron_seqs_stop_density(seq_list):
         # now add the remaining counts to the total count
         count += sum(frame_counts)
 
-    nts = sum([len(i) for i in seq_list])
+    nts = sum([len(i) - len(re.findall("[^ACTG]", i)) for i in seq_list])
     return np.divide(count*3, nts)
 
 def calc_intron_seqs_codon_set_density(seq_list, codon_set = None):

@@ -12,13 +12,12 @@ import pandas as pd
 # import scipy.stats as stats
 # import matplotlib.pyplot as plt
 import conservation
-import _rs_conservation as rsc
+# import _rs_conservation as rsc
 import os
 import zipfile
 from useful_motif_sets import stops
 from regex_patterns import codon_pattern
-from progressbar import ProgressBar
-from tqdm import tqdm
+
 
 
 def densities():
@@ -156,3 +155,6 @@ def lincRNA_densities():
     with open("temp_files/lincRNA.csv", "w") as outfile:
         outfile.write("id,exon,intron\n")
         [outfile.write("{0},{1},{2}\n".format(id, np.median(exon_densities[id]), np.median(intron_densities[id]))) for id in exon_densities]
+
+
+densities()

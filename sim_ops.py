@@ -5,7 +5,7 @@ import numpy as np
 import random
 import re
 import collections
-from useful_motif_sets import dinucleotides, nucleotides
+from useful_motif_sets import dinucleotides, nucleotides, stops
 import multiprocessing as mp
 from progressbar import ProgressBar
 
@@ -386,7 +386,7 @@ def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotid
 
     return sim_densities
 
-def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, nucleotide_content, output_directory, seeds=None, seq_seeds=None):
+def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, nucleotide_content, output_directory, seeds=None, seq_seeds=None, match_density = None):
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
     dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
@@ -399,22 +399,34 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
 
     if len(simulations):
         for sim_no, simulation in enumerate(pbar(simulations)):
-            # set the seed
-            set_seed(seeds, simulation)
+            generated_set = False
+            while not generated_set:
+                # set the seed
+                set_seed(seeds, simulation)
 
-            # print the simulation number out
-            # print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], sim_no+1, len(simulations), id))
+                # print the simulation number out
+                # print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], sim_no+1, len(simulations), id))
 
-            simulated_seqs = []
-            # Generate a list of nucleotide matched sequences
-            for i, seq in enumerate(seqs):
-                generated = False
-                seq_seed = get_seq_seed(seq_seeds, sim_no, i)
-                while not generated:
-                    sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
-                    if sim_seq not in simulated_seqs:
-                        generated = True
-                        simulated_seqs.append(sim_seq)
+                simulated_seqs = []
+                # Generate a list of nucleotide matched sequences
+                for i, seq in enumerate(seqs):
+                    generated_seq = False
+                    seq_seed = get_seq_seed(seq_seeds, sim_no, i)
+
+                    if match_density:
+                        stop_density = seqo.calc_seqs_codon_set_density([seq], codon_set = stops)
+
+                    while not generated_seq:
+                        sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                        if match_density:
+                            sim_density = seqo.calc_seqs_codon_set_density([sim_seq], codon_set = stops)
+
+                        if sim_seq not in simulated_seqs:
+                            if not match_density or match_density and stop_density == sim_density:
+                                generated_seq = True
+                                simulated_seqs.append(sim_seq)
+                if sorted(seqs) != sorted(simulated_seqs):
+                    generated_set = True
 
             output_file = "{0}/{1}.txt".format(output_directory, random.random())
             output_files.append(output_file)

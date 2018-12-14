@@ -19,7 +19,7 @@ import multiprocessing as mp
 
 pbar = ProgressBar()
 
-def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None):
+def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None, transcript_id_search_pattern = None, gene_id_search_pattern = None, stop_codon_set = None):
 
     # if we want a clean run, remove any previous output directory
     if clean_run:
@@ -27,7 +27,7 @@ def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output
     gen.create_output_directories(dataset_output_directory)
 
     # initalise genome object
-    genome = Genome_Functions(gtf_file, genome_fasta, dataset_name, dataset_output_directory, clean_run)
+    genome = Genome_Functions(gtf_file, genome_fasta, dataset_name, dataset_output_directory, clean_run, transcript_id_search_pattern, gene_id_search_pattern, stop_codon_set)
     # get the genome features
     genome.generate_genome_features(id_list, filter_by_transcript, filter_by_gene)
     # load the genome dataset
@@ -51,13 +51,26 @@ def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output
 
 class Genome_Functions(object):
 
-    def __init__(self, gtf_file, genome_fasta, dataset_name, dataset_output_directory, clean_run):
+    def __init__(self, gtf_file, genome_fasta, dataset_name, dataset_output_directory, clean_run, transcript_id_search_pattern, gene_id_search_pattern, stop_codon_set):
         self.gtf_file = gtf_file
         self.genome_fasta = genome_fasta
         self.dataset_name = dataset_name
         self.dataset_output_directory = dataset_output_directory
         self.clean_run = clean_run
+        if not transcript_id_search_pattern:
+            self.transcript_id_pattern = transcript_id_pattern
+        else:
+            self.transcript_id_pattern = transcript_id_search_pattern
+        if not gene_id_search_pattern:
+            self.gene_id_pattern = gene_id_pattern
+        else:
+            self.gene_id_pattern = gene_id_search_pattern
+        if not stop_codon_set:
+            self.stop_codon_set = stops
+        else:
+            self.stop_codon_set = stop_codon_set
         self.filelist = {}
+
 
 
     def build_coding_sequences(self):
@@ -123,7 +136,7 @@ class Genome_Functions(object):
         dataset_features_bed = "{0}/{1}.{2}_features_dataset.bed".format(self.dataset_output_directory, self.gtf_file.split("/")[-1], self.dataset_name)
         # only run if the file doesn't exist or a clean run
         if not os.path.isfile(dataset_features_bed) or self.clean_run:
-            generate_genome_features_dataset(self.dataset_name, self.gtf_file, dataset_features_bed, input_list = input_list, filter_by_transcript = filter_by_transcript, filter_by_gene = filter_by_gene)
+            generate_genome_features_dataset(self.dataset_name, self.gtf_file, dataset_features_bed, self.transcript_id_pattern, self.gene_id_pattern, input_list = input_list, filter_by_transcript = filter_by_transcript, filter_by_gene = filter_by_gene)
         self.dataset_features_bed = dataset_features_bed
         self.filelist["dataset_features_bed"] = dataset_features_bed
 
@@ -171,7 +184,7 @@ class Genome_Functions(object):
 
         quality_filtered_cds_fasta = "{0}/{1}.cds.quality_filtered.step1.fasta".format(self.dataset_output_directory, self.dataset_name)
         if not os.path.isfile(quality_filtered_cds_fasta) or self.clean_run:
-            quality_filter_cds_sequences(self.full_cds_fasta, quality_filtered_cds_fasta)
+            quality_filter_cds_sequences(self.full_cds_fasta, quality_filtered_cds_fasta, stop_codon_set = self.stop_codon_set)
         self.quality_filtered_cds_fasta = quality_filtered_cds_fasta
         self.cds_fasta = quality_filtered_cds_fasta
         self.filelist["quality_filtered_cds_fasta"] = quality_filtered_cds_fasta
@@ -617,7 +630,7 @@ def extract_alignments_from_file(cds_fasta, ortholog_fasta, ortholog_transcript_
             outfile.write(">{0}\n{1},{2}\n".format(id, alignments[0], alignments[1]))
 
 
-def extract_gtf_features(input_list, gtf_file_path, filter_by_transcript = None, filter_by_gene = None):
+def extract_gtf_features(input_list, gtf_file_path, transcript_id_search_pattern, gene_id_search_pattern, filter_by_transcript = None, filter_by_gene = None):
     """
     Given a .gtf file, filter the entries based on an input list
 
@@ -643,8 +656,8 @@ def extract_gtf_features(input_list, gtf_file_path, filter_by_transcript = None,
         for entry in entries:
             entry_info = entry[8]
             # look for transcript id
-            transcript_search_results = re.search(transcript_id_pattern, entry_info)
-            gene_search_results = re.search(gene_id_pattern, entry_info)
+            transcript_search_results = re.search(transcript_id_search_pattern, entry_info)
+            gene_search_results = re.search(gene_id_search_pattern, entry_info)
             try:
                 # try to get transcript id and gene id
                 current_transcript_id = transcript_search_results.group(0)
@@ -692,6 +705,7 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
     features = gen.read_many_fields(input_file, "\t")
     # get the features labelled as stop codons
     stop_codons = extract_stop_codon_features(features, input_list, filter_by_gene = filter_by_gene)
+    start_codons = extract_start_codon_features(features, input_list, filter_by_gene = filter_by_gene)
     cds_features_list = collections.defaultdict(lambda: [])
     # get a list of all the exon parts that contribute to the cds
     # [cds_features_list[feature[3]].append(feature) for feature in self.features if feature[-1] == "CDS" and feature[3] in self.ids]
@@ -705,17 +719,23 @@ def extract_cds_features(input_file, input_list, filter_by_gene = None):
                 cds_features_list[feature[3]].append(feature)
 
     for id in cds_features_list:
+        # get the start codon coordinates if they exist
+        start_codon = start_codons[id]
+        start_codon_coordinates = [[i[1], i[2]] for i in start_codon]
         # get the stop codon coordinates if they exist
         stop_codon = stop_codons[id]
         stop_codon_coordinates = [[i[1], i[2]] for i in stop_codon]
         # get the cds coordinates if they arent in the stop codon list
-        cds_features_list[id] = [i for i in cds_features_list[id] if [i[1], i[2]] not in stop_codon_coordinates]
+        cds_features_list[id] = [i for i in cds_features_list[id] if [i[1], i[2]] not in stop_codon_coordinates and [i[1], i[2]] not in start_codon_coordinates]
         # now we need to sort the exons in order, reversing if on the minus strand
         strand = cds_features_list[id][0][5]
         if strand == "+":
             cds_features_list[id] = sorted(cds_features_list[id], key = lambda x:x[1])
         elif strand == "-":
             cds_features_list[id] = sorted(cds_features_list[id], key = lambda x:x[2], reverse = True)
+        # add the start codon if it exists
+        for start_codon in start_codons[id]:
+            cds_features_list[id] = [start_codon] + cds_features_list[id]
         # add the stop codon if it exists
         for stop_codon in stop_codons[id]:
             cds_features_list[id].append(stop_codon)
@@ -860,6 +880,33 @@ def extract_stop_codon_features(input_features, input_list, filter_by_gene = Non
     return feature_list
 
 
+def extract_start_codon_features(input_features, input_list, filter_by_gene = None):
+    """
+    Get all the features that match start codon
+
+    Args:
+        input_features (list): list containing features from gtf file
+        input_list (list): list containing ids to keep
+
+    Returns:
+        feature_list (dict): dictionary containing features corresponding to
+            start codons. dict[transcript_id] = feature
+    """
+
+    print("Getting start_codon features...")
+
+    feature_list = collections.defaultdict(lambda: [])
+    for feature in input_features:
+        if feature[-1] == "start_codon":
+            # if filtering by gene, check that gene is in the input list, else
+            # check the transcript
+            if filter_by_gene and feature[6] in input_list:
+                feature_list[feature[3]].append(feature)
+            elif feature[3] in input_list:
+                feature_list[feature[3]].append(feature)
+    return feature_list
+
+
 def extract_transcript_features(features_list, id_list):
     """
     Get the list of transcript features
@@ -969,11 +1016,14 @@ def filter_one_transcript_per_gene(transcript_list):
 
     print("Filtering to one transcript per gene...")
 
+    ids = []
     # get a list of genes with the associated transcripts
     gene_list = collections.defaultdict(lambda: [])
     for transcript in transcript_list:
         transcript_info = transcript_list[transcript][0]
         gene_list[transcript_info[6]].append(transcript_info)
+        ids.append(transcript_info[6])
+
     # now get the longest one
     longest_transcripts = {}
     for gene_id in gene_list:
@@ -1046,7 +1096,7 @@ def get_alignment_one_synonymous_from_stop(aligned_sequences):
 #     return [["".join(kept_seq1), "".join(kept_seq2)], ["".join(removed_seq1), "".join(removed_seq2)]]
 
 
-def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_features_output_bed, input_list = None, filter_by_transcript = None, filter_by_gene = None):
+def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_features_output_bed, transcript_id_search_pattern, gene_id_search_pattern, input_list = None, filter_by_transcript = None, filter_by_gene = None):
     """
     Create a dataset containing all the relevant genome features from the
     given list.
@@ -1071,7 +1121,7 @@ def generate_genome_features_dataset(dataset_name, dataset_gtf_file, dataset_fea
         input_list = ["foo"]
 
     # do the filtering
-    args = [dataset_gtf_file, filter_by_transcript, filter_by_gene]
+    args = [dataset_gtf_file, transcript_id_search_pattern, gene_id_search_pattern, filter_by_transcript, filter_by_gene]
     # reduce the number of workers here otherwise it doesnt like it
     features = gen.run_parallel_function(input_list, args, extract_gtf_features, parallel = True, workers = int(os.cpu_count() / 2) - 1)
     # output the features to the bed file
@@ -1149,8 +1199,8 @@ def get_intron_coordinates(input_bed, output_bed):
                     entry = copy.deepcopy(exon_list[id][exon_no])
                     strand = exon_list[id][exon_no][5]
                     if strand == "-":
-                        temp_start = exon_list[id][exon_no+1][2]
-                        temp_end = exon_list[id][exon_no][1]
+                        temp_start = int(exon_list[id][exon_no+1][2])
+                        temp_end = int(exon_list[id][exon_no][1])
                         if temp_start > temp_end:
                             start = temp_end
                             end = temp_start
@@ -1164,7 +1214,7 @@ def get_intron_coordinates(input_bed, output_bed):
                         entry[1] = exon_list[id][exon_no][2]
                         entry[2] = exon_list[id][exon_no+1][1]
                         entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
-                    outfile.write("{0}\n".format("\t".join(entry)))
+                    outfile.write("{0}\n".format("\t".join(gen.stringify(entry))))
 
 def get_motifs_overlaps(seqs, motif_set):
 
@@ -1446,7 +1496,7 @@ def list_alignments_to_strings(seq_list):
     return alignments
 
 
-def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False):
+def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, full_chr=False, check_chr = True, transcript_id_search_pattern = transcript_id_pattern, ):
     """
     Given a gtf file, return a list of unique transcript ids associated with
     the specific features
@@ -1478,9 +1528,9 @@ def list_transcript_ids_from_features(gtf_file_path, exclude_pseudogenes=True, f
 
     for entry in entries:
         # ensure this is a correct chromosome
-        if entry[chr_index] in "123456789XY" and entry[chr_index+1] in "0123456789XY\t":
+        if check_chr and entry[chr_index] in "123456789XY" and entry[chr_index+1] in "0123456789XY\t" or not check_chr:
             # search for the transcript id
-            id = re.search(transcript_id_pattern, entry)
+            id = re.search(transcript_id_search_pattern, entry)
             # if the id exists, add to list
             if id:
                 ids.append(id.group(0))
@@ -1538,7 +1588,7 @@ def pick_random_family_member(families_file, seqs_dict, output_file = None):
     return seqs_dict
 
 
-def quality_filter_cds_sequences(input_fasta, output_fasta):
+def quality_filter_cds_sequences(input_fasta, output_fasta, stop_codon_set = None):
     """
     Quality filter coding sequences
 
@@ -1549,11 +1599,12 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
 
     print("Filtering cds...")
 
+    if not stop_codon_set:
+        stop_codon_set = stops
+
     # copile regex searches
     actg_regex = re.compile("[^ACTG]")
     codon_regex = re.compile(".{3}")
-
-    stop_codons = ["TAA", "TAG", "TGA"]
 
     # read the sequences
     names, seqs = gen.read_fasta(input_fasta)
@@ -1570,7 +1621,7 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
             if passed and seq[:3] != "ATG":
                 passed = False
             # check to see if the last codon is a stop codon
-            if passed and seq[-3:] not in stop_codons:
+            if passed and seq[-3:] not in stop_codon_set:
                 passed = False
             # check to see if sequence is a length that is a
             # multiple of 3
@@ -1582,7 +1633,7 @@ def quality_filter_cds_sequences(input_fasta, output_fasta):
                 passed = False
             # check if there are any in frame stop codons
             codons = re.findall(codon_regex, seq[3:-3])
-            inframe_stops = [codon for codon in codons if codon in stop_codons]
+            inframe_stops = [codon for codon in codons if codon in stop_codon_set]
             if passed and len(inframe_stops):
                 passed = False
             # only if passed all the filters write to file
