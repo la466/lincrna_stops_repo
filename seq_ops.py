@@ -72,11 +72,9 @@ def calc_seqs_codon_set_density(seq_list, codon_set = None, exclude_frames = Non
     count = 0
     for seq in seq_list:
         for frame in list(range(3)):
+            if not exclude_frames or exclude_frames and frame not in exclude_frames:
             # get the stop codons in that frame
-            codon_hit_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in codon_set])
-            if exclude_frames and frame not in exclude_frames:
-                pass
-            else:
+                codon_hit_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in codon_set])
                 count += codon_hit_count
     nts = sum([len(i) for i in seq_list])
     codon_density = np.divide(count*3, nts)

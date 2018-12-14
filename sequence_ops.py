@@ -1166,10 +1166,23 @@ def get_intron_coordinates(input_bed, output_bed):
                         entry[3] = "{0}.{1}-{2}".format(id, exon_no, exon_no+1)
                     outfile.write("{0}\n".format("\t".join(entry)))
 
+def get_motifs_overlaps(seqs, motif_set):
+
+    overlap_indices = []
+    for i, motif in enumerate(motif_set):
+        print("{0}/{1}".format(i+1, len(motif_set)))
+        for seq in seqs:
+            hits = re.finditer('(?=({0}))'.format(motif), seq)
+            [overlap_indices.extend(list(range(i.start(), i.start() + len(motif)))) for i in hits]
+    # overlap_indices = sorted(list(set(overlap_indices)))
+
+    return overlap_indices
+
+
 
 def get_motifs_overlap_indices(seqs, motif_set):
     """
-    For a set of sequences, get a list of all indices that overlap something
+    For a set of aligned sequences, get a list of all indices that overlap something
     in the motif set
 
     Args:
