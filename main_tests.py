@@ -38,7 +38,7 @@ def main():
 
     motif_simulations_directory = "{0}/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
     if generate_motif_dinucleotide_controls:
-        simopc.generate_motif_dinucleotide_controls(ese_file, 1000, motif_simulations_directory)
+        simopc.generate_motif_dinucleotide_controls(ese_file, 1000, motif_simulations_directory, match_density = True)
 
     gc_control_exon_output_directory = "{0}/clean_exon_gc_controls".format(output_directory)
     if generate_gc_controls_exons:
