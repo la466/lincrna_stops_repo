@@ -83,7 +83,7 @@ def main():
     alignments_file = "{0}/genome_sequences/human.macaque.alignments.fasta".format(input_directory)
     ese_file = "source_data/motif_sets/int3.txt"
     ds_output_directory = "{0}/tests/ese_ds".format(output_directory)
-    output_file = "{0}/codon_ds.csv".format(ds_output_directory)
+    output_file = "{0}/codon_ds_matched_densities.csv".format(ds_output_directory)
     output_file1 = "{0}/codons_ds.csv".format(ds_output_directory)
     if cds_ds:
         mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_controls_directory = motif_simulations_directory, families_file = families_file)
