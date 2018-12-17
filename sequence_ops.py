@@ -368,6 +368,7 @@ def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
         output_file (str): path to output file to write results to
     """
 
+
     codon_hits_ds = {}
     no_codon_hits_ds = {}
 
@@ -393,6 +394,80 @@ def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
             # write to file
             args = ["_".join(sorted(codon_set)), hits_ds, no_hits_ds, int(np.divide(len(hits_alignment_strings[0]), 3)), int(np.divide(len(no_hits_alignment_strings[0]), 3))]
             outfile.write("{0}\n".format(",".join(gen.stringify(args))))
+
+
+def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, sequence_alignments, output_file = None, output_directory = None):
+    """
+    Wrapper to calculate the ds score for the sequence parts where the synonymous
+    site can and cannot form on of the codons in a codon set in sequence parts that overlap
+    a set of given motifs
+
+    Args:
+        motif_set_list (list): list of integers to iterate over, corresponds to motif_sets
+        motif_sets (dict): dictionary containing paths to motif set files
+        codon_sets (list): a list of list containing codon sets to iterate over
+        sequence_alignments (dict): dictionary containing the aligned sequences for each transcript
+        output_file (str): if set, output to given file
+        output_directory (str): if set, save files to output directory
+
+    Returns:
+        outputs (list): list of output file paths
+    """
+
+    if not output_file and not output_directory:
+        print("Please provide output file or directory...")
+        raise Exception
+
+    outputs = []
+
+    if motif_set_list:
+
+        # print(mp.current_process().name.split("-")[-1], motif_set_list)
+        for i, set_no in enumerate(motif_set_list):
+            print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(motif_set_list)))
+            motif_set = [i[0] for i in gen.read_many_fields(motif_sets[set_no], "\t") if "#" not in i[0] and ">" not in i[0]]
+            stop_motif_set = [i for i in motif_set if len(re.findall("(TAA|TAG|TGA)", i))]
+            non_stop_motif_set = [i for i in motif_set if i not in stop_motif_set]
+            # now get all the parts of the sequences where only the motif sets occur
+            full_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
+            stops_extracted = extract_motif_sequences_from_alignment(sequence_alignments, stop_motif_set)
+            non_stops_extracted = extract_motif_sequences_from_alignment(sequence_alignments, non_stop_motif_set)
+
+            # now calculate the ds scores for each set
+            all_ese_alignments = list_alignments_to_strings(full_extracted_sequences)
+            stops_ese_alignments = list_alignments_to_strings(stops_extracted)
+            non_stops_ese_alignments = list_alignments_to_strings(non_stops_extracted)
+            # calculate the ds scores
+            all_ese_ds = cons.calc_ds(all_ese_alignments)
+            stops_ese_ds = cons.calc_ds(stops_ese_alignments)
+            non_stops_ese_ds = cons.calc_ds(non_stops_ese_alignments)
+
+            # get the ds score for all ese sequence for those that hit codon set
+            temp_output_file1 = "temp_files/temp_ds_full_{0}.txt".format(set_no)
+            calc_motif_set_codons_ds(codon_sets, full_extracted_sequences, temp_output_file1)
+            # get ds score for only motifs that have a hit to stops
+            temp_output_file2 = "temp_files/temp_ds_stop_hits_{0}.txt".format(set_no)
+            calc_motif_set_codons_ds(codon_sets, non_stops_extracted, temp_output_file2)
+
+            all_motif_hits = gen.read_many_fields(temp_output_file1, ",")
+            stops_motif_hits = gen.read_many_fields(temp_output_file2, ",")
+
+            all_motif_hits = {i[0]: i[1:] for i in all_motif_hits[1:]}
+            stops_motif_hits = {i[0]: i[1:] for i in stops_motif_hits[1:]}
+
+            # set up the output filepath
+            if output_file:
+                output_file = output_file
+            if output_directory:
+                output_file = "{0}/{1}.{2}.txt".format(output_directory, set_no, random.random())
+            outputs.append(output_file)
+
+            with open(output_file, "w") as outfile:
+                outfile.write("id,all_ese_ds,stops_ese_ds,non_stops_ese_ds,all_ese_stop_hits_ds,all_ese_non_stop_hits_ds,all_ese_stop_hits_query_count,all_ese_non_stop_hits_query_count,stops_ese_stop_hits_ds,stops_ese_non_stop_hits_ds,stops_ese_stop_hits_query_count,stops_ese_non_stop_hits_query_count\n")
+                for id in all_motif_hits:
+                    outfile.write("{0},{1},{2},{3},{4},{5}\n".format(id, all_ese_ds, stops_ese_ds, non_stops_ese_ds, ",".join(gen.stringify(all_motif_hits[id])), ",".join(gen.stringify(stops_motif_hits[id]))))
+
+    return outputs
 
 
 def calc_motif_sets_codons_ds_wrapper(motif_set_list, motif_sets, codon_sets, sequence_alignments, output_file = None, output_directory = None):

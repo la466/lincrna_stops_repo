@@ -628,3 +628,78 @@ def calc_exon_region_densities(codon_sets, upstream_flanks, cores, downstream_fl
                     outfile.write("{0},{1},{2},{3}\n".format(id, np.median(upstream_densities[id]), np.median(core_densities[id]), np.median(downstream_densities[id])))
 
     return outputs
+
+
+
+def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
+
+    start_time = time.time()
+
+    # if the sequence alignment file doesnt exist, create it
+    if not os.path.isfile(alignment_file):
+        sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
+
+    # set up the output directory
+    gen.create_output_directories(output_directory)
+    # get all the sequence alignments
+    sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names)}
+
+    # if families file, pick a random member of the family
+    if families_file:
+        if not run_number:
+            family_output_choices_file = "{0}/family_choices.txt".format(output_directory)
+        else:
+            family_output_choices_file = "{0}/family_choices_stats_{1}.txt".format(output_directory, run_number)
+        sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
+
+
+    codon_sets = [stops]
+    # if codon_sets_file:
+    #     gc_matched_sets = gen.read_many_fields(codon_sets_file, "\t")
+    #     purine_matched = sequo.get_purine_matched_sets(stops, gc_matched_sets)
+    #     extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
+    #     codon_sets = codon_sets + extra_sets
+    #
+    # create a file for the real outputs
+    temp_dir = "temp_ds"
+    gen.create_output_directories(temp_dir)
+
+    # create a list containing sets to test
+    real_name = "real"
+    motif_sets = {real_name: motif_file}
+    if motif_controls_directory:
+        for i, file in enumerate(os.listdir(motif_controls_directory)[:10]):
+            motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
+    motif_set_list = [i for i in motif_sets]
+    #
+    # set up the control runs
+    kwargs_dict = {"output_directory": temp_dir}
+    args = [motif_sets, codon_sets, sequence_alignments]
+    # run on the controls
+    outputs = simoc.run_simulation_function(motif_set_list, args, sequo.calc_motif_sets_all_ds_wrapper, kwargs_dict = kwargs_dict, sim_run = False, parallel = True)
+
+    # now write all the results to the output file
+    sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
+    with open(output_file, "w") as outfile:
+        for i, file in enumerate(outputs):
+            if i == 0:
+                header = gen.read_many_fields(file, ",")[0]
+                outfile.write("sim_id,{0}\n".format(",".join(header[1:])))
+            results = gen.read_many_fields(file, ",")[1:]
+            results = {i[0]: i[1:] for i in results}
+            # get the id of the results
+            sim_no = file.split("/")[-1].split(".")[0]
+            if sim_no == real_name:
+                id = "real"
+            else:
+                id = "sim_{0}".format(int(sim_no)+1)
+            outfile.write("{0}".format(id))
+            for codon_set in sorted_codon_sets:
+                outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
+            outfile.write("\n")
+
+    # # remove all the temp files
+    [gen.remove_file(i) for i in outputs]
+
+    gen.get_time(start_time)
