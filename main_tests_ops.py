@@ -669,7 +669,7 @@ def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcri
     real_name = "real"
     motif_sets = {real_name: motif_file}
     if motif_controls_directory:
-        for i, file in enumerate(os.listdir(motif_controls_directory)[:10]):
+        for i, file in enumerate(os.listdir(motif_controls_directory)):
             motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
     motif_set_list = [i for i in motif_sets]
     #
