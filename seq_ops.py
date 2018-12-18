@@ -6,7 +6,7 @@ import itertools as it
 import re
 import collections
 import os
-from useful_motif_sets import stops
+from useful_motif_sets import stops, nucleotides
 import sequence_ops as sequo
 
 # stops = ["TAT", "TAC", "TCA"]
@@ -323,6 +323,34 @@ def get_exon_positions_bed(full_bed, coding_bed, output_file):
             frames = [exon_info[transcript][i][2] for i in sorted(exon_info[transcript]) if i in coding_exons[transcript]]
             if transcript in coding_exons:
                 outfile.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(transcript, ",".join(gen.stringify(exons)), ",".join(gen.stringify(starts)), ",".join(gen.stringify(lengths)), ",".join(gen.stringify(frames))))
+
+
+def generate_all_motif_combinations(motifs, output_file):
+    """
+    Generate all motif combinations that match a set of sequences
+    """
+    motifs = sorted(motifs)
+    motif_lengths = [len(i) for i in motifs]
+    # get a list of all combinations for each motif length
+    motif_lists = {i: ["".join(j) for j in it.product(nucleotides, repeat=i)] for i in motif_lengths}
+    # now set the possible choices for each motif
+    possible_choices = [motif_lists[i] for i in motif_lengths]
+    # now generate all the combinations
+    combinations = [i for i in it.product(*possible_choices)]
+
+    motif_combinations = []
+
+    for i, combination in enumerate(combinations):
+        print(i, len(combinations))
+        combination = sorted(combination)
+        if combination not in motif_combinations and len(list(set(combination))) == len(motifs):
+            motif_combinations.append(combination)
+
+    with open(output_file, "w") as outfile:
+        [outfile.write("{0}\n".format("\t".join(i))) for i in motif_combinations]
+
+
+
 
 def get_gc_matched_motifs(motifs, output_file):
 
