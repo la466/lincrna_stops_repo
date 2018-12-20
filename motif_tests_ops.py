@@ -14,6 +14,50 @@ import collections
 import numpy as np
 import multiprocessing as mp
 
+
+
+def motif_stop_codon_densities(motif_file, motif_controls_directory, required_simulations, output_file):
+
+    filelist = {"real": motif_file}
+    for i, file in enumerate(os.listdir(motif_controls_directory)[:required_simulations]):
+        filelist[i] = "{0}/{1}".format(motif_controls_directory, file)
+    file_ids = [i for i in filelist]
+
+    temp_dir = "temp_motif_dir"
+    gen.create_output_directories(temp_dir)
+
+    args = [filelist, temp_dir]
+    outputs = simopc.run_simulation_function(file_ids, args, calculate_stop_codon_densities, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("sim_id,stop_density\n")
+        for file in outputs:
+            outfile.write("{0}\n".format(",".join(gen.read_many_fields(file, "\t")[0])))
+
+
+
+def calculate_stop_codon_densities(file_ids, filelist, output_directory):
+
+    outputs = []
+
+    if len(file_ids):
+        for i, id in enumerate(file_ids):
+            print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(file_ids)))
+            motifs = [i[0] for i in gen.read_many_fields(filelist[id], "\t") if "#" not in i[0] and ">" not in i[0]]
+            density = seqo.calc_seqs_codon_set_density(motifs, codon_set = stops)
+
+            if "real" in str(id):
+                temp_file = "{0}/real.txt".format(output_directory)
+            else:
+                temp_file = "{0}/{1}.txt".format(output_directory, random.random())
+            outputs.append(temp_file)
+
+            with open(temp_file, "w") as temp:
+                temp.write("{0}\t{1}\n".format(id, density))
+
+    return outputs
+
+
 def motif_codon_densities(motif_file, codon_combinations_file, motif_controls_directory, required_simulations, output_file):
 
     filelist = {"real": motif_file}

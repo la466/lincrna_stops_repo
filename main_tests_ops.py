@@ -36,7 +36,7 @@ def calc_codon_set_density(exon_list, intron_list, codon_set = None):
 
     exon_densities = {name: seqo.calc_seqs_codon_set_density(exon_list[name], codon_set = codon_set) for name in exon_list}
     intron_densities = {name: seqo.calc_seqs_codon_set_density(intron_list[name], codon_set = codon_set) for name in intron_list}
-    intron_densities_scaled = {name: seqo.calc_intron_seqs_codon_set_density(intron_list[name], codon_set = codon_set) for name in intron_list}
+    intron_densities_scaled = {name: seqo.calc_intron_seqs_stop_density(intron_list[name], codon_set = codon_set) for name in intron_list}
 
     return exon_densities, intron_densities, intron_densities_scaled
 
@@ -174,9 +174,8 @@ def compare_stop_density(exons_fasta, introns_fasta, output_file, families_file 
     introns_gc = {name: seqo.calc_gc_seqs_combined(intron_list[name]) for name in intron_list}
 
     codon_sets = [stops]
-    args = [exons_gc, len(codon_sets), introns_gc, exon_list, intron_list, output_file, families_file]
+    args = [len(codon_sets), exons_gc, introns_gc, exon_list, intron_list, output_file, families_file]
     simoc.run_simulation_function(codon_sets, args, calculate_densities, parallel = False, sim_run = False)
-
 
 
 def calc_nds(transcript_ids, transcript_list, gc_controls_zip):

@@ -57,7 +57,7 @@ def main():
         simopc.generate_dint_intron_controls(introns_fasta, dint_control_intron_output_directory)
 
     # get the stop density
-    output_file = "{0}/_test_compare_exon_intron_stop_density.csv".format(output_directory)
+    output_file = "{0}/tests/compare_exon_intron_stop_density.csv".format(output_directory)
     if compare_stop_density:
         mto.compare_stop_density(exons_fasta, introns_fasta, output_file, families_file = families_file)
 

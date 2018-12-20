@@ -53,7 +53,10 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, kwa
         for process in processes:
             outputs.extend(process.get())
     else:
-        outputs = function_to_run(simulations, *sim_args, **kwargs_dict)
+        if kwargs_dict:
+            outputs = function_to_run(simulations, *sim_args, **kwargs_dict)
+        else:
+            outputs = function_to_run(simulations, *sim_args)
 
     return outputs
 
