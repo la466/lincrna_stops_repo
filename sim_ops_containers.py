@@ -49,9 +49,20 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, kwa
         if not workers:
             workers = os.cpu_count() - 2
         processes = gen.run_in_parallel(simulations, sim_args, function_to_run, kwargs_dict = kwargs_dict, workers = workers)
-        outputs = []
+        results = []
         for process in processes:
-            outputs.extend(process.get())
+            results.append(process.get())
+        # now merge into one
+        if isinstance(results[0],list):
+            flattened_outputs = []
+            [flattened_outputs.extend(i) for i in results]
+            outputs = flattened_outputs
+        elif isinstance(results[0], dict):
+            flattened_outputs = {}
+            [flattened_outputs.update(i) for i in results]
+            outputs = flattened_outputs
+        outputs = flattened_outputs
+
     else:
         if kwargs_dict:
             outputs = function_to_run(simulations, *sim_args, **kwargs_dict)

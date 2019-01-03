@@ -11,6 +11,22 @@ import sequence_ops as sequo
 
 # stops = ["TAT", "TAC", "TCA"]
 
+def calc_motif_density(seq_list, motif_set):
+
+    seq_hits = 0
+    seq_nts = 0
+
+    motif_search = re.compile("(?=({0}))".format("|".join(motif_set)))
+    for i, seq in enumerate(seq_list):
+        hits = []
+        matches = re.finditer(motif_search, seq)
+        [hits.extend(list(range(hit.span()[0], hit.span()[0] + len(hit.group(1))))) for hit in matches]
+        hits = sorted(list(set(hits)))
+        seq_nts += len(seq)
+        seq_hits += len(hits)
+
+    density = np.divide(seq_hits, seq_nts)
+    return density
 
 def get_exon_reading_frame(exon_seq, cds_seq):
     """

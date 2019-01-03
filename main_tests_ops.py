@@ -702,3 +702,44 @@ def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcri
     [gen.remove_file(i) for i in outputs]
 
     gen.get_time(start_time)
+
+
+def calculate_motif_densities(iteration_list, filelist, sequence_list):
+
+    densities = {}
+
+    for i, iteration in enumerate(iteration_list):
+        print("{0}/{1}".format(i+1, len(iteration_list)))
+        motif_set = [i[0] for i in gen.read_many_fields(filelist[iteration], "\t") if "#" not in i[0] and ">" not in i[0]]
+        density = seqo.calc_motif_density(sequence_list, motif_set)
+        densities[iteration] = density
+
+    return densities
+
+def calc_intron_densities(motif_file, introns_fasta):
+
+    required = 10000
+    controls_dir = "clean_run/motif_controls/int3"
+
+    gen.create_output_directories(controls_dir)
+    if len(os.listdir(controls_dir)) < required:
+        required_sets = required - len(os.listdir(controls_dir))
+        sequo.generate_motif_controls(motif_file, controls_dir, required_sets, stop_restricted = True)
+
+    motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0] and ">" not in i[0]]
+    intron_names, intron_seqs = gen.read_fasta(introns_fasta)
+    introns = collections.defaultdict(lambda: [])
+    [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names)]
+
+    motif_sets = {"real": motif_file}
+    for i, file in enumerate(os.listdir(controls_dir)[:required]):
+        motif_sets[i+1] = "{0}/{1}".format(controls_dir, file)
+    motif_set_list = [i for i in motif_sets]
+
+    output_file = "clean_run/intron_densities.csv"
+    args = [motif_sets, intron_seqs]
+    outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("sim_id,intron_density\n")
+        [outfile.write("{0},{1}\n".format(i, outputs[i])) for i in outputs]
