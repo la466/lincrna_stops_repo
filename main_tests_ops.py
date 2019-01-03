@@ -718,7 +718,7 @@ def calculate_motif_densities(iteration_list, filelist, sequence_list):
 
 def calc_intron_densities(motif_file, introns_fasta):
 
-    required = 10000
+    required = 1000
     controls_dir = "clean_run/motif_controls/int3"
 
     gen.create_output_directories(controls_dir)
