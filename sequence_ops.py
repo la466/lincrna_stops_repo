@@ -1945,10 +1945,12 @@ def check_repeated_motif_sets(filelist):
 
 def generate_motif_set(required_sets, motif_set, motif_choices, output_dir):
 
+    purine_content = calc_purine_content(motif_set)
+
     output_files = []
 
     for i, set in enumerate(required_sets):
-        print("{0}/{1}".format(i+1, len(required_sets)))
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(required_sets)))
         np.random.seed()
         set_generated = False
         while not set_generated:

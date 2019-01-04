@@ -709,16 +709,19 @@ def calculate_motif_densities(iteration_list, filelist, sequence_list):
     densities = {}
 
     for i, iteration in enumerate(iteration_list):
-        print("{0}/{1}".format(i+1, len(iteration_list)))
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(iteration_list)))
         motif_set = [i[0] for i in gen.read_many_fields(filelist[iteration], "\t") if "#" not in i[0] and ">" not in i[0]]
-        density = seqo.calc_motif_density(sequence_list, motif_set)
+        density = {i: seqo.calc_motif_density(sequence_list[i], motif_set) for i in sequence_list}
         densities[iteration] = density
+        # density = seqo.calc_motif_density(sequence_list, motif_set)
+
+        # densities[iteration] = [density, sequo.calc_purine_content(motif_set)]
 
     return densities
 
-def calc_intron_densities(motif_file, introns_fasta):
+def calc_intron_densities(motif_file, introns_fasta, families_file = None):
 
-    required = 1000
+    required = 10000
     controls_dir = "clean_run/motif_controls/int3"
 
     gen.create_output_directories(controls_dir)
@@ -727,19 +730,69 @@ def calc_intron_densities(motif_file, introns_fasta):
         sequo.generate_motif_controls(motif_file, controls_dir, required_sets, stop_restricted = True)
 
     motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0] and ">" not in i[0]]
+
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
     introns = collections.defaultdict(lambda: [])
     [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names)]
+    introns = {i: introns[i] for i in introns}
 
-    motif_sets = {"real": motif_file}
-    for i, file in enumerate(os.listdir(controls_dir)[:required]):
-        motif_sets[i+1] = "{0}/{1}".format(controls_dir, file)
+    motif_sets = {i+1: "{0}/{1}".format(controls_dir, file) for i, file in enumerate(os.listdir(controls_dir)[:required])}
     motif_set_list = [i for i in motif_sets]
 
-    output_file = "clean_run/intron_densities.csv"
-    args = [motif_sets, intron_seqs]
+    real_density = {i: seqo.calc_motif_density(introns[i], motif_set) for i in introns}
+
+    args = [motif_sets, introns]
     outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, sim_run = False)
 
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        real_density = sequo.group_family_results(real_density, families)
+
+        outputs = {i: sequo.group_family_results(outputs[i], families) for i in outputs}
+
+
+    output_file = "clean_run/intron_densities2.csv"
     with open(output_file, "w") as outfile:
-        outfile.write("sim_id,intron_density\n")
-        [outfile.write("{0},{1}\n".format(i, outputs[i])) for i in outputs]
+        outfile.write("sim_id,{0}\n".format(','.join(sorted(real_density))))
+
+
+        outfile.write("real,{0}\n".format(','.join(gen.stringify([np.median(real_density[id]) for id in sorted(real_density)]))))
+        for sim_id in sorted(outputs):
+            sim_outputs = []
+            for id in sorted(outputs[sim_id]):
+                sim_outputs.append(np.median(outputs[sim_id][id]))
+            outfile.write("{0},{1}\n".format(sim_id, ','.join(gen.stringify(sim_outputs))))
+
+
+def calc_purine_content(exons_fasta, introns_fasta, output_file, families_file = None):
+
+    intron_names, intron_seqs = gen.read_fasta(introns_fasta)
+    introns = collections.defaultdict(lambda: [])
+    [introns[name.split('.')[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if len(intron_seqs[i]) > 211]
+
+    exon_names, exon_seqs = gen.read_fasta(exons_fasta)
+    exons = collections.defaultdict(lambda: [])
+    [exons[name.split('.')[0]].append(exon_seqs[i]) for i, name in enumerate(exon_names) if len(exon_seqs[i]) > 211 and name.split(".")[0] in introns]
+
+
+    exon_purine_content = {i: sequo.calc_purine_content(exons[i]) for i in exons}
+    intron_purine_content = {i: sequo.calc_purine_content(introns[i]) for i in introns}
+
+
+    exon_cores = {i: [seq[69:-69] for seq in exons[i]] for i in exons}
+    intron_cores = {i: [seq[69:-69] for seq in introns[i]] for i in introns}
+
+    exon_core_purine = {i: sequo.calc_purine_content(exon_cores[i]) for i in exon_cores}
+    intron_core_purine = {i: sequo.calc_purine_content(intron_cores[i]) for i in intron_cores}
+
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        exon_purine_content = sequo.group_family_results(exon_purine_content, families)
+        intron_purine_content = sequo.group_family_results(intron_purine_content, families)
+        exon_core_purine = sequo.group_family_results(exon_core_purine, families)
+        intron_core_purine = sequo.group_family_results(intron_core_purine, families)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,exon_purine_content,intron_purine_content,exon_core_purine_content,intron_core_purine_content\n")
+        [outfile.write("{0},{1},{2},{3},{4}\n".format(i, np.median(exon_purine_content[i]), np.median(intron_purine_content[i]), np.median(exon_core_purine[i]), np.median(intron_core_purine[i]))) for i in sorted(intron_purine_content) if i in exon_purine_content]

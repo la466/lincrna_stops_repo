@@ -10,11 +10,11 @@ from useful_motif_sets import stops
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density"]
+    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18], ints=[])
-    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], ints=[])
+    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density, calc_purine_content = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density, args.calc_purine_content
 
     # set a start time
     start = time.time()
@@ -99,7 +99,11 @@ def main():
         mto.exon_region_density(cds_fasta, coding_exons_fasta, gc_matched_stops_sets_file, families_file = families_file)
 
     if intron_density:
-        mto.calc_intron_densities(ese_file, introns_fasta)
+        mto.calc_intron_densities(ese_file, introns_fasta, families_file = families_file)
+
+    output_file = "{0}/purine_content.csv".format(output_directory)
+    if calc_purine_content:
+        mto.calc_purine_content(coding_exons_fasta, introns_fasta, output_file, families_file = families_file)
 
 
 if __name__ == "__main__":
