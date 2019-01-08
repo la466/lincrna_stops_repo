@@ -29,3 +29,25 @@ median(file$exon_density)
 median(file$intron_density)
 median(file$intron_density_scaled)
 
+median(file$exon_gc)
+median(file$intron_gc)
+
+
+nc_file = read.csv("clean_run/tests/non_coding_exons/non_coding_exons.csv", head = T)
+colnames(nc_file) = c("non-coding exons", "non-coding exons scaled")
+nc_data = melt(nc_file)
+nc_data = nc_data[, c("variable", "value")]
+
+full_data = rbind(data, nc_data)
+
+plot = density_boxplot(full_data, "Type", "Stop density")
+cairo_pdf("clean_run/plots/non_coding_exon_comparison.pdf", width = 12)
+plot
+dev.off()
+
+kruskal.test(full_data$value~full_data$variable)
+x = full_data$value
+
+# x = c(file$upstream_density, file$core_density, file$downstream_density)
+g = factor(rep(1:5, c(length(file$exon_density), length(file$intron_density), length(file$intron_density_scaled), length(nc_file$density), length(nc_file$scaled_density))), labels = c("e", "i", "is", "nc", "ncs"))
+dunn.test(x, g, method = "bonferroni")

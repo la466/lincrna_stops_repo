@@ -22,6 +22,28 @@ def get_exon_reading_frame(exon_seq, cds_seq):
     return exon_start_index % 3
 
 
+def calc_seqs_stop_count(seq_list, exclude_frames = None):
+    """
+    For a list of sequences, calculate the combined stop density.
+
+    Args:
+        seqs (list): list of seqeunces
+        exclude_frames (list): list containing frames (0,1,2) to exclude from calculation
+
+    Returns:
+        stop_density (float): proportion of nucleotides contributing to stop codons
+    """
+    count = 0
+    for seq in seq_list:
+        for frame in list(range(3)):
+            # get the stop codons in that frame
+            stop_count = len([i for i in re.findall(".{3}", seq[frame:]) if i in stops])
+            if exclude_frames and frame not in exclude_frames:
+                pass
+            else:
+                count += stop_count
+    return count
+
 def calc_seqs_stop_density(seq_list, exclude_frames = None):
     """
     For a list of sequences, calculate the combined stop density.

@@ -10,11 +10,11 @@ from useful_motif_sets import stops
 
 def main():
 
-    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density"]
+    arguments = ["input_directory", "output_directory", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "exon_region_excess", "non_coding_exons"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17], ints=[])
-    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density
+    args = gen.parse_arguments(description, arguments, flags = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19], ints=[])
+    input_directory, output_directory, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, exon_region_excess, non_coding_exons = args.input_directory, args.output_directory, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.exon_region_excess, args.non_coding_exons
 
     # set a start time
     start = time.time()
@@ -28,6 +28,7 @@ def main():
     non_transcribed_fasta = "{0}/genome_sequences/human/human.non_transcribed.fasta".format(input_directory)
     families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
     coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_coding_exons.fasta".format(input_directory)
+    non_coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_non_coding_exons.fasta".format(input_directory)
 
     ese_file = "source_data/motif_sets/int3.txt"
 
@@ -95,8 +96,19 @@ def main():
     if cds_codon_ds:
         mto.calc_codon_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)
 
+    exon_regions_directory = "{0}/tests/exon_regions".format(output_directory)
+    gen.create_output_directories(exon_regions_directory)
+    exon_region_density_file = "{0}/exon_regions_density.csv".format(exon_regions_directory)
     if exon_region_density:
-        mto.exon_region_density(cds_fasta, coding_exons_fasta, gc_matched_stops_sets_file, families_file = families_file)
+        mto.exon_region_density(cds_fasta, coding_exons_fasta, gc_matched_stops_sets_file, exon_region_density_file, families_file = families_file)
+    exon_region_excess_file = "{0}/exon_regions_excess.csv".format(exon_regions_directory)
+    if exon_region_excess:
+        mto.exon_region_excess(cds_fasta, coding_exons_fasta, exon_region_excess_file, families_file = families_file)
+
+    non_coding_exons_dir = "{0}/tests/non_coding_exons".format(output_directory)
+    non_coding_exons_file = "{0}/non_coding_exons.csv".format(non_coding_exons_dir)
+    if non_coding_exons:
+        mto.non_coding_exons(non_coding_exons_fasta, non_coding_exons_file, families_file = families_file)
 
 
 if __name__ == "__main__":
