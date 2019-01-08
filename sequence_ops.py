@@ -2,6 +2,7 @@ import generic as gen
 import file_ops as fo
 import conservation as cons
 import sim_ops_containers as simopc
+import seq_ops as seqo
 from regex_patterns import codon_pattern, exon_number_pattern, gene_id_pattern, transcript_id_pattern
 import re
 import os
@@ -1903,19 +1904,25 @@ def replace_motifs_in_seqs(seq_list, motif_set = None):
 
 
 
-def generate_motif_controls(motif_file, output_dir, required, stop_restricted = None):
+def generate_random_motifs(motif_file, output_dir, required, stop_restricted = None, exclude_motif_set = None, match_gc = None):
 
+    # get all the motifs in the provided motif file
     motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0] and ">" not in i[0]]
+    # get the possible lengths of the motifs in the provided motif file
     lengths = list(set([len(i) for i in motif_set]))
 
+    # generate all possible choices of motifs with lengths in lengths
     choices = {i: ["".join(j) for j in it.product(nucleotides, repeat = i)] for i in lengths}
 
+    # if the motifs needs to be restricted by stops
     if stop_restricted:
         choices = {i: keep_only_no_stops_in_one_reading_frame(choices[i]) for i in choices}
 
+    # set up the arguments
     required_sets = list(range(required))
     args = [motif_set, choices, output_dir]
-    output_files = simopc.run_simulation_function(required_sets, args, generate_motif_set, sim_run = False)
+    kwargs_dict = {"exclude_motif_set": exclude_motif_set}
+    output_files = simopc.run_simulation_function(required_sets, args, generate_motif_set, kwargs_dict = kwargs_dict, sim_run = False)
 
     # check that none of the sets are the same
     repeated_files = check_repeated_motif_sets(output_files)
@@ -1924,47 +1931,64 @@ def generate_motif_controls(motif_file, output_dir, required, stop_restricted = 
         while repeated:
             [gen.remove_file(file) for file in repeated_files]
             required_sets = list(range(len(repeated_files)))
-            args = [motif_set, choices, output_dir]
-            output_files = output_files = simopc.run_simulation_function(required_sets, args, generate_motif_set, sim_run = False)
+            output_files = output_files = simopc.run_simulation_function(required_sets, args, generate_motif_set, kwargs_dict = kwargs_dict, sim_run = False)
+            # now check for repeats, if there are, repeat again
             repeated_files = check_repeated_motif_sets(output_files)
             if not len(repeated_files):
                 repeated = False
 
 
 def check_repeated_motif_sets(filelist):
+    """
+    Checks to see if the contents of a motif set file match another in the list
+    """
     sets = []
     repeat_files = []
     for file in filelist:
+        # sort the motifs
         motif_set = sorted([i[0] for i in gen.read_many_fields(file, "\t")])
+        # if that motif set isnt in the list, add to list
         if motif_set not in sets:
             sets.append(motif_set)
+        # if the motif set is in the list, add to the list to return
         else:
             repeat_files.append(file)
     return repeat_files
 
 
-def generate_motif_set(required_sets, motif_set, motif_choices, output_dir):
+def generate_motif_set(required_sets, motif_set, motif_choices, output_dir, exclude_motif_set = None):
 
-    purine_content = calc_purine_content(motif_set)
+    # sort the motifs for later use
+    motif_set = sorted(motif_set)
+
+    # if we want to exclude the motifs found in the motif set, remove from the list
+    if exclude_motif_set:
+        motif_choices = {i: [motif for motif in motif_choices[i] if motif not in motif_set] for i in motif_choices}
 
     output_files = []
 
     for i, set in enumerate(required_sets):
-        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(required_sets)))
+        gen.print_parallel_status(i, required_sets)
         np.random.seed()
         set_generated = False
+        # whilst we havent generated a full set
         while not set_generated:
             random_set = []
+            # for motif in the set
             for motif in motif_set:
                 chosen = False
+                # choose a random motif that isnt in the set
                 while not chosen:
                     choice = np.random.choice(motif_choices[len(motif)])
+                    # ensure the motif hasnt already been chosen
                     if choice not in random_set:
                         random_set.append(choice)
                         chosen = True
+            # sort the random set and ensure it is not the real motif set
             random_set = sorted(random_set)
             if random_set != sorted(motif_set):
                 set_generated = True
+
         output_file = "{0}/{1}.txt".format(output_dir, random.random())
         output_files.append(output_file)
         with open(output_file, "w") as outfile:
@@ -1979,3 +2003,7 @@ def keep_only_no_stops_in_one_reading_frame(seq_list):
         if len(list(set(stops) & set(re.findall(codon_pattern, i)))) == 0 or len(list(set(stops) & set(re.findall(codon_pattern, i[1:])))) == 0 or len(list(set(stops) & set(re.findall(codon_pattern, i[2:])))) == 0:
             kept_seqs.append(i)
     return kept_seqs
+
+
+def read_motifs(input_file):
+    return [i[0] for i in gen.read_many_fields(input_file, "\t") if i[0][0] not in [">", "#"]]

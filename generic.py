@@ -409,7 +409,7 @@ def motif_to_regex(motifs):
     regex = [re.compile("".join([i[0],"(?=",i[1:],")"])) for i in motifs]
     return(regex)
 
-def parse_arguments(description, arguments, floats = None, flags = None, ints = None):
+def parse_arguments(description, arguments, floats = None, flags = None, ints = None, opt_flags = []):
     '''
     Use argparse to parse a set of input arguments from the command line.
     '''
@@ -419,10 +419,14 @@ def parse_arguments(description, arguments, floats = None, flags = None, ints = 
         flags = []
     if not ints:
         ints = []
+    if not opt_flags:
+        opt_flags = []
     parser = argparse.ArgumentParser(description = description)
     for pos, argument in enumerate(arguments):
         if pos in flags:
             parser.add_argument("--{0}".format(argument), action = "store_true", help = argument)
+        elif pos in opt_flags:
+            parser.add_argument("-{0}".format(argument), action = "store", dest = "{0}".format(argument))
         else:
             if pos in floats:
                 curr_type = float
@@ -672,3 +676,7 @@ def update_reset_count(count, limit):
     else:
         count += 1
     return count
+
+
+def print_parallel_status(i, iteration_list):
+    print("(W{0}) {1}/{2}".format(multiprocessing.current_process().name.split("-")[-1], i+1, len(iteration_list)))

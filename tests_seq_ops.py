@@ -4,6 +4,13 @@ import unittest
 
 class Tests(unittest.TestCase):
 
+    def test_calc_motif_density(self):
+        seqs = [["ATCCCAATAGAGATTTACCACACAATTGGGAT"], ["ACTAGCAGCATCTA", "CTATATATCTCGCGCGCGCGCATATCG"]]
+        motifs = [["CCC", "TTT", "AGA"], ["CTA", "TAT"]]
+        expected = [np.divide(11,32), np.divide(17,41)]
+        observed = [calc_motif_density(seq, motifs[i]) for i, seq in enumerate(seqs)]
+        self.assertEqual(expected, observed)
+
     def test_calc_codon_density_in_seqs(self):
         input_file = "test_data/seq_ops/test_calc_codon_density_in_seqs/input.fasta"
         seqs = gen.read_fasta(input_file)[1]

@@ -843,49 +843,56 @@ def calculate_motif_densities(iteration_list, filelist, sequence_list):
 
     return densities
 
-def calc_intron_densities(motif_file, introns_fasta, families_file = None):
+def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_dir, families_file = None, required_simulations = None, combined = None):
 
-    required = 10000
-    controls_dir = "clean_run/motif_controls/int3"
+    if not required_simulations:
+        required_simulations = 1000
 
-    gen.create_output_directories(controls_dir)
-    if len(os.listdir(controls_dir)) < required:
-        required_sets = required - len(os.listdir(controls_dir))
-        sequo.generate_motif_controls(motif_file, controls_dir, required_sets, stop_restricted = True)
+    # generate random motifs if they dont already exist
+    if len(os.listdir(controls_dir)) < required_simulations:
+        print("Generating control motif sets...")
+        required_sets = required_simulations - len(os.listdir(controls_dir))
+        sequo.generate_random_motifs(motif_file, controls_dir, required_sets, stop_restricted = True, exclude_motif_set = True)
 
-    motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0] and ">" not in i[0]]
-
+    # get the list of introns
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
     introns = collections.defaultdict(lambda: [])
     [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names)]
-    introns = {i: introns[i] for i in introns}
 
-    motif_sets = {i+1: "{0}/{1}".format(controls_dir, file) for i, file in enumerate(os.listdir(controls_dir)[:required])}
+    introns = sequo.pick_random_family_member(families_file, introns)
+
+    if combined:
+        intron_list = {"all": []}
+        [intron_list["all"].extend(introns[i]) for i in introns]
+        introns = intron_list
+    else:
+        introns = {i: introns[i] for i in introns}
+
+    # get a list of random motif files, and a list of ids
+    motif_sets = {i+1: "{0}/{1}".format(controls_dir, file) for i, file in enumerate(os.listdir(controls_dir)[:required_simulations])}
     motif_set_list = [i for i in motif_sets]
 
-    real_density = {i: seqo.calc_motif_density(introns[i], motif_set) for i in introns}
+    real_motifs = sequo.read_motifs(motif_file)
+    real_densities = {i: seqo.calc_motif_density(introns[i], real_motifs) for i in introns}
 
     args = [motif_sets, introns]
     outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, sim_run = False)
 
-    if families_file:
-        families = gen.read_many_fields(families_file, "\t")
-        real_density = sequo.group_family_results(real_density, families)
+    results = {}
+    for id in real_densities:
+        results[id] = [real_densities[id]]
+        for simulation in sorted(outputs):
+            results[id].append(outputs[simulation][id])
 
-        outputs = {i: sequo.group_family_results(outputs[i], families) for i in outputs}
-
-
-    output_file = "clean_run/intron_densities2.csv"
     with open(output_file, "w") as outfile:
-        outfile.write("sim_id,{0}\n".format(','.join(sorted(real_density))))
+        outfile.write("sim_id,{0}\n".format(",".join([id for id in sorted(real_densities)])))
+        outfile.write("real,{0}\n".format(",".join(gen.stringify([real_densities[id] for id in sorted(real_densities)]))))
+        for sim in outputs:
+            outfile.write("{0},{1}\n".format(sim, ",".join(gen.stringify([outputs[sim][id] for id in sorted(outputs[sim])]))))
 
 
-        outfile.write("real,{0}\n".format(','.join(gen.stringify([np.median(real_density[id]) for id in sorted(real_density)]))))
-        for sim_id in sorted(outputs):
-            sim_outputs = []
-            for id in sorted(outputs[sim_id]):
-                sim_outputs.append(np.median(outputs[sim_id][id]))
-            outfile.write("{0},{1}\n".format(sim_id, ','.join(gen.stringify(sim_outputs))))
+
+
 
 
 def calc_purine_content(exons_fasta, introns_fasta, output_file, families_file = None):
