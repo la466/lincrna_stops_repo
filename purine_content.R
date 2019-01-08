@@ -19,6 +19,18 @@ median(file$intron_core_purine_content)
 file = read.csv("temp_files/random_purine_content.csv", head = T)
 head(file)
 
-wilcox.test(file$exon, file$intron, paired = T)
-wilcox.test(file$sim_exon, file$sim_intron, paired = T)
+real = file[file$id == "real",]
+sims = file[file$id != "real",]
+
+btest = binom.test(nrow(sims[sims$pvalue < 0.05,]), nrow(sims), alternative = "g")
+btest
+
+exons = (nrow(sims[sims$median_exon >= real$median_exon,]) + 1) / (nrow(sims) + 1)
+intron = (nrow(sims[sims$median_intron <= real$median_intron,]) + 1) / (nrow(sims) + 1)
+
+
+file = read.csv("temp_files/purine_content_no_eses.csv", head = T)
+real = file[file$id == "real",]
+sims = file[file$id != "real",]
+
 
