@@ -1,7 +1,8 @@
 import generic as gen
 import file_ops as fo
 import conservation as cons
-from regex_patterns import exon_number_pattern, gene_id_pattern, transcript_id_pattern
+import sim_ops_containers as simopc
+from regex_patterns import codon_pattern, exon_number_pattern, gene_id_pattern, transcript_id_pattern
 import re
 import os
 import collections
@@ -16,6 +17,7 @@ import sys
 from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold, one_away_codons
 from progressbar import ProgressBar
 import multiprocessing as mp
+import itertools as it
 
 pbar = ProgressBar()
 
@@ -1898,3 +1900,82 @@ def replace_motifs_in_seqs(seq_list, motif_set = None):
         replaced_seq_list[id] = removed_motifs_seq
 
     return replaced_seq_list
+
+
+
+def generate_motif_controls(motif_file, output_dir, required, stop_restricted = None):
+
+    motif_set = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0] and ">" not in i[0]]
+    lengths = list(set([len(i) for i in motif_set]))
+
+    choices = {i: ["".join(j) for j in it.product(nucleotides, repeat = i)] for i in lengths}
+
+    if stop_restricted:
+        choices = {i: keep_only_no_stops_in_one_reading_frame(choices[i]) for i in choices}
+
+    required_sets = list(range(required))
+    args = [motif_set, choices, output_dir]
+    output_files = simopc.run_simulation_function(required_sets, args, generate_motif_set, sim_run = False)
+
+    # check that none of the sets are the same
+    repeated_files = check_repeated_motif_sets(output_files)
+    if len(repeated_files):
+        repeated = True
+        while repeated:
+            [gen.remove_file(file) for file in repeated_files]
+            required_sets = list(range(len(repeated_files)))
+            args = [motif_set, choices, output_dir]
+            output_files = output_files = simopc.run_simulation_function(required_sets, args, generate_motif_set, sim_run = False)
+            repeated_files = check_repeated_motif_sets(output_files)
+            if not len(repeated_files):
+                repeated = False
+
+
+def check_repeated_motif_sets(filelist):
+    sets = []
+    repeat_files = []
+    for file in filelist:
+        motif_set = sorted([i[0] for i in gen.read_many_fields(file, "\t")])
+        if motif_set not in sets:
+            sets.append(motif_set)
+        else:
+            repeat_files.append(file)
+    return repeat_files
+
+
+def generate_motif_set(required_sets, motif_set, motif_choices, output_dir):
+
+    purine_content = calc_purine_content(motif_set)
+
+    output_files = []
+
+    for i, set in enumerate(required_sets):
+        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(required_sets)))
+        np.random.seed()
+        set_generated = False
+        while not set_generated:
+            random_set = []
+            for motif in motif_set:
+                chosen = False
+                while not chosen:
+                    choice = np.random.choice(motif_choices[len(motif)])
+                    if choice not in random_set:
+                        random_set.append(choice)
+                        chosen = True
+            random_set = sorted(random_set)
+            if random_set != sorted(motif_set):
+                set_generated = True
+        output_file = "{0}/{1}.txt".format(output_dir, random.random())
+        output_files.append(output_file)
+        with open(output_file, "w") as outfile:
+            [outfile.write("{0}\n".format(i)) for i in sorted(random_set)]
+
+    return output_files
+
+
+def keep_only_no_stops_in_one_reading_frame(seq_list):
+    kept_seqs = []
+    for i in seq_list:
+        if len(list(set(stops) & set(re.findall(codon_pattern, i)))) == 0 or len(list(set(stops) & set(re.findall(codon_pattern, i[1:])))) == 0 or len(list(set(stops) & set(re.findall(codon_pattern, i[2:])))) == 0:
+            kept_seqs.append(i)
+    return kept_seqs
