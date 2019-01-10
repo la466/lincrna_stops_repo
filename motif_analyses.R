@@ -55,7 +55,7 @@ file$gc = substr(file$gc_content, 0, 3)
 file$purine = substr(file$purine_content, 0, 3)
 stops =  file[file$codons == "TAA_TAG_TGA",]
 gc_matched = file[file$gc == stops$gc,]
-file[890:895,]
+
 
 
 plot1 = density_scatterplot(gc_matched, ycol = "nd", xlab = "GC matched codon sets (sorted alphabetically)", ylab = "ND")
@@ -111,29 +111,105 @@ emperical_p <- function(data, id_col, id_differentiator, test_col) {
   return(p)
 }
 
+real_density <- function(data, id_col, id_differentiator, test_col) {
+  real = data[data[[id_col]] == id_differentiator,]
+  return (real[[test_col]])
+}
+
+normalised_density <- function(data, id_col, id_differentiator, test_col) {
+  real = data[data[[id_col]] == id_differentiator,]
+  sims = data[data[[id_col]] != id_differentiator,]
+  nd = (real[[test_col]] - mean(sims[[test_col]])) / mean(sims[[test_col]])
+  return (nd)
+}
 
 filepath = "clean_run/motif_tests/int3_stop_codon_densities.csv"
 data = read.csv(filepath, head = T)
 plot <- density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01)
 ggsave("clean_run/plots/dinucleotide_matched_stop_densities_int3.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
+filepath = "clean_run/motif_tests/RESCUE_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+plot <- density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01)
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_RESCUE.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
+filepath = "clean_run/motif_tests/ke400_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+plot <- density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01)
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_ke400.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
+filepath = "clean_run/motif_tests/PESE_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+plot <- density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01)
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_PESE.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
+filepath = "clean_run/motif_tests/ESR_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+plot <- density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01)
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_ESR.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
 emperical_p(data, "sim_id", "real", "stop_density")
 
 filepath = "clean_run/motif_tests/ises_wang_stop_codon_densities.csv"
 data = read.csv(filepath, head = T)
 plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.005)
 ggsave("clean_run/plots/dinucleotide_matched_stop_densities_ises_wang.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
+filepath = "clean_run/motif_tests/ess_fas_hex2_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.005)
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_ess_hex2.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
 emperical_p(data, "sim_id", "real", "stop_density")
 
 filepath = "clean_run/motif_tests/ess_fas_hex3_stop_codon_densities.csv"
 data = read.csv(filepath, head = T)
 plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.005)
 ggsave("clean_run/plots/dinucleotide_matched_stop_densities_ess_hex3.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
 emperical_p(data, "sim_id", "real", "stop_density")
 
-filepath = "clean_run/motif_tests/rbp_motifs_filtered_stop_codon_densities.csv"
+filepath = "clean_run/motif_tests/rbp_motifs_cds_stop_codon_densities.csv"
 data = read.csv(filepath, head = T)
 plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.001)
 ggsave("clean_run/plots/dinucleotide_matched_stop_densities_rbp_motifs_cds.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
+filepath = "clean_run/motif_tests/rbp_motifs_non_cds_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.001)
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_rbp_motifs_non_cds.pdf", plot = plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
 emperical_p(data, "sim_id", "real", "stop_density")
 
 

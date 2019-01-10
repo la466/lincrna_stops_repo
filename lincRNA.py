@@ -3,15 +3,16 @@ import containers as cont
 import lincRNA_tests as ltests
 import sim_ops_containers as simopc
 import main_tests_ops as mto
+import seq_ops as seqo
 import time
 import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9], ints=[3])
-    input_bed, input_fasta, output_directory, required_simulations, extract_sequences, clean_run, get_exon_dint_controls, get_intron_dint_controls, exon_region_density, compare_stop_density = args.input_bed, args.input_fasta, args.output_directory, args.required_simulations, args.extract_sequences, args.clean_run, args.get_exon_dint_controls, args.get_intron_dint_controls, args.exon_region_density, args.compare_stop_density
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10], ints=[3])
+    input_bed, input_fasta, output_directory, required_simulations, extract_sequences, clean_run, density_sim, get_exon_dint_controls, get_intron_dint_controls, exon_region_density, compare_stop_density = args.input_bed, args.input_fasta, args.output_directory, args.required_simulations, args.extract_sequences, args.clean_run, args.density_sim, args.get_exon_dint_controls, args.get_intron_dint_controls, args.exon_region_density, args.compare_stop_density
 
     # set a start time
     start = time.time()
@@ -56,6 +57,10 @@ def main():
     exon_intron_density_file = "{0}/tests/lincrna/compare_exon_intron_stop_density.csv".format(output_directory)
     if compare_stop_density:
         mto.compare_stop_density(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, exon_intron_density_file, families_file = lincRNA_multi_exon_families)
+
+    if density_sim:
+        ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
+
 
 if __name__ == "__main__":
     main()

@@ -499,6 +499,8 @@ def generate_nt_matched_seq(seq, dinucleotide_choices, dicnucleotide_probabiliti
         np.random.seed(seed)
 
     required_dints = int(len(seq)/2)
+    if sum(dicnucleotide_probabilities) != 1:
+        dicnucleotide_probabilities += np.divide(1 - sum(dicnucleotide_probabilities), len(dicnucleotide_probabilities))
     sim_content = list(np.random.choice(dinucleotide_choices, required_dints, p=dicnucleotide_probabilities))
     if len(seq) % 2 != 0:
         sim_content.append(np.random.choice(nucleotide_choices, p=nucleotide_probabilities))
