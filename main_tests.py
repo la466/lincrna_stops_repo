@@ -11,11 +11,11 @@ from useful_motif_sets import stops
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", ]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24], ints=[], opt_flags=[2,3])
-    input_directory, output_directory, simulations, ese_file, clean_run, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density, calc_purine_content, exon_region_excess, non_coding_exons = args.input_directory, args.output_directory, args.simulations, args.ese_file, args.clean_run, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density, args.calc_purine_content, args.exon_region_excess, args.non_coding_exons
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], ints=[], opt_flags=[2,3])
+    input_directory, output_directory, simulations, ese_file, clean_run, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density, calc_purine_content, exon_region_excess, non_coding_exons, cds_ds_mutation = args.input_directory, args.output_directory, args.simulations, args.ese_file, args.clean_run, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density, args.calc_purine_content, args.exon_region_excess, args.non_coding_exons, args.cds_ds_mutation
 
     if simulations:
         simulations = int(simulations)
@@ -28,6 +28,7 @@ def main():
 
     exons_fasta = "{0}/genome_sequences/human/human.cds.clean_coding_exons.fasta".format(input_directory)
     cds_fasta = "{0}/genome_sequences/human/human.cds.clean.fasta".format(input_directory)
+    multi_exon_cds_fasta = "{0}/genome_sequences/human/human.cds.multi_exons.fasta".format(input_directory)
     introns_fasta = "{0}/genome_sequences/human/human.clean_introns.fasta".format(input_directory)
     non_transcribed_fasta = "{0}/genome_sequences/human/human.non_transcribed.fasta".format(input_directory)
     families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
@@ -91,14 +92,18 @@ def main():
     output_file = "{0}/codon_ds_matched_densities.csv".format(ds_output_directory)
     output_file1 = "{0}/codons_ds.csv".format(ds_output_directory)
     output_file2 = "{0}/codon_ds_stats.csv".format(ds_output_directory)
+    output_file3 = "{0}/codon_ds_stats_mutation.csv".format(ds_output_directory)
     if cds_ds:
         mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
     if cds_ds_all:
-        mto.calc_ds_all(simulations, alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file2, motif_controls_directory = motif_simulations_directory, families_file = families_file)
+        mto.calc_ds_all(simulations, alignments_file, cds_fasta, multi_exon_cds_fasta,  ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file2, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
     if cds_codon_ds:
         mto.calc_codon_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)
+
+    if cds_ds_mutation:
+        mto.calc_ds_mutation(simulations, alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file3, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
     exon_regions_directory = "{0}/tests/exon_regions".format(output_directory)
     gen.create_output_directories(exon_regions_directory)

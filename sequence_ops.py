@@ -357,8 +357,6 @@ def calc_codon_sets_ds_wrapper(codon_sets, restricted_sequences, output_file = N
     return outputs
 
 
-
-
 def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
     """
     Given sets of codons, 1) extract all the pieces of the sequence alignments
@@ -399,6 +397,205 @@ def calc_motif_set_codons_ds(codon_sets, sequence_alignments, output_file):
             outfile.write("{0}\n".format(",".join(gen.stringify(args))))
 
 
+def get_codon_overlaps(overlap_indices, sequence_length, inverse = None, full_set = None):
+
+    kept_indices = []
+    for i in range(0, sequence_length, 3):
+        # get each codons indices
+        local_range = list(range(i, i+3))
+        # if one of the codons indices is in the overlap indices
+        # and the synonymous site is in the overlaps
+        if list(set(local_range) & set(overlap_indices)) and i+2 in overlap_indices:
+            # if we are doing the inverse, i.e. all sites that didn't have the original overlap
+            if inverse:
+                # keep only sites that strictly do not have any overlap with the motifs
+                if not list(set(local_range) & set(full_set)):
+                    kept_indices.extend(local_range)
+            else:
+                kept_indices.extend(local_range)
+    return kept_indices
+
+def chunk_indices(flat_list):
+    chunked_list = []
+    # chunk = []
+    for i in range(0, len(flat_list), 3):
+        chunked_list.append(flat_list[i:i+3])
+    #     if index + 1 not in flat_list:
+    #         chunked_list.append(chunk)
+    #         chunk = []
+    # chunked_list.append(chunk)
+    # chunked_list = [i for i in chunked_list if len(i)]
+    return chunked_list
+
+def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = None, only_fourfold = True):
+    """
+    Keep anything that looks like it belongs in the motif set
+    from either of the alignment sequences
+
+    Args:
+        alignment_seqs (list): list containing [seq1, seq2] of aligned sequences
+        motif_set (list): list of motifs to query the alignment sequences.
+        If the motif sits in frame, keep all sites, but if the next motif hit
+        isn't straight away, add a buffer of NNN to prevent any extra codons being created.
+        If the motif sits out of frame, if the first or first two are hits, then it is the last
+        codon of the motif. Take the first two nucleotides and add N to the end to remove the
+        synonymous site of the codon. If the last two or last nucleotides are hits, it is the
+        first codon of the motif. Take the last two nucleotides and add N to keep the synonymous
+        site. Then append all codons together.
+        only_fourfold (bool): if true, only use fourfold degenerates
+    Returns:
+        remaining_motif_sequences (list): list containing [seq1, seq1] but only
+        sites that overlap one of the motifs
+    """
+
+    retained_overlap_sequences = {}
+    retained_non_overlap_sequences = {}
+    retained_stop_overlap_sequences = {}
+    retained_non_stop_overlap_sequences = {}
+
+
+    for i,id in enumerate(alignment_seqs):
+        if i:
+            alignment_set = alignment_seqs[id]
+            # get a list of all indices of all positions that overlap with something
+            # that looks like a motif in the set and all the positions that dont
+            overlap_indices = get_motifs_overlap_indices(alignment_set, motif_set)
+            non_overlap_indices = [i for i in range(0, len(alignment_set[0])) if i not in overlap_indices]
+
+            # now get the codon indices that correspond to the overlap sets
+            # only want those codons that have an overlap at a synonymous site
+            overlap_codon_indices = get_codon_overlaps(overlap_indices, len(alignment_set[0]))
+            # for the indicies that don't overlap, we only want to keep those that strictly arent overlaps
+            non_overlap_codon_indices = get_codon_overlaps(non_overlap_indices, len(alignment_set[0]), inverse = True, full_set = overlap_indices)
+
+            # now need to check if the codons are retained if we are checking fourfold
+            # needs to be done here because we want a codon to be fourfold
+            if only_fourfold:
+                retained_overlaps = []
+                retained_non_overlaps = []
+                overlap_codon_indices_chunked = [overlap_codon_indices[i:i+3] for i in list(range(0, len(overlap_codon_indices), 3))]
+                for codon_index in overlap_codon_indices_chunked:
+                    codon1 = alignment_set[0][codon_index[0]:codon_index[-1]+1]
+                    codon2 = alignment_set[1][codon_index[0]:codon_index[-1]+1]
+                    if codon1 in fourfold or codon2 in fourfold:
+                        retained_overlaps.extend(codon_index)
+                non_overlap_codon_indices_chunked = [non_overlap_codon_indices[i:i+3] for i in list(range(0, len(non_overlap_codon_indices), 3))]
+                for codon_index in non_overlap_codon_indices_chunked:
+                    codon1 = alignment_set[0][codon_index[0]:codon_index[-1]+1]
+                    codon2 = alignment_set[1][codon_index[0]:codon_index[-1]+1]
+                    if codon1 in fourfold or codon2 in fourfold:
+                        retained_non_overlaps.extend(codon_index)
+
+                overlap_codon_indices = retained_overlaps
+                non_overlap_codon_indices = retained_non_overlaps
+
+            # now group the indices into chunks, based on whether n + 1 exists
+            overlap_codon_indices = chunk_indices(overlap_codon_indices)
+            non_overlap_codon_indices = chunk_indices(non_overlap_codon_indices)
+
+
+            # now get the indices that create a stop from the overlap set
+            stop_overlap_codon_indices = []
+            non_stop_overlap_codon_indices = []
+            for chunk in overlap_codon_indices:
+                codons = [alignment_set[0][chunk[1]:chunk[-1]+2], alignment_set[0][chunk[2]:chunk[-1]+3], alignment_set[1][chunk[1]:chunk[-1]+2], alignment_set[1][chunk[2]:chunk[-1]+3]]
+                if list(set(stops) & set(codons)):
+                    stop_overlap_codon_indices.append(chunk)
+                else:
+                    non_stop_overlap_codon_indices.append(chunk)
+
+
+
+            overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in overlap_codon_indices] for sequence in alignment_set]
+            non_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in non_overlap_codon_indices] for sequence in alignment_set]
+            stop_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in stop_overlap_codon_indices] for sequence in alignment_set]
+            non_stop_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in non_stop_overlap_codon_indices] for sequence in alignment_set]
+
+            motif_overlap_sequences = ["".join(i) for i in overlap_sequences]
+            motif_non_overlap_sequences = ["".join(i) for i in non_overlap_sequences]
+            motif_stop_overlap_sequences = ["".join(i) for i in stop_overlap_sequences]
+            motif_non_stop_overlap_sequences = ["".join(i) for i in non_stop_overlap_sequences]
+
+            motif_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_overlap_sequences]
+            motif_non_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_non_overlap_sequences]
+            motif_stop_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_stop_overlap_sequences]
+            motif_non_stop_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_non_stop_overlap_sequences]
+
+            retained_overlap_sequences[id] = motif_overlap_sequences
+            retained_non_overlap_sequences[id] = motif_non_overlap_sequences
+            retained_stop_overlap_sequences[id] = motif_stop_overlap_sequences
+            retained_non_stop_overlap_sequences[id] = motif_non_stop_overlap_sequences
+
+    return retained_overlap_sequences, retained_non_overlap_sequences, retained_stop_overlap_sequences, retained_non_stop_overlap_sequences
+
+                # motif_seq = []
+                # #for each codon in the sequences
+                # # for seq_pos in range(0, len(seq), 3):
+                # for seq_pos in range(0, 60, 3):
+                #
+                #     local_range = list(range(seq_pos, seq_pos + 3))
+                #     next_range = list(range(seq_pos + 3, seq_pos + 6))
+                #     codon = seq[seq_pos:seq_pos+3]
+                #
+                #     print(no, codon)
+                #
+                #     if len(list(set(local_range) & set(overlap_codon_indices))):
+                #         # check if fourfold degenerate
+                #         if only_fourfold:
+                #             if codon in fourfold:
+                #                 motif_seq.append(codon)
+                #         else:
+                #             motif_seq.append(codon)
+                #         # if the next codon doesnt also appear, thats the end of the motif
+                #         if not len(list(set(next_range) & set(overlap_codon_indices))):
+                #             overlap_kept_sequences[no].append("".join(motif_seq))
+                #             motif_seq = []
+                #     elif len(list(set(local_range) & set(non_overlap_codon_indices))):
+                #         # check if fourfold degenerate
+                #         if only_fourfold:
+                #             if codon in fourfold:
+                #                 motif_seq.append(codon)
+                #         else:
+                #             motif_seq.append(codon)
+                #         # if the next codon doesnt also appear, thats the end of the motif
+                #         if not len(list(set(next_range) & set(non_overlap_codon_indices))):
+                #             non_overlap_kept_sequences[no].append("".join(motif_seq))
+                #             motif_seq = []
+
+
+
+            # for no, sequence in enumerate(alignment_set):
+            #     motif_seq = []
+            #     # for each codon in the sequences
+            #     for seq_pos in range(0, len(sequence), 3):
+            #         local_range = list(range(seq_pos, seq_pos + 3))
+            #         # if a position in the codon is in the overlap list
+            #         if len(list(set(local_range) & set(overlap_indices))):
+            #             codon_overlap = list(set(local_range) & set(overlap_indices))
+            #             # ensure that the synonymous site is in the overlap, otherwise we don't want it
+            #             if seq_pos + 2 in indices_to_keep:
+            #                 codon = sequence[seq_pos:seq_pos+3]
+            #                 # if we want to keep only the fourfold codons
+            #                 if only_fourfold and codon in fourfold:
+            #                     motif_seq.append(codon)
+            #                 else:
+            #                     motif_seq.append(codon)
+            #
+            #             next_range = list(range(seq_pos+3, seq_pos + 6))
+            #             if not len(list(set(next_range) & set(overlap_indices))):
+            #                 kept_sequences[no].append("".join(motif_seq))
+            #                 motif_seq = []
+
+            # print(kept_sequences)
+
+
+        # kept_sequences = ["CCC".join(i) for i in kept_sequences]
+        # print(kept_sequences[0])
+        # remaining_motif_sequences[id] = kept_sequences
+    # return []
+    # return remaining_motif_sequences
+
+
 def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, sequence_alignments, output_file = None, output_directory = None):
     """
     Wrapper to calculate the ds score for the sequence parts where the synonymous
@@ -433,40 +630,21 @@ def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, seque
             non_stop_motif_set = [i for i in motif_set if i not in stop_motif_set]
 
             # now get all the parts of the sequences where only the motif sets occur
-            full_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
-            non_motif_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set, reverse = True)
-            stops_extracted = extract_motif_sequences_from_alignment(sequence_alignments, stop_motif_set)
-            non_stops_extracted = extract_motif_sequences_from_alignment(sequence_alignments, non_stop_motif_set)
+            retained_overlap_sequence, retained_non_overlap_sequence, retained_stop_overlap_sequences, reatined_non_stop_overlap_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
 
-            # now calculate the ds scores for each set
-            all_ese_alignments = list_alignments_to_strings(full_extracted_sequences)
-            non_motif_alignments = list_alignments_to_strings(non_motif_extracted_sequences)
-            stops_ese_alignments = list_alignments_to_strings(stops_extracted)
-            non_stops_ese_alignments = list_alignments_to_strings(non_stops_extracted)
-
-            # calculate the ds scores
-            all_ese_ds = cons.calc_ds(all_ese_alignments)
-            non_ese_ds = cons.calc_ds(non_motif_alignments)
-            stops_ese_ds = cons.calc_ds(stops_ese_alignments)
-            non_stops_ese_ds = cons.calc_ds(non_stops_ese_alignments)
-
-            # # get the ds score for all ese sequence for those that hit codon set
-            # temp_output_file1 = "temp_files/temp_ds_full_{0}.txt".format(set_no)
-            # calc_motif_set_codons_ds(codon_sets, full_extracted_sequences, temp_output_file1)
-            # # get ds score for only motifs that have a hit to stops
-            # temp_output_file2 = "temp_files/temp_ds_stop_hits_{0}.txt".format(set_no)
-            # calc_motif_set_codons_ds(codon_sets, non_stops_extracted, temp_output_file2)
-            # # get ds score for only sequence parts that arent ese
-            # temp_output_file3 = "temp_files/temp_ds_stop_hits_non_ese_{0}.txt".format(set_no)
-            # calc_motif_set_codons_ds(codon_sets, non_motif_extracted_sequences, temp_output_file3)
-            #
-            # all_motif_hits = gen.read_many_fields(temp_output_file1, ",")
-            # stops_motif_hits = gen.read_many_fields(temp_output_file2, ",")
-            # non_motif_hits = gen.read_many_fields(temp_output_file3, ",")
-            #
-            # all_motif_hits = {i[0]: i[1:] for i in all_motif_hits[1:]}
-            # stops_motif_hits = {i[0]: i[1:] for i in stops_motif_hits[1:]}
-            # non_motif_hits = {i[0]: i[1:] for i in non_motif_hits[1:]}
+            # # now calculate the ds scores for each set
+            retained_overlap_alignments = list_alignments_to_strings(retained_overlap_sequence)
+            retained_non_overlap_alignments = list_alignments_to_strings(retained_non_overlap_sequence)
+            retained_stop_overlap_alignments = list_alignments_to_strings(retained_stop_overlap_sequences)
+            retained_non_stop_overlap_alignments = list_alignments_to_strings(reatined_non_stop_overlap_sequences)
+            # stops_ese_alignments = list_alignments_to_strings(stops_extracted)
+            # non_stops_ese_alignments = list_alignments_to_strings(non_stops_extracted)
+            # #
+            # # calculate the ds scores
+            retained_overlap_ds = cons.calc_ds(retained_overlap_alignments)
+            retained_non_overlap_ds = cons.calc_ds(retained_non_overlap_alignments)
+            retained_stop_overlap_ds = cons.calc_ds(retained_stop_overlap_alignments)
+            retained_non_stop_overlap_ds = cons.calc_ds(retained_non_stop_overlap_alignments)
 
             # set up the output filepath
             if output_file:
@@ -476,17 +654,94 @@ def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, seque
             outputs.append(output_file)
 
             with open(output_file, "w") as outfile:
-                # outfile.write("id,all_ese_ds,non_ese_ds,stops_ese_ds,non_stops_ese_ds\n")
-                # for id in all_ese_ds:
-                outfile.write("{0},{1},{2},{3},{4}\n".format(set_no, all_ese_ds, non_ese_ds, stops_ese_ds, non_stops_ese_ds))
-            # with open(output_file, "w") as outfile:
-            #     outfile.write("id,all_ese_ds,stops_ese_ds,non_stops_ese_ds,all_ese_stop_hits_ds,all_ese_non_stop_hits_ds,all_ese_stop_hits_query_count,all_ese_non_stop_hits_query_count,stops_ese_stop_hits_ds,stops_ese_non_stop_hits_ds,stops_ese_stop_hits_query_count,stops_ese_non_stop_hits_query_count,non_ese_ds,non_ese_stop_ds,non_ese_non_stop_ds,non_ese_stop_query_count,non_ese_non_stop_query_count\n")
-            #     for id in all_motif_hits:
-            #         outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, all_ese_ds, stops_ese_ds, non_stops_ese_ds, ",".join(gen.stringify(all_motif_hits[id])), ",".join(gen.stringify(stops_motif_hits[id])), non_ese_ds, ",".join(gen.stringify(non_motif_hits[id]))))
+                outfile.write("{0},{1},{2},{3},{4}\n".format(set_no, retained_overlap_ds, retained_non_overlap_ds, retained_stop_overlap_ds, retained_non_stop_overlap_ds))
 
-            # gen.remove_file(temp_output_file1)
-            # gen.remove_file(temp_output_file2)
-            # gen.remove_file(temp_output_file3)
+
+    return outputs
+
+
+def get_all_mutations(seq):
+    mutation_seqs = []
+    seq_nts = list(seq)
+    for i,nt in enumerate(seq_nts):
+        for mut_nt in nucleotides:
+            if mut_nt != nt:
+                query_nts = copy.deepcopy(seq_nts)
+                query_nts[i] = mut_nt
+                mut_seq = "".join(query_nts)
+                mutation_seqs.append(mut_seq)
+    return mutation_seqs
+
+
+def calc_ds_mutation_wrapper(motif_set_list, motif_sets, codon_sets, sequence_alignments, output_file = None, output_directory = None):
+    """
+    Wrapper to calculate the ds score for the sequence parts where the synonymous
+    site can and cannot form on of the codons in a codon set in sequence parts that overlap
+    a set of given motifs
+
+    Args:
+        motif_set_list (list): list of integers to iterate over, corresponds to motif_sets
+        motif_sets (dict): dictionary containing paths to motif set files
+        codon_sets (list): a list of list containing codon sets to iterate over
+        sequence_alignments (dict): dictionary containing the aligned sequences for each transcript
+        output_file (str): if set, output to given file
+        output_directory (str): if set, save files to output directory
+
+    Returns:
+        outputs (list): list of output file paths
+    """
+
+    if not output_file and not output_directory:
+        print("Please provide output file or directory...")
+        raise Exception
+
+    outputs = []
+
+    if motif_set_list:
+
+        # print(mp.current_process().name.split("-")[-1], motif_set_list)
+        for i, set_no in enumerate(motif_set_list):
+            print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(motif_set_list)))
+            motif_set = [i[0] for i in gen.read_many_fields(motif_sets[set_no], "\t") if "#" not in i[0] and ">" not in i[0]]
+
+            stop_motif_set = [i for i in motif_set if len(re.findall("(TAA|TAG|TGA)", i))]
+            non_stop_motif_set = [i for i in motif_set if i not in stop_motif_set]
+
+            non_stop_mutation_set = [get_all_mutations(i) for i in non_stop_motif_set]
+            mutation_set_stops = [len([i for i in motif_set if len(re.findall("(TAA|TAG|TGA)", i))]) for motif_set in non_stop_mutation_set]
+
+            non_stop_non_stop_mutation = [motif for i, motif in enumerate(non_stop_motif_set) if mutation_set_stops[i] == 0]
+            non_stop_stop_mutation = [motif for i, motif in enumerate(non_stop_motif_set) if mutation_set_stops[i] != 0]
+
+
+            # # now get all the parts of the sequences where only the motif sets occur
+            # full_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
+            # non_motif_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set, reverse = True)
+            no_stop_mutation = extract_motif_sequences_from_alignment(sequence_alignments, non_stop_non_stop_mutation)
+            stop_mutation = extract_motif_sequences_from_alignment(sequence_alignments, non_stop_stop_mutation)
+
+            # # now calculate the ds scores for each set
+            # all_ese_alignments = list_alignments_to_strings(full_extracted_sequences)
+            # non_motif_alignments = list_alignments_to_strings(non_motif_extracted_sequences)
+            stops_alignments = list_alignments_to_strings(stop_mutation)
+            non_stops_alignments = list_alignments_to_strings(no_stop_mutation)
+
+            # # calculate the ds scores
+            # all_ese_ds = cons.calc_ds(all_ese_alignments)
+            # non_ese_ds = cons.calc_ds(non_motif_alignments)
+            stops_ds = cons.calc_ds(stops_alignments)
+            non_stops_ds = cons.calc_ds(non_stops_alignments)
+
+
+            # set up the output filepath
+            if output_file:
+                output_file = output_file
+            if output_directory:
+                output_file = "{0}/{1}.{2}.txt".format(output_directory, set_no, random.random())
+            outputs.append(output_file)
+
+            with open(output_file, "w") as outfile:
+                outfile.write("{0},{1},{2}\n".format(set_no, stops_ds, non_stops_ds))
 
     return outputs
 
@@ -886,87 +1141,6 @@ def keep_fourfold_indices(indices, sequences):
 
 
 
-def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = None, fourfold = True):
-    """
-    Keep anything that looks like it belongs in the motif set
-    from either of the alignment sequences
-
-    Args:
-        alignment_seqs (list): list containing [seq1, seq2] of aligned sequences
-        motif_set (list): list of motifs to query the alignment sequences.
-        If the motif sits in frame, keep all sites, but if the next motif hit
-        isn't straight away, add a buffer of NNN to prevent any extra codons being created.
-        If the motif sits out of frame, if the first or first two are hits, then it is the last
-        codon of the motif. Take the first two nucleotides and add N to the end to remove the
-        synonymous site of the codon. If the last two or last nucleotides are hits, it is the
-        first codon of the motif. Take the last two nucleotides and add N to keep the synonymous
-        site. Then append all codons together.
-        fourfold (bool): if true, only use fourfold degenerates
-    Returns:
-        remaining_motif_sequences (list): list containing [seq1, seq1] but only
-        sites that overlap one of the motifs
-    """
-
-    remaining_motif_sequences = {}
-
-    for id in alignment_seqs:
-        alignment_set = alignment_seqs[id]
-        # get a list of all indices of all positions that overlap with something
-        # that looks like a motif in the set
-        indices_to_keep = get_motifs_overlap_indices(alignment_set, motif_set, reverse = reverse)
-        if fourfold:
-            indices_to_keep = keep_fourfold_indices(indices_to_keep, alignment_set)
-        kept_sequences = [[],[]]
-        for i, sequence in enumerate(alignment_set):
-            for pos in range(0, len(sequence)-3, 3):
-                positions = range(pos, pos+3)
-                # if there is at least one of the nucleotides in the codon that overlaps with the motif set
-                if list(set(positions) & set(indices_to_keep)):
-                    # get a list of the codon nucleotides
-                    codon = sequence[pos:pos+3]
-                    # 1) if all nucleotides are in the overlap, we can keep all
-                    #   then have to ensure that if the motif finishes in frame, and there is not another
-                    #    motif next to it, we add a buffer codon because otherwise we might accidently create
-                    #    motifs we dont want
-                    if positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
-                        if "-" not in codon:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-                        else:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-                        # if the next codon doesnt contain one of the indices, we need to add a buffer codon
-                        if pos+3 not in indices_to_keep:
-                            kept_sequences[i].append("NNN")
-
-                    # 2) if only the first two nucleotides are in the overlap, the
-                    #    synonymous site will not need to count, but they could add to previous codon
-                    #    so keep just the first two nucleotides
-                    #    e.g. |GTC|[(GC)N] => GCC
-                    # 3) if there is only the first nucleotide in the codon that overlaps, still
-                    #    need first two sites of sequence because synonymous site from previous codon
-                    #    could encode stop using first two of next codon, which includes the focal site
-                    #    e.g. |GTC|[(T)TN] => TTC
-                    elif positions[0] in indices_to_keep and positions[1] in indices_to_keep and positions[2] not in indices_to_keep or positions[0] in indices_to_keep and positions[1] not in indices_to_keep and positions[2] not in indices_to_keep:
-                        if "-" not in codon:
-                            kept_sequences[i].append(sequence[pos:pos+2] + "N")
-                        else:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-                    # 4) if only the last nucleotide overlaps, it means it is the first of the
-                    #    motif overlap and the synonymous site, but need the nucleotide before too
-                    #    e.g. [NG(T)]|TAC => CGT
-                    # 5) if the last two overlap, then it is the first two nucleotides of the motif,
-                    #    so keep both
-                    #    e.g. [N(AT)]|GTA => CAT
-                    elif positions[0] not in indices_to_keep and positions[1] not in indices_to_keep and positions[2] in indices_to_keep or positions[0] not in indices_to_keep and positions[1] in indices_to_keep and positions[2] in indices_to_keep:
-                        if "-" not in codon:
-                            kept_sequences[i].append("N" + sequence[pos+1:pos+3])
-                        else:
-                            kept_sequences[i].append(sequence[pos:pos+3])
-
-
-        kept_sequences = ["".join(i) for i in kept_sequences]
-        remaining_motif_sequences[id] = kept_sequences
-
-    return remaining_motif_sequences
 
 
 def extract_stop_codon_features(input_features, input_list, filter_by_gene = None):

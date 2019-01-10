@@ -737,7 +737,7 @@ def calc_exon_region_densities(codon_sets, upstream_flanks, cores, downstream_fl
 
 
 
-def calc_ds_all(simulations, alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
+def calc_ds_all(simulations, alignment_file, cds_fasta, mutli_exon_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
 
     start_time = time.time()
 
@@ -748,15 +748,15 @@ def calc_ds_all(simulations, alignment_file, cds_fasta, ortholog_cds_fasta, orth
     # set up the output directory
     gen.create_output_directories(output_directory)
     # get all the sequence alignments
+    # first get all the names of the cases that are multi exon genes
+    multi_exons_cds_names = gen.read_fasta(mutli_exon_fasta)[0]
+    # then get the alignments that match these genes
     sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
-    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names)}
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names) if name in multi_exons_cds_names}
 
     # if families file, pick a random member of the family
     if families_file:
-        if not run_number:
-            family_output_choices_file = "{0}/family_choices.txt".format(output_directory)
-        else:
-            family_output_choices_file = "{0}/family_choices_stats_{1}.txt".format(output_directory, run_number)
+        family_output_choices_file = "{0}/family_choices.txt".format(output_directory)
         sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
 
     codon_sets = [stops]
@@ -924,8 +924,6 @@ def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_
     gen.remove_directory(sim_output_directory)
 
 
-
-
 def calc_purine_content(exons_fasta, introns_fasta, output_file, families_file = None):
 
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
@@ -958,3 +956,57 @@ def calc_purine_content(exons_fasta, introns_fasta, output_file, families_file =
     with open(output_file, "w") as outfile:
         outfile.write("id,exon_purine_content,intron_purine_content,exon_core_purine_content,intron_core_purine_content\n")
         [outfile.write("{0},{1},{2},{3},{4}\n".format(i, np.median(exon_purine_content[i]), np.median(intron_purine_content[i]), np.median(exon_core_purine[i]), np.median(intron_core_purine[i]))) for i in sorted(intron_purine_content) if i in exon_purine_content]
+
+
+
+def calc_ds_mutation(simulations, alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
+
+    start_time = time.time()
+
+    # if the sequence alignment file doesnt exist, create it
+    if not os.path.isfile(alignment_file):
+        sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
+
+    # set up the output directory
+    gen.create_output_directories(output_directory)
+    # get all the sequence alignments
+    sequence_alignment_names, sequence_alignment_seqs = gen.read_fasta(alignment_file)
+    sequence_alignments = {name: sequence_alignment_seqs[i].split(",") for i, name in enumerate(sequence_alignment_names)}
+
+    # if families file, pick a random member of the family
+    if families_file:
+        if not run_number:
+            family_output_choices_file = "{0}/family_choices.txt".format(output_directory)
+        else:
+            family_output_choices_file = "{0}/family_choices_stats_{1}.txt".format(output_directory, run_number)
+        sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
+
+    codon_sets = [stops]
+
+    # create a file for the real outputs
+    temp_dir = "temp_ds"
+    gen.create_output_directories(temp_dir)
+
+    # create a list containing sets to test
+    real_name = "real"
+    motif_sets = {real_name: motif_file}
+    if motif_controls_directory:
+        for i, file in enumerate(os.listdir(motif_controls_directory)[:simulations]):
+            motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
+    motif_set_list = [i for i in motif_sets]
+    #
+    # set up the control runs
+    kwargs_dict = {"output_directory": temp_dir}
+    args = [motif_sets, codon_sets, sequence_alignments]
+    # run on the controls
+    outputs = simoc.run_simulation_function(motif_set_list, args, sequo.calc_ds_mutation_wrapper, kwargs_dict = kwargs_dict, sim_run = False, parallel = True)
+
+    # now write all the results to the output file
+    # sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
+    with open(output_file, "w") as outfile:
+        outfile.write("id,stop_mutation_ds,non_stops_mutation_ds\n")
+        for i, file in enumerate(outputs):
+            results = gen.read_many_fields(file, ",")[0]
+            if results[0] != "real":
+                results[0] = int(results[0])+1
+            outfile.write("{0},{1}\n".format(results[0], ",".join(results[1:])))
