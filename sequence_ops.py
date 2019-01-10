@@ -431,6 +431,7 @@ def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, seque
             motif_set = [i[0] for i in gen.read_many_fields(motif_sets[set_no], "\t") if "#" not in i[0] and ">" not in i[0]]
             stop_motif_set = [i for i in motif_set if len(re.findall("(TAA|TAG|TGA)", i))]
             non_stop_motif_set = [i for i in motif_set if i not in stop_motif_set]
+
             # now get all the parts of the sequences where only the motif sets occur
             full_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
             non_motif_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set, reverse = True)
@@ -442,29 +443,30 @@ def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, seque
             non_motif_alignments = list_alignments_to_strings(non_motif_extracted_sequences)
             stops_ese_alignments = list_alignments_to_strings(stops_extracted)
             non_stops_ese_alignments = list_alignments_to_strings(non_stops_extracted)
+
             # calculate the ds scores
             all_ese_ds = cons.calc_ds(all_ese_alignments)
             non_ese_ds = cons.calc_ds(non_motif_alignments)
             stops_ese_ds = cons.calc_ds(stops_ese_alignments)
             non_stops_ese_ds = cons.calc_ds(non_stops_ese_alignments)
 
-            # get the ds score for all ese sequence for those that hit codon set
-            temp_output_file1 = "temp_files/temp_ds_full_{0}.txt".format(set_no)
-            calc_motif_set_codons_ds(codon_sets, full_extracted_sequences, temp_output_file1)
-            # get ds score for only motifs that have a hit to stops
-            temp_output_file2 = "temp_files/temp_ds_stop_hits_{0}.txt".format(set_no)
-            calc_motif_set_codons_ds(codon_sets, non_stops_extracted, temp_output_file2)
-            # get ds score for only sequence parts that arent ese
-            temp_output_file3 = "temp_files/temp_ds_stop_hits_non_ese_{0}.txt".format(set_no)
-            calc_motif_set_codons_ds(codon_sets, non_motif_extracted_sequences, temp_output_file3)
-
-            all_motif_hits = gen.read_many_fields(temp_output_file1, ",")
-            stops_motif_hits = gen.read_many_fields(temp_output_file2, ",")
-            non_motif_hits = gen.read_many_fields(temp_output_file3, ",")
-
-            all_motif_hits = {i[0]: i[1:] for i in all_motif_hits[1:]}
-            stops_motif_hits = {i[0]: i[1:] for i in stops_motif_hits[1:]}
-            non_motif_hits = {i[0]: i[1:] for i in non_motif_hits[1:]}
+            # # get the ds score for all ese sequence for those that hit codon set
+            # temp_output_file1 = "temp_files/temp_ds_full_{0}.txt".format(set_no)
+            # calc_motif_set_codons_ds(codon_sets, full_extracted_sequences, temp_output_file1)
+            # # get ds score for only motifs that have a hit to stops
+            # temp_output_file2 = "temp_files/temp_ds_stop_hits_{0}.txt".format(set_no)
+            # calc_motif_set_codons_ds(codon_sets, non_stops_extracted, temp_output_file2)
+            # # get ds score for only sequence parts that arent ese
+            # temp_output_file3 = "temp_files/temp_ds_stop_hits_non_ese_{0}.txt".format(set_no)
+            # calc_motif_set_codons_ds(codon_sets, non_motif_extracted_sequences, temp_output_file3)
+            #
+            # all_motif_hits = gen.read_many_fields(temp_output_file1, ",")
+            # stops_motif_hits = gen.read_many_fields(temp_output_file2, ",")
+            # non_motif_hits = gen.read_many_fields(temp_output_file3, ",")
+            #
+            # all_motif_hits = {i[0]: i[1:] for i in all_motif_hits[1:]}
+            # stops_motif_hits = {i[0]: i[1:] for i in stops_motif_hits[1:]}
+            # non_motif_hits = {i[0]: i[1:] for i in non_motif_hits[1:]}
 
             # set up the output filepath
             if output_file:
@@ -474,13 +476,17 @@ def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, seque
             outputs.append(output_file)
 
             with open(output_file, "w") as outfile:
-                outfile.write("id,all_ese_ds,stops_ese_ds,non_stops_ese_ds,all_ese_stop_hits_ds,all_ese_non_stop_hits_ds,all_ese_stop_hits_query_count,all_ese_non_stop_hits_query_count,stops_ese_stop_hits_ds,stops_ese_non_stop_hits_ds,stops_ese_stop_hits_query_count,stops_ese_non_stop_hits_query_count,non_ese_ds,non_ese_stop_ds,non_ese_non_stop_ds,non_ese_stop_query_count,non_ese_non_stop_query_count\n")
-                for id in all_motif_hits:
-                    outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, all_ese_ds, stops_ese_ds, non_stops_ese_ds, ",".join(gen.stringify(all_motif_hits[id])), ",".join(gen.stringify(stops_motif_hits[id])), non_ese_ds, ",".join(gen.stringify(non_motif_hits[id]))))
+                # outfile.write("id,all_ese_ds,non_ese_ds,stops_ese_ds,non_stops_ese_ds\n")
+                # for id in all_ese_ds:
+                outfile.write("{0},{1},{2},{3},{4}\n".format(set_no, all_ese_ds, non_ese_ds, stops_ese_ds, non_stops_ese_ds))
+            # with open(output_file, "w") as outfile:
+            #     outfile.write("id,all_ese_ds,stops_ese_ds,non_stops_ese_ds,all_ese_stop_hits_ds,all_ese_non_stop_hits_ds,all_ese_stop_hits_query_count,all_ese_non_stop_hits_query_count,stops_ese_stop_hits_ds,stops_ese_non_stop_hits_ds,stops_ese_stop_hits_query_count,stops_ese_non_stop_hits_query_count,non_ese_ds,non_ese_stop_ds,non_ese_non_stop_ds,non_ese_stop_query_count,non_ese_non_stop_query_count\n")
+            #     for id in all_motif_hits:
+            #         outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, all_ese_ds, stops_ese_ds, non_stops_ese_ds, ",".join(gen.stringify(all_motif_hits[id])), ",".join(gen.stringify(stops_motif_hits[id])), non_ese_ds, ",".join(gen.stringify(non_motif_hits[id]))))
 
-            gen.remove_file(temp_output_file1)
-            gen.remove_file(temp_output_file2)
-            gen.remove_file(temp_output_file3)
+            # gen.remove_file(temp_output_file1)
+            # gen.remove_file(temp_output_file2)
+            # gen.remove_file(temp_output_file3)
 
     return outputs
 
@@ -860,7 +866,27 @@ def extract_multi_exons_entries_to_bed(input_bed, output_bed = None):
         gen.remove_file(output_bed_file)
 
 
-def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = None):
+def keep_fourfold_indices(indices, sequences):
+
+    kept_indices = []
+
+    length = len(sequences[0])
+    # for each of the codons in the sequences
+    for i in range(0, length, 3):
+        # get the indices of the codon
+        local_range = list(range(i, i+3))
+        # if any of those indices are in ese hits
+        if list(set(local_range) & set(indices)):
+            codons = [i[local_range[0]:local_range[-1]+1] for i in sequences]
+            local_fourfold = [i for i in codons if i in fourfold]
+            if len(local_fourfold):
+                kept_indices.extend([i for i in local_range if i in indices])
+
+    return kept_indices
+
+
+
+def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = None, fourfold = True):
     """
     Keep anything that looks like it belongs in the motif set
     from either of the alignment sequences
@@ -875,7 +901,7 @@ def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = 
         synonymous site of the codon. If the last two or last nucleotides are hits, it is the
         first codon of the motif. Take the last two nucleotides and add N to keep the synonymous
         site. Then append all codons together.
-
+        fourfold (bool): if true, only use fourfold degenerates
     Returns:
         remaining_motif_sequences (list): list containing [seq1, seq1] but only
         sites that overlap one of the motifs
@@ -888,7 +914,8 @@ def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = 
         # get a list of all indices of all positions that overlap with something
         # that looks like a motif in the set
         indices_to_keep = get_motifs_overlap_indices(alignment_set, motif_set, reverse = reverse)
-
+        if fourfold:
+            indices_to_keep = keep_fourfold_indices(indices_to_keep, alignment_set)
         kept_sequences = [[],[]]
         for i, sequence in enumerate(alignment_set):
             for pos in range(0, len(sequence)-3, 3):
@@ -938,7 +965,6 @@ def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = 
 
         kept_sequences = ["".join(i) for i in kept_sequences]
         remaining_motif_sequences[id] = kept_sequences
-
 
     return remaining_motif_sequences
 

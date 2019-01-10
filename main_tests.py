@@ -11,11 +11,11 @@ from useful_motif_sets import stops
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", ]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", ]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23], ints=[], opt_flags=[2,3])
-    input_directory, output_directory, simulations, ese_file, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density, calc_purine_content, exon_region_excess, non_coding_exons = args.input_directory, args.output_directory, args.simulations, args.ese_file, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density, args.calc_purine_content, args.exon_region_excess, args.non_coding_exons
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24], ints=[], opt_flags=[2,3])
+    input_directory, output_directory, simulations, ese_file, clean_run, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density, calc_purine_content, exon_region_excess, non_coding_exons = args.input_directory, args.output_directory, args.simulations, args.ese_file, args.clean_run, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density, args.calc_purine_content, args.exon_region_excess, args.non_coding_exons
 
     if simulations:
         simulations = int(simulations)
@@ -95,7 +95,7 @@ def main():
         mto.calc_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
     if cds_ds_all:
-        mto.calc_ds_all(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file2, motif_controls_directory = motif_simulations_directory, families_file = families_file)
+        mto.calc_ds_all(simulations, alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file2, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
     if cds_codon_ds:
         mto.calc_codon_ds(alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file1, families_file = families_file, codon_sets_file = gc_matched_stops_sets_file)
@@ -122,7 +122,7 @@ def main():
             raise Exception
         intron_density_controls_dir = "clean_run/motif_controls/{0}".format(ese_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(intron_density_controls_dir)
-        mto.calculate_intron_densities(ese_file, introns_fasta, intron_density_sim_file, intron_density_controls_dir, families_file = families_file, required_simulations = simulations, combined = True)
+        mto.calculate_intron_densities(ese_file, introns_fasta, intron_density_sim_file, intron_density_controls_dir, families_file = families_file, required_simulations = simulations, combined = True, clean_run = clean_run)
 
     output_file = "{0}/purine_content.csv".format(output_directory)
     if calc_purine_content:

@@ -14,6 +14,7 @@ import os
 import multiprocessing as mp
 from progressbar import ProgressBar
 from useful_motif_sets import stops
+import pickle
 
 def calc_codon_set_density(exon_list, intron_list, codon_set = None):
     """
@@ -736,7 +737,7 @@ def calc_exon_region_densities(codon_sets, upstream_flanks, cores, downstream_fl
 
 
 
-def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
+def calc_ds_all(simulations, alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, motif_file, output_directory, output_file, motif_controls_directory = None, families_file = None, run_number = None, codon_sets_file = None):
 
     start_time = time.time()
 
@@ -758,14 +759,8 @@ def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcri
             family_output_choices_file = "{0}/family_choices_stats_{1}.txt".format(output_directory, run_number)
         sequence_alignments = sequo.pick_random_family_member(families_file, sequence_alignments, output_file = family_output_choices_file)
 
-
     codon_sets = [stops]
-    # if codon_sets_file:
-    #     gc_matched_sets = gen.read_many_fields(codon_sets_file, "\t")
-    #     purine_matched = sequo.get_purine_matched_sets(stops, gc_matched_sets)
-    #     extra_sets = [i for i in purine_matched if len(list(set(i) & set(stops))) == 0]
-    #     codon_sets = codon_sets + extra_sets
-    #
+
     # create a file for the real outputs
     temp_dir = "temp_ds"
     gen.create_output_directories(temp_dir)
@@ -774,7 +769,7 @@ def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcri
     real_name = "real"
     motif_sets = {real_name: motif_file}
     if motif_controls_directory:
-        for i, file in enumerate(os.listdir(motif_controls_directory)):
+        for i, file in enumerate(os.listdir(motif_controls_directory)[:simulations]):
             motif_sets[i] = "{0}/{1}".format(motif_controls_directory, file)
     motif_set_list = [i for i in motif_sets]
     #
@@ -785,24 +780,48 @@ def calc_ds_all(alignment_file, cds_fasta, ortholog_cds_fasta, ortholog_transcri
     outputs = simoc.run_simulation_function(motif_set_list, args, sequo.calc_motif_sets_all_ds_wrapper, kwargs_dict = kwargs_dict, sim_run = False, parallel = True)
 
     # now write all the results to the output file
-    sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
+    # sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
     with open(output_file, "w") as outfile:
+        outfile.write("id,all_ese_ds,non_ese_ds,stops_ese_ds,non_stops_ese_ds\n")
         for i, file in enumerate(outputs):
-            if i == 0:
-                header = gen.read_many_fields(file, ",")[0]
-                outfile.write("sim_id,{0}\n".format(",".join(header[1:])))
-            results = gen.read_many_fields(file, ",")[1:]
-            results = {i[0]: i[1:] for i in results}
-            # get the id of the results
-            sim_no = file.split("/")[-1].split(".")[0]
-            if sim_no == real_name:
-                id = "real"
-            else:
-                id = "sim_{0}".format(int(sim_no)+1)
-            outfile.write("{0}".format(id))
-            for codon_set in sorted_codon_sets:
-                outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
-            outfile.write("\n")
+            # if i == 0:
+            #     header = gen.read_many_fields(file, ",")[0]
+            #     outfile.write("sim_id,{0}\n".format(",".join(header[1:])))
+            results = gen.read_many_fields(file, ",")[0]
+            if results[0] != "real":
+                results[0] = int(results[0])+1
+            outfile.write("{0},{1}\n".format(results[0], ",".join(results[1:])))
+            # results = {i[0]: i[1:] for i in results}
+            # # get the id of the results
+            # sim_no = file.split("/")[-1].split(".")[0]
+            # if sim_no == real_name:
+            #     id = "real"
+            # else:
+            #     id = "sim_{0}".format(int(sim_no)+1)
+            # outfile.write("{0}".format(id))
+            # for codon_set in sorted_codon_sets:
+            #     outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
+            # outfile.write("\n")
+
+    # # now write all the results to the output file
+    # sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
+    # with open(output_file, "w") as outfile:
+    #     for i, file in enumerate(outputs):
+    #         if i == 0:
+    #             header = gen.read_many_fields(file, ",")[0]
+    #             outfile.write("sim_id,{0}\n".format(",".join(header[1:])))
+    #         results = gen.read_many_fields(file, ",")[1:]
+    #         results = {i[0]: i[1:] for i in results}
+    #         # get the id of the results
+    #         sim_no = file.split("/")[-1].split(".")[0]
+    #         if sim_no == real_name:
+    #             id = "real"
+    #         else:
+    #             id = "sim_{0}".format(int(sim_no)+1)
+    #         outfile.write("{0}".format(id))
+    #         for codon_set in sorted_codon_sets:
+    #             outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
+    #         outfile.write("\n")
 
     # # remove all the temp files
     [gen.remove_file(i) for i in outputs]
@@ -828,22 +847,26 @@ def non_coding_exons(fasta_file, output_file, families_file = None):
         outfile.write("id,density,scaled_density\n")
         [outfile.write("{0},{1},{2}\n".format(id, np.median(density[id]), np.median(scaled_density[id]))) for id in density]
 
-def calculate_motif_densities(iteration_list, filelist, sequence_list):
+def calculate_motif_densities(iteration_list, filelist, sequence_list, clean_run, output_directory = None):
 
-    densities = {}
+    if not output_directory:
+        output_directory = "temp_dir"
+    gen.create_output_directories(output_directory)
+
+    output_files = []
 
     for i, iteration in enumerate(iteration_list):
-        print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(iteration_list)))
-        motif_set = [i[0] for i in gen.read_many_fields(filelist[iteration], "\t") if "#" not in i[0] and ">" not in i[0]]
-        density = {i: seqo.calc_motif_density(sequence_list[i], motif_set) for i in sequence_list}
-        densities[iteration] = density
-        # density = seqo.calc_motif_density(sequence_list, motif_set)
+        gen.print_parallel_status(i, iteration_list)
+        output_file = "{0}/sim{1}.txt".format(output_directory, iteration)
+        output_files.append(output_file)
+        if not os.path.isfile(output_file) or clean_run:
+            motif_set = [i[0] for i in gen.read_many_fields(filelist[iteration], "\t") if "#" not in i[0] and ">" not in i[0]]
+            density = {i: seqo.calc_motif_density(sequence_list[i], motif_set) for i in sequence_list}
+            pickle.dump(density, open(output_file, "wb" ) )
+        # densities[iteration] = density
+    return output_files
 
-        # densities[iteration] = [density, sequo.calc_purine_content(motif_set)]
-
-    return densities
-
-def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_dir, families_file = None, required_simulations = None, combined = None):
+def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_dir, families_file = None, required_simulations = None, combined = None, clean_run = None):
 
     if not required_simulations:
         required_simulations = 1000
@@ -857,10 +880,11 @@ def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_
     # get the list of introns
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
     introns = collections.defaultdict(lambda: [])
-    [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names)]
+    [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names[:10000])]
 
     introns = sequo.pick_random_family_member(families_file, introns)
 
+    combined = False
     if combined:
         intron_list = {"all": []}
         [intron_list["all"].extend(introns[i]) for i in introns]
@@ -875,22 +899,29 @@ def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_
     real_motifs = sequo.read_motifs(motif_file)
     real_densities = {i: seqo.calc_motif_density(introns[i], real_motifs) for i in introns}
 
-    args = [motif_sets, introns]
-    outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, sim_run = False)
+    sim_output_directory = "temp_motif_dir"
+    args = [motif_sets, introns, clean_run]
+    kwargs = {"output_directory": sim_output_directory}
+    outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, kwargs_dict = kwargs, sim_run = False)
 
     results = {}
     for id in real_densities:
-        results[id] = [real_densities[id]]
-        for simulation in sorted(outputs):
-            results[id].append(outputs[simulation][id])
+        results[id] = real_densities[id]
+    sim_densities = collections.defaultdict(lambda: collections.defaultdict())
+    for output in outputs:
+        sim_id = int(output.split("/")[-1].split(".")[0][3:])
+        densities = pickle.load( open(output, "rb" ) )
+        for id in densities:
+            sim_densities[sim_id][id] = densities[id]
 
     with open(output_file, "w") as outfile:
         outfile.write("sim_id,{0}\n".format(",".join([id for id in sorted(real_densities)])))
         outfile.write("real,{0}\n".format(",".join(gen.stringify([real_densities[id] for id in sorted(real_densities)]))))
-        for sim in outputs:
-            outfile.write("{0},{1}\n".format(sim, ",".join(gen.stringify([outputs[sim][id] for id in sorted(outputs[sim])]))))
+        for sim in sorted(sim_densities):
+            sim_outputs = [sim_densities[sim][i] for i in sorted(sim_densities[sim])]
+            outfile.write("{0},{1}\n".format(sim, ",".join(gen.stringify(sim_outputs))))
 
-
+    gen.remove_directory(sim_output_directory)
 
 
 
