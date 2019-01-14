@@ -42,7 +42,7 @@ def main():
     if generate_gc_matched_stop_sets:
         seqo.get_gc_matched_motifs(stops, gc_matched_stops_sets_file)
 
-    motif_simulations_directory = "{0}/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
+    motif_simulations_directory = "{0}/dinucleotide_controls/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
     if generate_motif_dinucleotide_controls:
         simopc.generate_motif_dinucleotide_controls(ese_file, 10000, motif_simulations_directory, match_density = True)
 

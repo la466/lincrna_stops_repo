@@ -4,6 +4,15 @@ head(file)
 
 real = file[file$id == "real",]
 sims = file[file$id != "real",]
+
+nrow(sims)
+
+nrow(sims[sims$all_ese_ds <= real$all_ese_ds,])
+nrow(sims[sims$non_ese_ds <= real$non_ese_ds,])
+nrow(sims[sims$stops_ese_ds <= real$stops_ese_ds,])
+nrow(sims[sims$non_stops_ese_ds <= real$non_stops_ese_ds,])
+
+
 sims
 nd = (real$all_ese_ds - mean(sims$all_ese_ds)) / mean(sims$all_ese_ds)
 

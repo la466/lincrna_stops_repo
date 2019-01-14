@@ -427,7 +427,7 @@ def chunk_indices(flat_list):
     # chunked_list = [i for i in chunked_list if len(i)]
     return chunked_list
 
-def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = None, only_fourfold = True):
+def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = None, only_fourfold = True, codon_set = None):
     """
     Keep anything that looks like it belongs in the motif set
     from either of the alignment sequences
@@ -494,39 +494,42 @@ def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = 
             non_overlap_codon_indices = chunk_indices(non_overlap_codon_indices)
 
 
-            # now get the indices that create a stop from the overlap set
-            stop_overlap_codon_indices = []
-            non_stop_overlap_codon_indices = []
-            for chunk in overlap_codon_indices:
-                codons = [alignment_set[0][chunk[1]:chunk[-1]+2], alignment_set[0][chunk[2]:chunk[-1]+3], alignment_set[1][chunk[1]:chunk[-1]+2], alignment_set[1][chunk[2]:chunk[-1]+3]]
-                if list(set(stops) & set(codons)):
-                    stop_overlap_codon_indices.append(chunk)
-                else:
-                    non_stop_overlap_codon_indices.append(chunk)
-
-
-
             overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in overlap_codon_indices] for sequence in alignment_set]
             non_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in non_overlap_codon_indices] for sequence in alignment_set]
-            stop_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in stop_overlap_codon_indices] for sequence in alignment_set]
-            non_stop_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in non_stop_overlap_codon_indices] for sequence in alignment_set]
-
+            # join the sequences
             motif_overlap_sequences = ["".join(i) for i in overlap_sequences]
             motif_non_overlap_sequences = ["".join(i) for i in non_overlap_sequences]
-            motif_stop_overlap_sequences = ["".join(i) for i in stop_overlap_sequences]
-            motif_non_stop_overlap_sequences = ["".join(i) for i in non_stop_overlap_sequences]
-
+            # convert so its just hte synonymous site that differs
             motif_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_overlap_sequences]
             motif_non_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_non_overlap_sequences]
-            motif_stop_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_stop_overlap_sequences]
-            motif_non_stop_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_non_stop_overlap_sequences]
-
+            # add to dictionary
             retained_overlap_sequences[id] = motif_overlap_sequences
             retained_non_overlap_sequences[id] = motif_non_overlap_sequences
-            retained_stop_overlap_sequences[id] = motif_stop_overlap_sequences
-            retained_non_stop_overlap_sequences[id] = motif_non_stop_overlap_sequences
 
-    return retained_overlap_sequences, retained_non_overlap_sequences, retained_stop_overlap_sequences, retained_non_stop_overlap_sequences
+            if codon_set:
+                # now get the indices that create a stop from the overlap set
+                stop_overlap_codon_indices = []
+                non_stop_overlap_codon_indices = []
+                for chunk in overlap_codon_indices:
+                    codons = [alignment_set[0][chunk[1]:chunk[-1]+2], alignment_set[0][chunk[2]:chunk[-1]+3], alignment_set[1][chunk[1]:chunk[-1]+2], alignment_set[1][chunk[2]:chunk[-1]+3]]
+                    if list(set(codon_set) & set(codons)):
+                        stop_overlap_codon_indices.append(chunk)
+                    else:
+                        non_stop_overlap_codon_indices.append(chunk)
+
+                stop_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in stop_overlap_codon_indices] for sequence in alignment_set]
+                non_stop_overlap_sequences = [[sequence[i[0]:i[-1]+1] if i != "-" else "---" for i in non_stop_overlap_codon_indices] for sequence in alignment_set]
+                motif_stop_overlap_sequences = ["".join(i) for i in stop_overlap_sequences]
+                motif_non_stop_overlap_sequences = ["".join(i) for i in non_stop_overlap_sequences]
+                motif_stop_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_stop_overlap_sequences]
+                motif_non_stop_overlap_sequences = ["".join(["GC{0}".format(seq[i+2]) if "-" not in seq[i:i+3] else seq[i:i+3] for i in range(0, len(seq), 3)]) for seq in motif_non_stop_overlap_sequences]
+                retained_stop_overlap_sequences[id] = motif_stop_overlap_sequences
+                retained_non_stop_overlap_sequences[id] = motif_non_stop_overlap_sequences
+
+    if codon_set:
+        return retained_overlap_sequences, retained_non_overlap_sequences, retained_stop_overlap_sequences, retained_non_stop_overlap_sequences
+    else:
+        return retained_overlap_sequences, retained_non_overlap_sequences
 
                 # motif_seq = []
                 # #for each codon in the sequences
@@ -630,7 +633,7 @@ def calc_motif_sets_all_ds_wrapper(motif_set_list, motif_sets, codon_sets, seque
             non_stop_motif_set = [i for i in motif_set if i not in stop_motif_set]
 
             # now get all the parts of the sequences where only the motif sets occur
-            retained_overlap_sequence, retained_non_overlap_sequence, retained_stop_overlap_sequences, reatined_non_stop_overlap_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
+            retained_overlap_sequence, retained_non_overlap_sequence, retained_stop_overlap_sequences, reatined_non_stop_overlap_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set, codon_set = stops)
 
             # # now calculate the ds scores for each set
             retained_overlap_alignments = list_alignments_to_strings(retained_overlap_sequence)
@@ -703,35 +706,29 @@ def calc_ds_mutation_wrapper(motif_set_list, motif_sets, codon_sets, sequence_al
         for i, set_no in enumerate(motif_set_list):
             print("(W{0}) {1}/{2}".format(mp.current_process().name.split("-")[-1], i+1, len(motif_set_list)))
             motif_set = [i[0] for i in gen.read_many_fields(motif_sets[set_no], "\t") if "#" not in i[0] and ">" not in i[0]]
-
             stop_motif_set = [i for i in motif_set if len(re.findall("(TAA|TAG|TGA)", i))]
             non_stop_motif_set = [i for i in motif_set if i not in stop_motif_set]
 
             non_stop_mutation_set = [get_all_mutations(i) for i in non_stop_motif_set]
-            mutation_set_stops = [len([i for i in motif_set if len(re.findall("(TAA|TAG|TGA)", i))]) for motif_set in non_stop_mutation_set]
+            mutation_set_no_stops = [non_stop_motif_set[i] for i, motif_set in enumerate(non_stop_mutation_set) if sum([len(re.findall("(TAA|TAG|TGA)", motif)) for motif in motif_set]) == 0]
+            mutation_set_stops = [i for i in non_stop_motif_set if i not in mutation_set_no_stops]
 
-            non_stop_non_stop_mutation = [motif for i, motif in enumerate(non_stop_motif_set) if mutation_set_stops[i] == 0]
-            non_stop_stop_mutation = [motif for i, motif in enumerate(non_stop_motif_set) if mutation_set_stops[i] != 0]
-
-
-            # # now get all the parts of the sequences where only the motif sets occur
-            # full_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set)
-            # non_motif_extracted_sequences = extract_motif_sequences_from_alignment(sequence_alignments, motif_set, reverse = True)
-            no_stop_mutation = extract_motif_sequences_from_alignment(sequence_alignments, non_stop_non_stop_mutation)
-            stop_mutation = extract_motif_sequences_from_alignment(sequence_alignments, non_stop_stop_mutation)
+            retained_mutation_no_stops =  extract_motif_sequences_from_alignment(sequence_alignments, mutation_set_no_stops)[0]
+            retained_mutation_stops =  extract_motif_sequences_from_alignment(sequence_alignments, mutation_set_stops)[0]
 
             # # now calculate the ds scores for each set
-            # all_ese_alignments = list_alignments_to_strings(full_extracted_sequences)
-            # non_motif_alignments = list_alignments_to_strings(non_motif_extracted_sequences)
-            stops_alignments = list_alignments_to_strings(stop_mutation)
-            non_stops_alignments = list_alignments_to_strings(no_stop_mutation)
+            stops_alignments = list_alignments_to_strings(retained_mutation_stops)
+            non_stops_alignments = list_alignments_to_strings(retained_mutation_no_stops)
 
-            # # calculate the ds scores
-            # all_ese_ds = cons.calc_ds(all_ese_alignments)
-            # non_ese_ds = cons.calc_ds(non_motif_alignments)
-            stops_ds = cons.calc_ds(stops_alignments)
-            non_stops_ds = cons.calc_ds(non_stops_alignments)
-
+            # # calculate the ds scores)
+            if sum([len(i) for i in stops_alignments]):
+                stops_ds = cons.calc_ds(stops_alignments)
+            else:
+                stops_ds = "nan"
+            if sum([len(i) for i in non_stops_alignments]):
+                non_stops_ds = cons.calc_ds(non_stops_alignments)
+            else:
+                non_stops_ds = "nan"
 
             # set up the output filepath
             if output_file:
@@ -1742,6 +1739,24 @@ def group_family_results(result_list, families):
 
     return outputs
 
+def return_median_family_result(result_list, families):
+    """
+    Group the results of sequences in paralagous family together
+
+    Args:
+        result_list (dict): dictionary of results with transcript ids a keys
+        families (list): list of lists containing families
+
+    Returns:
+        outputs (dict): dictionary containing list of outputs sorted by families,
+            dict[id] = [result]
+    """
+
+    grouped_results = group_family_results(result_list, families)
+    outputs = {i: np.median(grouped_results[i]) for i in grouped_results}
+
+    return outputs
+
 
 def intersect_coding_exons(full_bed, reduced_bed, output_file):
     """
@@ -1785,8 +1800,9 @@ def list_alignments_to_strings(seq_list):
     """
 
     alignments = [[],[]]
-    [alignments[0].append(seq_list[i][0]) for i in sorted(seq_list)]
-    [alignments[1].append(seq_list[i][1]) for i in sorted(seq_list)]
+
+    [alignments[0].append(seq_list[i][0]) for i in sorted(seq_list) if len(seq_list[i][0])]
+    [alignments[1].append(seq_list[i][1]) for i in sorted(seq_list) if len(seq_list[i][1])]
     alignments = ["".join(i) for i in alignments]
     return alignments
 
