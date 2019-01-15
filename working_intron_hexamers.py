@@ -12,7 +12,6 @@ import pandas as pd
 # import scipy.stats as stats
 # import matplotlib.pyplot as plt
 import conservation
-import _rs_conservation as rsc
 import os
 import zipfile
 from useful_motif_sets import stops
