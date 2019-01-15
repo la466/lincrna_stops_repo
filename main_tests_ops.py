@@ -855,13 +855,14 @@ def calculate_motif_densities(iteration_list, filelist, sequence_list, clean_run
 
     output_files = []
 
+
     for i, iteration in enumerate(iteration_list):
         gen.print_parallel_status(i, iteration_list)
         output_file = "{0}/sim{1}.txt".format(output_directory, iteration)
         output_files.append(output_file)
         if not os.path.isfile(output_file) or clean_run:
             motif_set = [i[0] for i in gen.read_many_fields(filelist[iteration], "\t") if "#" not in i[0] and ">" not in i[0]]
-            density = {i: seqo.calc_motif_density(sequence_list[i], motif_set) for i in sequence_list}
+            density = {id: seqo.calc_motif_density(sequence_list[id], motif_set) for id in sequence_list}
             pickle.dump(density, open(output_file, "wb" ) )
         # densities[iteration] = density
     return output_files
@@ -880,7 +881,7 @@ def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_
     # get the list of introns
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
     introns = collections.defaultdict(lambda: [])
-    [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names[:10000])]
+    [introns[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names)]
 
     introns = sequo.pick_random_family_member(families_file, introns)
 
@@ -902,60 +903,62 @@ def calculate_intron_densities(motif_file, introns_fasta, output_file, controls_
     sim_output_directory = "temp_motif_dir"
     args = [motif_sets, introns, clean_run]
     kwargs = {"output_directory": sim_output_directory}
-    outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, kwargs_dict = kwargs, sim_run = False)
+    outputs = simoc.run_simulation_function(motif_set_list, args, calculate_motif_densities, kwargs_dict = kwargs, sim_run = False, parallel = True)
 
-    results = {}
+    results = collections.defaultdict(lambda: [])
     for id in real_densities:
-        results[id] = real_densities[id]
-    sim_densities = collections.defaultdict(lambda: collections.defaultdict())
+        results[id].append(real_densities[id])
+
+    # print(len(real_densities))
+
     for output in outputs:
         sim_id = int(output.split("/")[-1].split(".")[0][3:])
         densities = pickle.load( open(output, "rb" ) )
-        for id in densities:
-            sim_densities[sim_id][id] = densities[id]
+
+        for id in results:
+            results[id].append(densities[id])
 
     with open(output_file, "w") as outfile:
-        outfile.write("sim_id,{0}\n".format(",".join([id for id in sorted(real_densities)])))
-        outfile.write("real,{0}\n".format(",".join(gen.stringify([real_densities[id] for id in sorted(real_densities)]))))
-        for sim in sorted(sim_densities):
-            sim_outputs = [sim_densities[sim][i] for i in sorted(sim_densities[sim])]
-            outfile.write("{0},{1}\n".format(sim, ",".join(gen.stringify(sim_outputs))))
+        outfile.write("id,real,{0}\n".format(",".join(["sim_{0}".format(i+1) for i in range(len(outputs))])))
+        for id in sorted(results):
+            outfile.write("{0},{1},{2}\n".format(id, results[id][0], ",".join(gen.stringify(results[id][1:]))))
 
-    gen.remove_directory(sim_output_directory)
 
 
 def calc_purine_content(exons_fasta, introns_fasta, output_file, families_file = None):
 
     intron_names, intron_seqs = gen.read_fasta(introns_fasta)
     introns = collections.defaultdict(lambda: [])
-    [introns[name.split('.')[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if len(intron_seqs[i]) > 211]
+    [introns[name.split('.')[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names)]
 
     exon_names, exon_seqs = gen.read_fasta(exons_fasta)
     exons = collections.defaultdict(lambda: [])
-    [exons[name.split('.')[0]].append(exon_seqs[i]) for i, name in enumerate(exon_names) if len(exon_seqs[i]) > 211 and name.split(".")[0] in introns]
+    [exons[name.split('.')[0]].append(exon_seqs[i]) for i, name in enumerate(exon_names) if name.split(".")[0] in introns]
 
 
     exon_purine_content = {i: sequo.calc_purine_content(exons[i]) for i in exons}
     intron_purine_content = {i: sequo.calc_purine_content(introns[i]) for i in introns}
 
 
-    exon_cores = {i: [seq[69:-69] for seq in exons[i]] for i in exons}
-    intron_cores = {i: [seq[69:-69] for seq in introns[i]] for i in introns}
+    # exon_cores = {i: [seq[69:-69] for seq in exons[i]] for i in exons}
+    # intron_cores = {i: [seq[69:-69] for seq in introns[i]] for i in introns}
 
-    exon_core_purine = {i: sequo.calc_purine_content(exon_cores[i]) for i in exon_cores}
-    intron_core_purine = {i: sequo.calc_purine_content(intron_cores[i]) for i in intron_cores}
+    # exon_core_purine = {i: sequo.calc_purine_content(exon_cores[i]) for i in exon_cores}
+    # intron_core_purine = {i: sequo.calc_purine_content(intron_cores[i]) for i in intron_cores}
 
 
     if families_file:
         families = gen.read_many_fields(families_file, "\t")
         exon_purine_content = sequo.group_family_results(exon_purine_content, families)
         intron_purine_content = sequo.group_family_results(intron_purine_content, families)
-        exon_core_purine = sequo.group_family_results(exon_core_purine, families)
-        intron_core_purine = sequo.group_family_results(intron_core_purine, families)
+        # exon_core_purine = sequo.group_family_results(exon_core_purine, families)
+        # intron_core_purine = sequo.group_family_results(intron_core_purine, families)
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,exon_purine_content,intron_purine_content,exon_core_purine_content,intron_core_purine_content\n")
-        [outfile.write("{0},{1},{2},{3},{4}\n".format(i, np.median(exon_purine_content[i]), np.median(intron_purine_content[i]), np.median(exon_core_purine[i]), np.median(intron_core_purine[i]))) for i in sorted(intron_purine_content) if i in exon_purine_content]
+        outfile.write("id,exon_purine_content,intron_purine_content\n")
+        # outfile.write("id,exon_purine_content,intron_purine_content,exon_core_purine_content,intron_core_purine_content\n")
+        [outfile.write("{0},{1},{2}\n".format(i, np.median(exon_purine_content[i]), np.median(intron_purine_content[i]))) for i in sorted(intron_purine_content) if i in exon_purine_content]
+        # [outfile.write("{0},{1},{2},{3},{4}\n".format(i, np.median(exon_purine_content[i]), np.median(intron_purine_content[i]), np.median(exon_core_purine[i]), np.median(intron_core_purine[i]))) for i in sorted(intron_purine_content) if i in exon_purine_content]
 
 
 

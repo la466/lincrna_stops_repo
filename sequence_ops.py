@@ -193,6 +193,7 @@ class Genome_Functions(object):
         self.filelist["quality_filtered_cds_fasta"] = quality_filtered_cds_fasta
 
 
+
 class PAML_Functions(object):
 
     def __init__(self, input_file = None, output_file = None, tree_file = None, working_dir = None):
@@ -2223,3 +2224,11 @@ def keep_only_no_stops_in_one_reading_frame(seq_list):
 
 def read_motifs(input_file):
     return [i[0] for i in gen.read_many_fields(input_file, "\t") if i[0][0] not in [">", "#"]]
+
+
+def calc_nucleotide_content(seqs):
+    content = {}
+    nts = list("".join(seqs))
+    for nt in sorted(nucleotides):
+        content[nt] = np.divide(nts.count(nt), len(nts))
+    return content

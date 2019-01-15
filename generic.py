@@ -679,4 +679,4 @@ def update_reset_count(count, limit):
 
 
 def print_parallel_status(i, iteration_list):
-    print("(W{0}) {1}/{2}".format(multiprocessing.current_process().name.split("-")[-1], i+1, len(iteration_list)))
+    print("(Worker-{0}) {1}/{2}".format(multiprocessing.current_process().name.split("-")[-1], i+1, len(iteration_list)))

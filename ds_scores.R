@@ -2,8 +2,21 @@ file = read.csv("clean_run/tests/ese_ds/codon_ds_stats.csv", head=T)
 
 head(file)
 
+file$diff = file$stops_ese_ds = file$non_stops_ese_ds
 real = file[file$id == "real",]
+real
 sims = file[file$id != "real",]
+
+(nrow(sims[sims$all_ese_ds <= real$all_ese_ds,]) + 1) / (nrow(sims) + 1)
+(nrow(sims[sims$non_ese_ds <= real$non_ese_ds,]) + 1) / (nrow(sims) + 1)
+(nrow(sims[sims$stops_ese_ds <= real$stops_ese_ds,]) + 1) / (nrow(sims) + 1)
+(nrow(sims[sims$non_stops_ese_ds <= real$non_stops_ese_ds,]) + 1) / (nrow(sims) + 1)
+(nrow(sims[sims$diff <= real$diff,]) + 1) / (nrow(sims) + 1)
+
+real
+head(sims)
+real
+
 
 nrow(sims)
 
@@ -22,6 +35,8 @@ sims$diff = (sims$stops_ese_ds / sims$non_stops_ese_ds) * (1 - abs(nd))
 nrow(sims[sims$diff > 0 & sims$diff >= real$diff,])
 real
 sims
+
+h
 
 
 
