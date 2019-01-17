@@ -9,10 +9,13 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10], ints=[3])
-    input_bed, input_fasta, output_directory, required_simulations, extract_sequences, clean_run, density_sim, get_exon_dint_controls, get_intron_dint_controls, exon_region_density, compare_stop_density = args.input_bed, args.input_fasta, args.output_directory, args.required_simulations, args.extract_sequences, args.clean_run, args.density_sim, args.get_exon_dint_controls, args.get_intron_dint_controls, args.exon_region_density, args.compare_stop_density
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11], ints=[3])
+    input_bed, input_fasta, output_directory, required_simulations, extract_sequences, clean_run, density_sim, get_exon_dint_controls, get_intron_dint_controls, exon_region_density, compare_stop_density, sim_orf_lengths = args.input_bed, args.input_fasta, args.output_directory, args.required_simulations, args.extract_sequences, args.clean_run, args.density_sim, args.get_exon_dint_controls, args.get_intron_dint_controls, args.exon_region_density, args.compare_stop_density, args.sim_orf_lengths
+
+    lincrna_output_directory = "{0}/tests/lincrna".format(output_directory)
+    gen.create_output_directories(lincrna_output_directory)
 
     # set a start time
     start = time.time()
@@ -49,18 +52,25 @@ def main():
     if get_intron_dint_controls:
         simopc.generate_dint_intron_controls(lincRNA_multi_exon_intron_fasta, intron_dint_control_directory)
 
-    exon_region_density_file = "{0}/tests/lincrna/exon_region_densities.csv".format(output_directory)
+    exon_region_density_file = "{0}/exon_region_densities.csv".format(lincrna_output_directory)
     if exon_region_density:
         mto.exon_region_density(lincRNA_multi_exon_fasta, lincRNA_multi_exon_exons_fasta, None, exon_region_density_file, families_file = lincRNA_multi_exon_families)
 
     # get the stop density
-    exon_intron_density_file = "{0}/tests/lincrna/compare_exon_intron_stop_density.csv".format(output_directory)
+    exon_intron_density_file = "{0}/compare_exon_intron_stop_density.csv".format(lincrna_output_directory)
     if compare_stop_density:
         mto.compare_stop_density(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, exon_intron_density_file, families_file = lincRNA_multi_exon_families)
 
     if density_sim:
         ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
 
+    sim_orf_length_output_file = "{0}/sim_orf_lengths.csv".format(lincrna_output_directory)
+    sim_orf_length_z_file = "{0}/sim_orf_lengths_zs.csv".format(lincrna_output_directory)
+    if sim_orf_lengths:
+        if not os.path.isfile(sim_orf_length_output_file) or clean_run:
+            simopc.sim_orf_length(lincRNA_multi_exon_fasta, required_simulations, sim_orf_length_output_file)
+
+        ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file)
 
 if __name__ == "__main__":
     main()

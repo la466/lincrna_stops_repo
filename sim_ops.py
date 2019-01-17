@@ -192,7 +192,7 @@ def sim_exon_region_counts(simulations, seqs, seq_frames, dinucleotide_content, 
     return temp_files, exons_to_exclude
 
 
-def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content, temp_dir, seeds=None, seq_seeds=None):
+def sim_orf_lengths(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
     """
     Simulation to look at the lengths of ORFs in sequences
     compared with simulated null sequences
@@ -209,11 +209,11 @@ def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content,
     """
 
     temp_files = []
-
-    dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
-    nucleotide_choices = [n for n in sorted(nucleotide_content)]
-    nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
+    #
+    # dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
+    # dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
+    # nucleotide_choices = [n for n in sorted(nucleotide_content)]
+    # nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
     for sim_no, simulation in enumerate(simulations):
 
@@ -232,7 +232,10 @@ def sim_orf_lengths(simulations, seqs, dinucleotide_content, nucleotide_content,
             seq_seed = get_seq_seed(seq_seeds, sim_no, i)
 
             while not generated:
-                sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
+                sim_seq = list(seq)
+                np.random.shuffle(sim_seq)
+                sim_seq = "".join(sim_seq)
+                # sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
                     simulated_seqs[name] = sim_seq

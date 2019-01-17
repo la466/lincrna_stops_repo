@@ -9,8 +9,8 @@ from useful_motif_sets import stops
 import numpy as np
 from progressbar import ProgressBar
 import random
-# TODO: simulation to get the normalised densities of lincRNA stop codons
-# TODO: compare stop codon density in exons of lincRNA
+import pandas as pd
+
 
 def stop_density_test(input_fasta, output_file, required_simulations, families_file = None):
     simoc.simulate_sequence_stop_density(input_fasta, output_file, required_simulations, families_file = families_file)
@@ -152,3 +152,19 @@ def density_simulation(exons_fasta, introns_fasta, simulations, families_file = 
         outfile.write("id,exon,intron\n")
         for i in nd_exon:
             outfile.write("{0},{1},{2}\n".format(id, np.median(nd_exon[i]), np.median(nd_intron[i])))
+
+
+def process_length_sim(input_file, output_file):
+
+    data = pd.read_csv(input_file)
+    ids = list(data)[1:]
+    with open(output_file, "w") as outfile:
+        outfile.write("id,gc,real,median_sims,normalised_length,z_score\n")
+        for id in ids:
+            gc = data[id][0]
+            real = data[id][1]
+            sims = data[id][2:]
+
+            normalised_length = np.divide(real - np.mean(sims), np.mean(sims))
+            z = np.divide(real - np.mean(sims), np.std(sims))
+            outfile.write("{0},{1},{2},{3},{4},{5}\n".format(id, gc, real, sims.mean(), normalised_length, z))

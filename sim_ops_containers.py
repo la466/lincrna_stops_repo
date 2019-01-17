@@ -352,9 +352,10 @@ def sim_orf_length(seq_fasta, required_simulations, output_file, parallel=True, 
     seqs = seqo.get_unique_seqs(names, seqs_list)
     unique_seqs = [seqs[i] for i in seqs]
 
-    # get the dicnucleotide and nucleotide content of the sequences
-    dinucleotide_content = seqo.get_dinucleotide_content(unique_seqs)
-    nucleotide_content = seqo.get_nucleotide_content(unique_seqs)
+
+    # # get the dicnucleotide and nucleotide content of the sequences
+    # dinucleotide_content = seqo.get_dinucleotide_content(unique_seqs)
+    # nucleotide_content = seqo.get_nucleotide_content(unique_seqs)
 
     # get the longest orfs and gc content for the real sequences
     longest_orfs = seqo.get_longest_orfs(seqs)
@@ -368,20 +369,10 @@ def sim_orf_length(seq_fasta, required_simulations, output_file, parallel=True, 
 
     # run the simulations
     simulations = list(range(required_simulations))
-    sim_args = [seqs, dinucleotide_content, nucleotide_content, temp_dir, seeds, seq_seeds]
+    sim_args = [seqs, temp_dir, seeds, seq_seeds]
+    # sim_args = [seqs, dinucleotide_content, nucleotide_content, temp_dir, seeds, seq_seeds]
 
-    # run the simulations
-    if parallel:
-        # add foo to argument list for parallelisation
-        sim_args.insert(0, "foo")
-        workers = os.cpu_count() - 2
-        processes = gen.run_in_parallel(simulations, sim_args, simo.sim_orf_lengths, workers = workers)
-        outputs = []
-        for process in processes:
-            outputs.extend(process.get())
-    else:
-        outputs = simo.sim_orf_lengths(simulations, *sim_args)
-
+    outputs = run_simulation_function(simulations, sim_args, simo.sim_orf_lengths, sim_run = False)
     # get temp filelist so we can order simulants for tests
     temp_filelist = fo.order_temp_files(outputs)
 
