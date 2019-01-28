@@ -51,6 +51,8 @@ binom_test <- function(data, ycol = "density", group = NULL) {
 
 filepath = "clean_run/motif_tests/int3_densities.csv"
 file = read.csv(filepath, head = T)
+
+head(file)
 file$gc = substr(file$gc_content, 0, 3)
 file$purine = substr(file$purine_content, 0, 3)
 stops =  file[file$codons == "TAA_TAG_TGA",]
@@ -125,6 +127,7 @@ normalised_density <- function(data, id_col, id_differentiator, test_col) {
 
 filepath = "clean_run/motif_tests/int3_stop_codon_densities.csv"
 data = read.csv(filepath, head = T)
+head(data)
 plot <- density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01)
 ggsave("clean_run/plots/dinucleotide_matched_stop_densities_int3.pdf", plot = plot)
 stop_density = real_density(data, "sim_id", "real", "stop_density")
@@ -233,3 +236,33 @@ less
 
 less$gc = substr(less$gc_content, 0, 3)
 less
+
+
+
+## exon dinucleotide controls
+library(ggplot2)
+
+
+motif_set_test = function(filepath) {
+  data = read.csv(filepath, head = T)
+  stop_density = real_density(data, "sim_id", "real", "stop_density")
+  nd = normalised_density(data, "sim_id", "real", "stop_density")
+  p = emperical_p(data, "sim_id", "real", "stop_density")
+  print(stop_density)
+  print(nd)
+  print(p)
+}
+filepath = "clean_run/motif_tests/int3_stop_codon_densities_exon_dinucleotides.csv"
+motif_set_test(filepath)
+filepath = "clean_run/motif_tests/RESCUE_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/ess_fas_hex2_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/ess_fas_hex3_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/ises_wang_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/ke400_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/ESR_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/PESE_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/rbp_motifs_non_cds_stop_codon_densities_exon_dinucleotides.csv"
+filepath = "clean_run/motif_tests/rbp_motifs_cds_stop_codon_densities_exon_dinucleotides.csv"
+motif_set_test(filepath)
+
+

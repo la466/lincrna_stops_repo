@@ -831,6 +831,33 @@ def sim_intron_density(coding_exons_bed, genome_fasta, required_simulations, out
     gen.get_time(start_time)
 
 
+def generate_exon_dinucleotide_controls(motifs_file, exons_fasta, required_simulations, output_directory, match_density = None):
+
+    exon_seqs = gen.read_fasta(exons_fasta)[1]
+    exon_seqs = [i for i in exon_seqs if len(i) >= 138]
+
+    exon_flanks = []
+    for seq in exon_seqs:
+        exon_flanks.append(seq[:69])
+        exon_flanks.append(seq[-69:])
+
+    dinucleotide_content = seqo.get_dinucleotide_content(exon_flanks)
+    nucleotide_content = seqo.get_nucleotide_content(exon_flanks)
+
+    if os.path.isdir(output_directory):
+        gen.remove_directory(output_directory)
+    gen.create_output_directories(output_directory)
+
+    start = time.time()
+
+    motifs = sequo.read_motifs(motifs_file)
+
+    # create sets of motifs
+    print("Simluating sequences...")
+    kwargs = {"match_density": match_density}
+    args = [motifs, dinucleotide_content, nucleotide_content, output_directory]
+    simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_dinucleotide_matched_seqs, kwargs_dict = kwargs)
+
 def generate_motif_dinucleotide_controls(motifs_file, required_simulations, output_directory, match_density = None):
 
     motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t") if "#" not in i[0]]
