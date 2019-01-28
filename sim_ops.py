@@ -200,7 +200,6 @@ def sim_orf_lengths(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
     Args:
         simulations (list): list of simluations to iterate over
         seqs (dict): a dictionary of sequences
-        dinucleotide_content (dict): dictionary containing dinucleotide proportions
         temp_dir (str): a temporary directory to hold the outputs of the simulations
         seeds (list): list of seeds to be used for the randomisations
 
@@ -209,11 +208,6 @@ def sim_orf_lengths(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
     """
 
     temp_files = []
-    #
-    # dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
-    # dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
-    # nucleotide_choices = [n for n in sorted(nucleotide_content)]
-    # nucleotide_probabilities = [nucleotide_content[n] for n in sorted(nucleotide_content)]
 
     for sim_no, simulation in enumerate(simulations):
 
@@ -235,7 +229,6 @@ def sim_orf_lengths(simulations, seqs, temp_dir, seeds=None, seq_seeds=None):
                 sim_seq = list(seq)
                 np.random.shuffle(sim_seq)
                 sim_seq = "".join(sim_seq)
-                # sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                 if sim_seq not in simulated_seqs:
                     generated = True
                     simulated_seqs[name] = sim_seq

@@ -4,7 +4,7 @@
 
 library(ggplot2)
 
-file <- read.csv('results/sim_orf_lengths.csv', head=T)
+file <- read.csv('results/sim_orf_lengths.csv', head=T)file=read.csv()
 cor <- cor.test(file$gc, file$z, method="spearman")
 bin <- binom.test(nrow(file[file$z > 0,]), nrow(file), p=0.5, alternative = "g")
 

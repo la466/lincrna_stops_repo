@@ -784,46 +784,11 @@ def calc_ds_all(simulations, alignment_file, cds_fasta, mutli_exon_fasta, orthol
     with open(output_file, "w") as outfile:
         outfile.write("id,all_ese_ds,non_ese_ds,stops_ese_ds,non_stops_ese_ds\n")
         for i, file in enumerate(outputs):
-            # if i == 0:
-            #     header = gen.read_many_fields(file, ",")[0]
-            #     outfile.write("sim_id,{0}\n".format(",".join(header[1:])))
             results = gen.read_many_fields(file, ",")[0]
             if results[0] != "real":
                 results[0] = int(results[0])+1
             outfile.write("{0},{1}\n".format(results[0], ",".join(results[1:])))
-            # results = {i[0]: i[1:] for i in results}
-            # # get the id of the results
-            # sim_no = file.split("/")[-1].split(".")[0]
-            # if sim_no == real_name:
-            #     id = "real"
-            # else:
-            #     id = "sim_{0}".format(int(sim_no)+1)
-            # outfile.write("{0}".format(id))
-            # for codon_set in sorted_codon_sets:
-            #     outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
-            # outfile.write("\n")
 
-    # # now write all the results to the output file
-    # sorted_codon_sets = ["_".join(j) for j in sorted([sorted(i) for i in codon_sets])]
-    # with open(output_file, "w") as outfile:
-    #     for i, file in enumerate(outputs):
-    #         if i == 0:
-    #             header = gen.read_many_fields(file, ",")[0]
-    #             outfile.write("sim_id,{0}\n".format(",".join(header[1:])))
-    #         results = gen.read_many_fields(file, ",")[1:]
-    #         results = {i[0]: i[1:] for i in results}
-    #         # get the id of the results
-    #         sim_no = file.split("/")[-1].split(".")[0]
-    #         if sim_no == real_name:
-    #             id = "real"
-    #         else:
-    #             id = "sim_{0}".format(int(sim_no)+1)
-    #         outfile.write("{0}".format(id))
-    #         for codon_set in sorted_codon_sets:
-    #             outfile.write(",{0}".format(",".join(gen.stringify(results[codon_set]))))
-    #         outfile.write("\n")
-
-    # # remove all the temp files
     [gen.remove_file(i) for i in outputs]
 
     gen.get_time(start_time)

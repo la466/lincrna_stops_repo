@@ -159,7 +159,7 @@ def process_length_sim(input_file, output_file):
     data = pd.read_csv(input_file)
     ids = list(data)[1:]
     with open(output_file, "w") as outfile:
-        outfile.write("id,gc,real,median_sims,normalised_length,z_score\n")
+        outfile.write("id,gc,real,mean_sims,normalised_length,z_score\n")
         for id in ids:
             gc = data[id][0]
             real = data[id][1]
@@ -168,3 +168,21 @@ def process_length_sim(input_file, output_file):
             normalised_length = np.divide(real - np.mean(sims), np.mean(sims))
             z = np.divide(real - np.mean(sims), np.std(sims))
             outfile.write("{0},{1},{2},{3},{4},{5}\n".format(id, gc, real, sims.mean(), normalised_length, z))
+
+
+def calculate_lengths(exons_fasta, output_file, families_file = None):
+
+    names, seqs = gen.read_fasta(exons_fasta)
+    lincRNA = {name: seqs[i] for i, name in enumerate(names)}
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        lincRNA = sequo.group_family_results(lincRNA, families)
+
+    gcs = {id: [seqo.calc_seq_gc(i) for i in lincRNA[id]] for id in lincRNA}
+    lengths = {id: [len(i) for i in lincRNA[id]] for id in lincRNA}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,gc,length\n")
+        for id in lengths:
+            outfile.write("{0},{1},{2}\n".format(id, np.median(gcs[id]), np.median(lengths[id])))

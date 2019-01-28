@@ -65,12 +65,14 @@ def main():
         ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
 
     sim_orf_length_output_file = "{0}/sim_orf_lengths.csv".format(lincrna_output_directory)
+    lincRNA_length_output_file = "{0}/lincRNA_lengths.csv".format(lincrna_output_directory)
     sim_orf_length_z_file = "{0}/sim_orf_lengths_zs.csv".format(lincrna_output_directory)
     if sim_orf_lengths:
         if not os.path.isfile(sim_orf_length_output_file) or clean_run:
             simopc.sim_orf_length(lincRNA_multi_exon_fasta, required_simulations, sim_orf_length_output_file)
-
         ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file)
+        ltests.calculate_lengths(lincRNA_multi_exon_fasta, lincRNA_length_output_file, families_file = lincRNA_multi_exon_families)
+
 
 if __name__ == "__main__":
     main()
