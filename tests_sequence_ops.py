@@ -249,3 +249,39 @@ class Tests(unittest.TestCase):
         expected = gen.read_many_fields(expected_file, "#")
         observed = gen.read_many_fields(observed_file, "#")
         self.assertEqual(expected, observed)
+
+    def test_sequence_overlap_indicies(self):
+        input_file = "test_data/sequence_ops/test_sequence_overlap_indicies/input.fasta"
+        input_seqs = gen.read_fasta(input_file)[1]
+        query_motifs = [
+            ["GAC", "GAG"],
+            ["GAGCG", "CGA"],
+            ["AAAAA", "GAA"]
+        ]
+        expected = [
+            [2,3,4,11,12,13,14,15,16,28,29,30,32,33,34,40,41,42],
+            [4,5,6,7,8,9,16,17,18,19,20,21,26,27,28,29,30,31],
+            [13,14,15,16,17,18,19,20,21,22,23,24,25,26,31,32,33]
+        ]
+        observed = [sequence_overlap_indicies(seq, query_motifs[i]) for i, seq in enumerate(input_seqs)]
+        self.assertEqual(expected, observed)
+
+    def test_get_sequence_overlap_codons(self):
+        input_file = "test_data/sequence_ops/test_get_sequence_overlap_codons/input.fasta"
+        expected_file = "test_data/sequence_ops/test_get_sequence_overlap_codons/expected.fasta"
+        input_seqs = gen.read_fasta(input_file)[1]
+        input_indices = [[2,3,4,6,7,8,11,25,26,30],[4,5,30,31,32],[0,1,5,6,15,17,19,25,26]]
+        expected = [[i.split(",") for i in sets.split("|")] for sets in gen.read_fasta(expected_file)[1]]
+        observed = []
+        for i, seq in enumerate(input_seqs):
+            out = get_sequence_overlap_codons(seq, input_indices[i])
+            observed.append([out[0], out[1]])
+        self.assertEqual(expected, observed)
+
+    def test_retain_only_fourfold_codons(self):
+        input_file = "test_data/sequence_ops/test_retain_only_fourfold_codons/input.fasta"
+        expected_file = "test_data/sequence_ops/test_retain_only_fourfold_codons/expected.fasta"
+        inputs = [[i.split(",") for i in set.split("|")] for set in gen.read_fasta(input_file)[1]]
+        expected = [[i.split(",") for i in set.split("|")] for set in gen.read_fasta(expected_file)[1]]
+        observed = [retain_only_fourfold_codons(i) for i in inputs]
+        self.assertEqual(expected, observed)
