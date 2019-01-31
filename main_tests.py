@@ -43,7 +43,7 @@ def main():
     exon_region_excess, \
     non_coding_exons, \
     cds_ds_mutation, \
-    ese_ds \
+    ese_ds, \
     ese_ds_mutation = \
     args.input_directory, \
     args.output_directory, \
