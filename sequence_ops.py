@@ -477,7 +477,7 @@ def get_sequence_overlap_codons(sequence, overlap_indices):
         return overlap_codons, non_overlap_codons
 
 
-def get_sequence_mutation_codons(sequence, overlap_indices):
+def get_sequence_mutation_codons(sequences, overlap_indices):
     """
     Given a sequence, return the codons in the sequence that are one away from a
     stop codon and those that arent
@@ -487,21 +487,38 @@ def get_sequence_mutation_codons(sequence, overlap_indices):
         overlap_indices (list): list of sequence indices
     """
 
-    one_away_codons = []
-    other_codons = []
+    one_away_codons = [[], []]
+    other_codons = [[], []]
+
+    plus_1_one_away = ["TCA", "TTA", "TCG", "TGG", "TTG"]
+    plus_2_one_away = ["AAA", "CAA", "GAA", "AAG", "CAG", "GAG", "AGA", "CGA", "GGA"]
 
     # for each codon start
-    for i in range(0, len(sequence), 3):
+    for i in range(0, len(sequences[0]), 3):
         # get the codon indices
         query_values = list(range(i, i+3))
         # check if there is an overlap
         if query_values[-1] in overlap_indices:
-            codon = sequence[i:i+3]
-            overlap_codons.append(codon)
-        else:
-            non_overlap_codons.append(sequence[i:i+3])
-    
-        return overlap_codons, non_overlap_codons
+            # in the case where only the next nucleotide of a motif is ESE
+            if i+3 in overlap_indices and i+4 not in overlap_indices:
+                test_codon_seq_1 = sequences[0][i+1:i+4]
+                test_codon_seq_2 = sequences[1][i+1:i+4]
+                if test_codon_seq_1 in plus_1_one_away or test_codon_seq_2 in plus_1_one_away:
+                    one_away_codons[0].append(sequences[0][i:i+3])
+                    one_away_codons[1].append(sequences[1][i:i+3])
+            elif i+3 in overlap_indices and i+4 in overlap_indices:
+                test_codon_1_seq_1 = sequences[0][i+1:i+4]
+                test_codon_2_seq_1 = sequences[0][i+2:i+5]
+                test_codon_1_seq_2 = sequences[1][i+1:i+4]
+                test_codon_2_seq_2 = sequences[1][i+2:i+5]
+                if test_codon_1_seq_1 in plus_1_one_away or test_codon_2_seq_1 in plus_1_one_away or test_codon_1_seq_2 in plus_2_one_away or test_codon_2_seq_2 in plus_2_one_away:
+                    one_away_codons[0].append(sequences[0][i:i+3])
+                    one_away_codons[1].append(sequences[1][i:i+3])
+            else:
+                other_codons[0].append(sequences[0][i:i+3])
+                other_codons[1].append(sequences[1][i:i+3])
+
+    return one_away_codons, other_codons
 
 
 def get_sequence_overlap_stop_codons(sequences, overlaps):
@@ -578,15 +595,15 @@ def extract_motif_codons_mutations_from_sequence(sequences, query_motifs, get_st
     overlaps = sorted(list(set(gen.flatten([sequence_overlap_indicies(seq, query_motifs) for seq in sequences]))))
     # now get the codons from these overlaps
     # note this assumes that the sequences are of length 3
-    one_away_codons = []
-    other_codons = []
+    # one_away_codons = []
+    # other_codons = []
+    #
+    # for sequence in sequences:
+    one_away, other_codons = get_sequence_mutation_codons(sequences, overlaps)
+        # one_away_codons.append(one_away)
+        # other_codons.append(other_codons)
 
-    for sequence in sequences:
-        one_away, other_codons = get_sequence_mutation_codons(sequence, overlaps)
-        one_away_codons.append(overlapped)
-        other_codons.append(non_overlapped)
-
-    return one_away_codons, other_codons
+    return one_away, other_codons
 
 
 def extract_motif_codons_from_alignments(alignment_sequences, query_motifs, get_stops = None):
@@ -826,6 +843,7 @@ def extract_motif_sequences_from_alignment(alignment_seqs, motif_set, reverse = 
 
 def retain_only_fourfold_codons(query_sets):
 
+
     retained = []
     if len(query_sets) > 1:
         # set up the blank lists to hold fourfolds
@@ -973,10 +991,10 @@ def ese_ds_mutation_wrapper(ids, motif_set_filepaths, alignments, output_directo
             if output_file not in os.listdir(output_directory):
                 # read in the motifs
                 motif_set = read_motifs(filepath)
-
+                motif_set = [i for i in motif_set if not len(re.findall("(?=(TAA|TAG|TGA))", i))]
 
                 # now get all the alignment parts that overlap the motif sets
-                overlap_one_away_codons, overlap_other_codons = extract_motif_codons_mutations_from_alignments(alignments, one_away_motifs)
+                overlap_one_away_codons, overlap_other_codons = extract_motif_codons_mutations_from_alignments(alignments, motif_set)
 
                 if only_fourfold:
 
@@ -998,7 +1016,7 @@ def ese_ds_mutation_wrapper(ids, motif_set_filepaths, alignments, output_directo
                 other_ds = calc_strings_ds(other_strings)
 
                 with open(output_file, "w") as outfile:
-                    outfile.write("{0},{1},{2},{3},{4}\n".format(id, one_away_ds, other_ds, len(one_away_motifs), len(other_motifs)))
+                    outfile.write("{0},{1},{2},{3}\n".format(id, one_away_ds, other_ds, len(motif_set)))
 
     return outputs
 

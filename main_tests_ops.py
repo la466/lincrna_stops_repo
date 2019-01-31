@@ -811,7 +811,7 @@ def calc_ese_ds_mutation(alignment_file, cds_fasta, exons_fasta, motif_file, out
     exon_names = gen.read_fasta(exons_fasta)[0]
     # now get all the sequence alignments which match the names of the multi exon genes
     alignment_names, alignment_seqs = gen.read_fasta(alignment_file)
-    alignments = {name: alignment_seqs[i].split(",") for i, name in enumerate(alignment_names[:10]) if name in exon_names}
+    alignments = {name: alignment_seqs[i].split(",") for i, name in enumerate(alignment_names) if name in exon_names}
 
     # if we want to group into paralagous families
     if families_file:
