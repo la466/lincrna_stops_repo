@@ -13,10 +13,10 @@ import os
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds"]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_mutation"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26], ints=[], opt_flags=[2,3])
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27], ints=[], opt_flags=[2,3])
     input_directory, \
     output_directory, \
     simulations, \
@@ -43,7 +43,8 @@ def main():
     exon_region_excess, \
     non_coding_exons, \
     cds_ds_mutation, \
-    ese_ds = \
+    ese_ds \
+    ese_ds_mutation = \
     args.input_directory, \
     args.output_directory, \
     args.simulations, \
@@ -70,7 +71,8 @@ def main():
     args.exon_region_excess, \
     args.non_coding_exons, \
     args.cds_ds_mutation, \
-    args.ese_ds
+    args.ese_ds, \
+    args.ese_ds_mutation
 
     if simulations:
         simulations = int(simulations)
@@ -160,7 +162,7 @@ def main():
     if cds_ds_mutation:
         mto.calc_ds_mutation(simulations, alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file3, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
-    ds_output_file = "{0}/ese_ds.csv".format(ds_output_directory)
+    ese_ds_output_file = "{0}/ese_ds.csv".format(ds_output_directory)
     if ese_ds:
         # if the sequence alignments file doesnt exist, create it
         if not os.path.isfile(alignments_file):
@@ -168,7 +170,17 @@ def main():
         # create the output directory for the test
         gen.create_output_directories(ds_output_directory)
         # run the test
-        mto.calc_ese_ds(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ds_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
+        mto.calc_ese_ds(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
+
+    ese_ds_mutation_output_file = "{0}/ese_ds_mutation.csv".format(ds_output_directory)
+    if ese_ds_mutation:
+        # if the sequence alignments file doesnt exist, create it
+        if not os.path.isfile(alignments_file):
+            sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignments_file)
+        # create the output directory for the test
+        gen.create_output_directories(ds_output_directory)
+        # run the test
+        mto.calc_ese_ds_mutation(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_mutation_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
 
 
     exon_regions_directory = "{0}/tests/exon_regions".format(output_directory)
