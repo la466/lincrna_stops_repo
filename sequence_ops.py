@@ -529,7 +529,7 @@ def get_sequence_overlap_stop_codons(sequences, overlaps):
     # for each codon start
     for i in range(0, len(sequences[0]), 3):
         codon_indices = list(range(i, i+3))
-        if len(list(set(codon_indices) & set(overlaps))):
+        if codon_indices[-1] in overlaps:
             query1 = sequences[0][i:i+6]
             query2 = sequences[1][i:i+6]
             if query1[1:4] in stops or query1[2:5] in stops or query2[1:4] in stops or query2[2:5] in stops:
@@ -538,8 +538,27 @@ def get_sequence_overlap_stop_codons(sequences, overlaps):
             else:
                 non_stops_overlaps[0].append(sequences[0][i:i+3])
                 non_stops_overlaps[1].append(sequences[1][i:i+3])
+    return stops_overlaps, non_stops_overlaps
 
 
+
+def get_sequence_non_overlap_stop_codons(sequences, overlaps):
+
+    stops_overlaps = [[], []]
+    non_stops_overlaps = [[], []]
+
+    # for each codon start
+    for i in range(0, len(sequences[0]), 3):
+        codon_indices = list(range(i, i+3))
+        if codon_indices[-1] not in overlaps:
+            query1 = sequences[0][i:i+6]
+            query2 = sequences[1][i:i+6]
+            if query1[1:4] in stops or query1[2:5] in stops or query2[1:4] in stops or query2[2:5] in stops:
+                stops_overlaps[0].append(sequences[0][i:i+3])
+                stops_overlaps[1].append(sequences[1][i:i+3])
+            else:
+                non_stops_overlaps[0].append(sequences[0][i:i+3])
+                non_stops_overlaps[1].append(sequences[1][i:i+3])
     return stops_overlaps, non_stops_overlaps
 
 def extract_motif_codons_from_sequence(sequences, query_motifs, get_stops = None):
@@ -577,6 +596,28 @@ def extract_motif_codons_from_sequence(sequences, query_motifs, get_stops = None
         return overlap_codons, non_overlap_codons, stop_overlap_codons, non_stop_overlap_codons
     else:
         return overlap_codons, non_overlap_codons
+
+
+def extract_non_motif_codons_from_sequence(sequences, query_motifs, get_stops = None):
+    """
+    Given a set of sequences, get the codons that the query motifs overlaps.
+
+    Args:
+        sequences (list): list of sequences
+        query_motifs (list): list of motifs to query
+
+    Returns:
+        overlap_codons (list): list of codons that overlap motifs
+        non_overlap_codons (list): list of codons for each seq not overlapping
+    """
+
+    # get a list of overlaps in any of the sequences
+    overlaps = sorted(list(set(gen.flatten([sequence_overlap_indicies(seq, query_motifs) for seq in sequences]))))
+    # now get the codons from these overlaps
+    # note this assumes that the sequences are of length 3
+    non_overlap_stop_codons, non_overlap_non_stop_codons = get_sequence_non_overlap_stop_codons(sequences, overlaps)
+    return non_overlap_stop_codons, non_overlap_non_stop_codons
+
 
 def extract_motif_codons_mutations_from_sequence(sequences, query_motifs, get_stops = None):
     """
@@ -645,6 +686,29 @@ def extract_motif_codons_from_alignments(alignment_sequences, query_motifs, get_
         return overlap_codons, non_overlap_codons, stop_overlap_codons, non_stop_overlap_codons
     else:
         return overlap_codons, non_overlap_codons
+
+def extract_non_ese_stop_alignments(alignment_sequences, query_motifs):
+    """
+    Wrapper to extract the codons that contain motif hits from alignments sequences.
+    Given a list of sequences, extract the parts that overlap the given motifs
+
+    Args:
+        alignment_sequences (dict): dictionary containing sequences
+        query_motifs (list): list of motifs to query
+
+    Returns:
+        overlap_codons (list): list of codons that hit one of the motifs
+        non_overlap_codons (list): list of codons that didnt hit one of the motifs
+    """
+
+    non_overlap_stop_codons = []
+    non_overlap_non_stop_codons = []
+
+    for id in alignment_sequences:
+        stop_overlap, non_stop_overlap = extract_non_motif_codons_from_sequence(alignment_sequences[id], query_motifs)
+        non_overlap_stop_codons.append(stop_overlap)
+        non_overlap_non_stop_codons.append(non_stop_overlap)
+    return non_overlap_stop_codons, non_overlap_non_stop_codons
 
 def extract_motif_codons_mutations_from_alignments(alignment_sequences, query_motifs):
     """
@@ -960,6 +1024,62 @@ def ese_ds_wrapper(ids, motif_set_filepaths, alignments, output_directory, only_
 
                 with open(output_file, "w") as outfile:
                     outfile.write("{0},{1},{2},{3},{4}\n".format(id, overlap_ds, non_overlap_ds, stop_overlap_ds, non_stop_overlap_ds))
+
+    return outputs
+
+def non_ese_ds_wrapper(ids, motif_set_filepaths, alignments, output_directory, only_fourfold = True):
+    """
+    Wrapper to calculate the ds scores for motif sets in given alignemnts
+
+    Args:
+        ids (list): list of motif file ids
+        motif_set_filepaths (dict): filepaths of motif sets
+        alignments (dict): sequence alignments
+        output_directory (str): path to output_directory
+        only_fourfold (bool): if True, only retain fourfold degenerate codons
+    """
+
+    outputs = []
+    if ids:
+        for i, id in enumerate(ids):
+            gen.print_parallel_status(i, ids)
+
+            # get the filepath of the motifs
+            filepath = motif_set_filepaths[id]
+            # set up the temp file
+            output_file = "{0}/{1}".format(output_directory, filepath.split("/")[-1])
+            outputs.append(output_file)
+
+            # only run if the set doesn't exist
+            if output_file not in os.listdir(output_directory):
+                # read in the motifs
+                motif_set = read_motifs(filepath)
+                # now get all the alignment parts that overlap the motif sets
+                non_overlap_stop_codons, non_overlap_non_stop_codons = extract_non_ese_stop_alignments(alignments, motif_set)
+
+
+                if only_fourfold:
+
+                    non_overlap_stop_codons = [retain_only_fourfold_codons(i) for i in non_overlap_stop_codons]
+                    non_overlap_non_stop_codons = [retain_only_fourfold_codons(i) for i in non_overlap_non_stop_codons]
+
+                    non_overlap_stop_codons = convert_fourfold_to_gcn(non_overlap_stop_codons)
+                    non_overlap_non_stop_codons = convert_fourfold_to_gcn(non_overlap_non_stop_codons)
+
+
+                non_overlap_stop_strings = []
+                non_overlap_non_stop_strings = []
+
+                for set in non_overlap_stop_codons:
+                    non_overlap_stop_strings.append(["".join(i) for i in set])
+                for set in non_overlap_non_stop_codons:
+                    non_overlap_non_stop_strings.append(["".join(i) for i in set])
+
+                overlap_ds = calc_strings_ds(non_overlap_stop_strings)
+                non_overlap_ds = calc_strings_ds(non_overlap_non_stop_strings)
+
+                with open(output_file, "w") as outfile:
+                    outfile.write("{0},{1},{2}\n".format(id, overlap_ds, non_overlap_ds))
 
     return outputs
 
