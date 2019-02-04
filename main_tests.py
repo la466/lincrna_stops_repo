@@ -209,7 +209,7 @@ def main():
     if non_coding_exons:
         mto.non_coding_exons(non_coding_exons_fasta, non_coding_exons_file, families_file = families_file)
 
-    gen.create_output_directories("{0}/intron_density".format(output_directory))
+    gen.create_output_directories("{0}/tests/intron_density".format(output_directory))
     intron_density_sim_file = "{0}/intron_density/motif_sets_intron_density.csv".format(output_directory)
     if intron_density:
         if not ese_file:
