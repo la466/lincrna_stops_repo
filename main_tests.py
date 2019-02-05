@@ -7,15 +7,74 @@ import seq_ops as seqo
 import file_ops as fo
 import time
 from useful_motif_sets import stops
+import os
+
 
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation"]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_mutation", "non_ese_stop_ds"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], ints=[], opt_flags=[2,3])
-    input_directory, output_directory, simulations, ese_file, clean_run, generate_gc_matched_stop_sets, generate_motif_dinucleotide_controls, compare_stop_density, compare_codon_density, coding_exons, generate_gc_controls_exons, generate_gc_controls_introns, generate_dint_exon_controls, generate_dint_intron_controls, cds_ds, cds_ds_all, cds_codon_ds, cds_density_nd, stop_density_nd, without_ese, exon_region_density, intron_density, calc_purine_content, exon_region_excess, non_coding_exons, cds_ds_mutation = args.input_directory, args.output_directory, args.simulations, args.ese_file, args.clean_run, args.generate_gc_matched_stop_sets, args.generate_motif_dinucleotide_controls, args.compare_stop_density, args.compare_codon_density, args.coding_exons, args.generate_gc_controls_exons, args.generate_gc_controls_introns, args.generate_dint_exon_controls, args.generate_dint_intron_controls, args.cds_ds, args.cds_ds_all, args.cds_codon_ds, args.cds_density_nd, args.stop_density_nd, args.without_ese, args.exon_region_density, args.intron_density, args.calc_purine_content, args.exon_region_excess, args.non_coding_exons, args.cds_ds_mutation
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28], ints=[], opt_flags=[2,3])
+    input_directory, \
+    output_directory, \
+    simulations, \
+    ese_file, \
+    clean_run, \
+    generate_gc_matched_stop_sets, \
+    generate_motif_dinucleotide_controls, \
+    compare_stop_density, \
+    compare_codon_density, \
+    coding_exons, \
+    generate_gc_controls_exons, \
+    generate_gc_controls_introns, \
+    generate_dint_exon_controls, \
+    generate_dint_intron_controls, \
+    cds_ds, \
+    cds_ds_all, \
+    cds_codon_ds, \
+    cds_density_nd, \
+    stop_density_nd, \
+    without_ese, \
+    exon_region_density, \
+    intron_density, \
+    calc_purine_content, \
+    exon_region_excess, \
+    non_coding_exons, \
+    cds_ds_mutation, \
+    ese_ds, \
+    ese_ds_mutation, \
+    non_ese_stop_ds = \
+    args.input_directory, \
+    args.output_directory, \
+    args.simulations, \
+    args.ese_file, \
+    args.clean_run, \
+    args.generate_gc_matched_stop_sets, \
+    args.generate_motif_dinucleotide_controls, \
+    args.compare_stop_density, \
+    args.compare_codon_density, \
+    args.coding_exons, \
+    args.generate_gc_controls_exons, \
+    args.generate_gc_controls_introns, \
+    args.generate_dint_exon_controls, \
+    args.generate_dint_intron_controls, \
+    args.cds_ds, \
+    args.cds_ds_all, \
+    args.cds_codon_ds, \
+    args.cds_density_nd, \
+    args.stop_density_nd, \
+    args.without_ese, \
+    args.exon_region_density, \
+    args.intron_density, \
+    args.calc_purine_content, \
+    args.exon_region_excess, \
+    args.non_coding_exons, \
+    args.cds_ds_mutation, \
+    args.ese_ds, \
+    args.ese_ds_mutation, \
+    args.non_ese_stop_ds
 
     if simulations:
         simulations = int(simulations)
@@ -87,7 +146,7 @@ def main():
     ortholog_cds_fasta = "{0}/genome_sequences/macaque/macaque.cds.quality_filtered.step1.fasta".format(input_directory)
     ortholog_transcript_links = "{0}/genome_sequences/human.macaque.conservation_filtering.step3.bed".format(input_directory)
     alignments_file = "{0}/genome_sequences/human.macaque.alignments.fasta".format(input_directory)
-    ese_file = "source_data/motif_sets/int3.txt"
+    # ese_file = "source_data/motif_sets/int3.txt"
     ds_output_directory = "{0}/tests/ese_ds".format(output_directory)
     output_file = "{0}/codon_ds_matched_densities.csv".format(ds_output_directory)
     output_file1 = "{0}/codons_ds.csv".format(ds_output_directory)
@@ -105,6 +164,37 @@ def main():
     if cds_ds_mutation:
         mto.calc_ds_mutation(simulations, alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file3, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
+    ese_ds_output_file = "{0}/ese_ds.csv".format(ds_output_directory)
+    if ese_ds:
+        # if the sequence alignments file doesnt exist, create it
+        if not os.path.isfile(alignments_file):
+            sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignments_file)
+        # create the output directory for the test
+        gen.create_output_directories(ds_output_directory)
+        # run the test
+        mto.calc_ese_ds(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
+
+    ese_ds_mutation_output_file = "{0}/ese_ds_mutation.csv".format(ds_output_directory)
+    if ese_ds_mutation:
+        # if the sequence alignments file doesnt exist, create it
+        if not os.path.isfile(alignments_file):
+            sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignments_file)
+        # create the output directory for the test
+        gen.create_output_directories(ds_output_directory)
+        # run the test
+        mto.calc_ese_ds_mutation(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_mutation_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
+
+    non_ese_output_file = "{0}/non_ese_ds.csv".format(ds_output_directory)
+    if non_ese_stop_ds:
+        # if the sequence alignments file doesnt exist, create it
+        if not os.path.isfile(alignments_file):
+            sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignments_file)
+        # create the output directory for the test
+        gen.create_output_directories(ds_output_directory)
+        # run the test
+        mto.calc_non_ese_ds(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, non_ese_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
+
+
     exon_regions_directory = "{0}/tests/exon_regions".format(output_directory)
     gen.create_output_directories(exon_regions_directory)
     exon_region_density_file = "{0}/exon_regions_density.csv".format(exon_regions_directory)
@@ -119,7 +209,7 @@ def main():
     if non_coding_exons:
         mto.non_coding_exons(non_coding_exons_fasta, non_coding_exons_file, families_file = families_file)
 
-    gen.create_output_directories("{0}/intron_density".format(output_directory))
+    gen.create_output_directories("{0}/tests/intron_density".format(output_directory))
     intron_density_sim_file = "{0}/intron_density/motif_sets_intron_density.csv".format(output_directory)
     if intron_density:
         if not ese_file:

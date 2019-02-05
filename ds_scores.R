@@ -1,3 +1,41 @@
+ds_file = read.csv("clean_run/tests/ese_ds/ese_ds1.csv", head = T)
+
+empirical_p = function(data, column, alternative = "less") {
+  real = data[data$id == "real",]
+  sims = data[data$id != "real",]
+  
+  if (alternative == "less") {
+    p = (nrow(sims[sims[[column]] <= real[[column]],]) + 1) / (nrow(sims) + 1)
+  } else {
+    p = (nrow(sims[sims[[column]] >= real[[column]],]) + 1) / (nrow(sims) + 1)
+  }
+  return(p)
+}
+
+ds_file$ese_ds[ds_file$id == "real"]
+median(ds_file$ese_ds[ds_file$id != "real"])
+ese_p = empirical_p(ds_file, "ese_ds")
+ese_p
+non_ese_p = empirical_p(ds_file, "non_ese_ds")
+
+ds_file$ese_stop_ds[ds_file$id == "real"]
+ds_file$ese_non_stop_ds[ds_file$id == "real"]
+
+empirical_p(ds_file, "ese_non_stop_ds")
+empirical_p(ds_file, "ese_stop_ds")
+
+ds_mutation_file = read.csv("clean_run/tests/ese_ds/ese_ds_mutation.csv", head = T)
+head(ds_mutation_file)
+
+ds_mutation_file[ds_mutation_file$id == "real",]
+empirical_p(ds_mutation_file, "one_away_ds")
+empirical_p(ds_mutation_file, "others_ds")
+
+real = ds_mutation_file[ds_mutation_file$id == "real",]
+real$one_away_ds
+real$others_ds
+
+
 file = read.csv("clean_run/tests/ese_ds/codon_ds_stats.csv", head=T)
 
 head(file)
