@@ -9,9 +9,11 @@ from useful_motif_sets import dinucleotides, nucleotides, stops
 import multiprocessing as mp
 from progressbar import ProgressBar
 
-def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory):
+def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory, simulations = None):
 
-    required_simulations = 1000
+    required_simulations = simulations
+    if not required_simulations:
+        required_simulations = 1000
 
     temp_output_directory = "temp_dint_sims"
     gen.create_output_directories(temp_output_directory)

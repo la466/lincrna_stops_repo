@@ -401,6 +401,9 @@ def list_to_dict(input_list, index1, index2, as_list = False, uniquify = False, 
         output_dict = {i: sorted(list(set(output_dict[i]))) for i in output_dict}
     return(output_dict)
 
+def make_directory(path):
+    os.makedirs(path)
+
 def motif_to_regex(motifs):
     '''
     Convert a string into a lookahead regex where only the first base

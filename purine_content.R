@@ -41,9 +41,17 @@ median(file$intron)
 nrow(file)
 
 file = read.csv("clean_run/tests/purine_content/exon_intron_purine_content_with_ese.csv", head = T)
+file$padj = p.adjust(file$pvalue, method = "bonferroni")
+
 
 real = file[file$id == "real",]
 sims = file[file$id != "real",]
 
-head(file)
-real
+head(sims)
+
+sims[sims$pvalue < 0.05,]
+nrow(sims[sims$pvalue < 0.05 & sims$median_exon > sims$median_intron,])
+binom.test(nrow(sims[sims$pvalue < 0.05 & sims$median_exon > sims$median_intron,]), nrow(sims), p = 0.05, alternative = "g")
+nrow(sims[sims$padj < 0.05,])
+
+binom.test(19, 1000, p = 0.05, alternative = "g")
