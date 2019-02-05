@@ -96,7 +96,7 @@ nrow(not_stops_purine[not_stops_purine$nd <= -0.0426,])
 
 
 
-density_histogram<- function(data, xlab = "", ylab = "", binwidth = 0.01) {
+density_histogram <- function(data, xlab = "", ylab = "", binwidth = 0.01) {
   real = data[data$sim_id == "real",]
   sims = data[data$sim_id != "real",]
   p <- ggplot() + 
@@ -266,3 +266,9 @@ filepath = "clean_run/motif_tests/rbp_motifs_cds_stop_codon_densities_exon_dinuc
 motif_set_test(filepath)
 
 
+
+file = read.csv("clean_run/motif_tests/ess_wang_stop_codon_densities.csv", head = T)
+plot = density_histogram(file, xlab = "Stop codon density", ylab = "Count", binwidth = 0.005)
+plot
+emperical_p(file, "id", "real", "stop_density")
+normalised_density(file, "id", "real", "stop_density")

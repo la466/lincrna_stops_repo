@@ -39,3 +39,11 @@ median(file$exon)
 median(file$intron)
 
 nrow(file)
+
+file = read.csv("clean_run/tests/purine_content/exon_intron_purine_content_with_ese.csv", head = T)
+
+real = file[file$id == "real",]
+sims = file[file$id != "real",]
+
+head(file)
+real
