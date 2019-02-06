@@ -9,14 +9,14 @@ density_scatterplot <- function(data, ycol = "density", xlab = "", ylab = "") {
   data$id = as.numeric(seq(1:nrow(data)))
   stops = data[data$codons == "TAA_TAG_TGA",]
   not_stops = data[data$codons != "TAA_TAG_TGA",]
-  p <- ggplot() + 
-    geom_point(aes(x = not_stops$id, y = not_stops$nd), cex = 0.5, pch = 16) + 
-    geom_point(aes(x = stops$id, y = stops$nd), cex = 3, pch = 16, col = "red") + 
+  p <- ggplot() +
+    geom_point(aes(x = not_stops$id, y = not_stops$nd), cex = 0.5, pch = 16) +
+    geom_point(aes(x = stops$id, y = stops$nd), cex = 3, pch = 16, col = "red") +
     # scale_x_continuous(labels = not_stops$codons, breaks = seq(1:nrow(not_stops))) +
-    theme(axis.text.x = element_blank()) + 
-    geom_hline(yintercept = 0, lty = 2) + 
+    theme(axis.text.x = element_blank()) +
+    geom_hline(yintercept = 0, lty = 2) +
     labs(x = xlab, y = ylab)
-    
+
   return(p)
 }
 
@@ -26,15 +26,15 @@ density_boxplot <- function(data, ycol = "density") {
   data$purine <- as.factor(data$purine)
   data$col <- ifelse(data$purine == stops_purine, "a", "b")
   p <- ggplot(data, aes(x=data$purine, y=data[[ycol]])) +
-    stat_boxplot(geom ='errorbar') + 
+    stat_boxplot(geom ='errorbar') +
     geom_boxplot(aes(fill=data$col)) +
-    scale_fill_manual(values=c("RoyalBlue", "#dddddd")) + 
-    geom_hline(yintercept = stops_density, lty=2) + 
-    labs(x = "Query codons purine content", y="Query codons ND") + 
+    scale_fill_manual(values=c("RoyalBlue", "#dddddd")) +
+    geom_hline(yintercept = stops_density, lty=2) +
+    labs(x = "Query codons purine content", y="Query codons ND") +
     annotate("text", x=min(as.numeric(data$purine)), hjust=0.2, y=stops_density + 0.05, label="TAA,TAG,TGA", cex=3) +
-    annotate("text", x=min(as.numeric(data$purine)), hjust=0.1, y=stops_density - 0.05, label=round(stops_density,4), cex=3) + 
-    theme(legend.position="none") + 
-    scale_x_discrete(labels = c("0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4", "0.4-0.5", "0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1", "1")) + 
+    annotate("text", x=min(as.numeric(data$purine)), hjust=0.1, y=stops_density - 0.05, label=round(stops_density,4), cex=3) +
+    theme(legend.position="none") +
+    scale_x_discrete(labels = c("0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4", "0.4-0.5", "0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1", "1")) +
     stat_summary(fun.data = get_n, fun.args = list("vjust" = 0.1), geom = "text", aes(group = "purine"), size=3)
   return(p)
 }
@@ -148,3 +148,9 @@ filepath = "clean_run/motif_tests/rbp_motifs_cds_stop_codon_densities_exon_dinuc
 motif_set_test(filepath)
 
 
+
+file = read.csv("clean_run/motif_tests/ess_wang_stop_codon_densities.csv", head = T)
+plot = density_histogram(file, xlab = "Stop codon density", ylab = "Count", binwidth = 0.005)
+plot
+emperical_p(file, "id", "real", "stop_density")
+normalised_density(file, "id", "real", "stop_density")

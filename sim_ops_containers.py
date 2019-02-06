@@ -990,7 +990,7 @@ def sim_motif_codon_densities_genome(genome_fasta, gtf, seqs_file, required_simu
     # gen.remove_directory(temp_seq_dir)
 
 
-def generate_dint_controls(input_fasta, output_directory):
+def generate_dint_controls(input_fasta, output_directory, simulations = None):
 
     gen.create_output_directories(output_directory)
     names, seqs = gen.read_fasta(input_fasta)
@@ -1002,7 +1002,8 @@ def generate_dint_controls(input_fasta, output_directory):
     nucleotide_content = seqo.get_nucleotide_content([seq_list[i] for i in seq_list])
 
     args = [seq_list, dinucleotide_content, nucleotide_content, output_directory]
-    run_simulation_function(names, args, simo.generate_dint_controls, sim_run = False)
+    kwargs_dict = {"simulations": simulations}
+    run_simulation_function(names, args, simo.generate_dint_controls,  kwargs_dict = kwargs_dict, sim_run = False)
 
 
 def generate_dint_intron_controls(input_fasta, output_directory):
