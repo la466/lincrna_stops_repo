@@ -5,12 +5,12 @@ import seq_ops as seqo
 import sequence_ops as sequo
 import os
 import collections
-from useful_motif_sets import stops
+from useful_motif_sets import stops, codon_map
 import numpy as np
 from progressbar import ProgressBar
 import random
 import pandas as pd
-
+import scipy.stats
 
 def stop_density_test(input_fasta, output_file, required_simulations, families_file = None):
     simoc.simulate_sequence_stop_density(input_fasta, output_file, required_simulations, families_file = families_file)
@@ -186,3 +186,137 @@ def calculate_lengths(exons_fasta, output_file, families_file = None):
         outfile.write("id,gc,length\n")
         for id in lengths:
             outfile.write("{0},{1},{2}\n".format(id, np.median(gcs[id]), np.median(lengths[id])))
+
+
+def sim_stop_density(input_fasta, output_file, simulations = None, families_file = None):
+    """
+    Wrapper to calculate and simulate the stop codon density in lincRNA sequences.
+
+    Args:
+        input_fasta (str): path to input fasta containing sequences
+        output_file (str): path to output file
+        simulations (int): if set, the number of simulations to run
+        families_file (str): if set, the path to the file containing the paralogous families
+    """
+    # get the sequences
+    names, sequences = gen.read_fasta(input_fasta)
+    sequence_list = {name: sequences[i] for i, name in enumerate(names)}
+
+    if families_file:
+        sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    # create a temporary output directory
+    temp_dir = "temp_lincrna_sim"
+    gen.create_output_directories(temp_dir)
+    # set up the simulation
+    simulation_list = ["real"]
+    simulation_list.extend(list(range(simulations)))
+    # get a list of the output files that might have already been created
+    output_filelist = {}
+    for file in os.listdir(temp_dir):
+        if "real" not in file:
+            output_filelist[int(file.split(".")[0].split("_")[-1])] = "{0}/{1}".format(temp_dir, file)
+        else:
+            output_filelist[file.split(".")[0].split("_")[-1]] = "{0}/{1}".format(temp_dir, file)
+
+    args = [sequence_list, temp_dir, output_filelist]
+    # run the simulation
+    outputs = simoc.run_simulation_function(simulation_list, args, simo.simulate_lincrna_stop_codon_density, sim_run = False)
+    # join all outputs
+    outputs = {**output_filelist, **outputs}
+    real_output = outputs["real"]
+    sim_outputs = {i: outputs[i] for i in outputs if i != "real"}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,gc,stop_codon_density\n")
+        # real data
+        outfile.write("{0}\n".format(gen.read_many_fields(real_output, "\t")[0][0]))
+        # simulation data
+        for sim_id in sorted(sim_outputs):
+            data = gen.read_many_fields(sim_outputs[sim_id], "\t")[0][0]
+            outfile.write("{0},{1}\n".format(sim_id + 1, ",".join(data.split(",")[1:])))
+    # remove the temp directory
+    gen.remove_directory(temp_dir)
+
+
+def process_sim_stop_density_outputs(output_dir, output_file, test_col = None):
+    """
+    Wrapper to calculate p value for lincRNA stop codon density after shuffling
+    of sequences
+    """
+
+    if not test_col:
+        test_col = "stop_codon_density"
+
+    with open(output_file, "w") as outfile:
+        outfile.write("run_number,gc,density,median_simulated_density,normalised_density,p_value,adj_p_value\n")
+        for i, file in enumerate(os.scandir(output_dir)):
+            data = pd.read_csv(file.path)
+            real = data[data['id'] == "real"]
+            sims = data[data['id'] != "real"]
+            less_than = sims[test_col] <= real[test_col][0]
+            p = np.divide(less_than.sum() + 1, len(sims) + 1)
+            median_sims = sims[test_col].median()
+            nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
+            outfile.write("{0},{1},{2},{3},{4},{5},{6}\n".format(i+1, real["gc"][0], real[test_col][0], median_sims, nd, p, p*len(os.listdir(output_dir))))
+
+
+def sim_stop_density_within_genes(input_fasta, output_file, simulations = None, families_file = None):
+    """
+    Wrapper to calculate and simulate the stop codon density in lincRNA sequences.
+
+    Args:
+        input_fasta (str): path to input fasta containing sequences
+        output_file (str): path to output file
+        simulations (int): if set, the number of simulations to run
+        families_file (str): if set, the path to the file containing the paralogous families
+    """
+    # get the sequences
+    names, sequences = gen.read_fasta(input_fasta)
+    sequence_list = {name: sequences[i] for i, name in enumerate(names)}
+
+    if families_file:
+        sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    # create a temporary output directory
+    temp_dir = "temp_lincrna_sim_within_genes"
+    gen.create_output_directories(temp_dir)
+    # get a list of the output files that might have already been created
+    output_filelist = {}
+    for file in os.listdir(temp_dir):
+        output_filelist[file.split(".")[0]] = "{0}/{1}".format(temp_dir, file)
+    simulation_list = [i for i in sequence_list if i not in output_filelist]
+
+    args = [sequence_list, temp_dir, output_filelist, simulations]
+    # run the simulation
+    outputs = simoc.run_simulation_function(simulation_list, args, simo.simulate_lincrna_stop_codon_density_within_genes, sim_run = False)
+    # join all outputs
+    outputs = {**output_filelist, **outputs}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,stop_density,median_simulated_stop_density,normalised_density,p_value\n")
+        for id in sorted(outputs):
+            data = [float(i) for i in gen.read_many_fields(outputs[id], ",")[0]]
+            real = data[0]
+            sims = data[1:]
+            p = np.divide(len([i for i in sims if i <= real]) + 1, len(sims) + 1)
+            nd = np.divide(real - np.mean(sims), np.mean(sims))
+            outfile.write("{0},{1},{2},{3},{4}\n".format(id,real,np.median(sims), nd, p))
+    # remove the temp directory
+    gen.remove_directory(temp_dir)
+
+def process_sim_stop_density_within_gene_outputs(output_dir, output_file):
+    """
+    Wrapper to calculate binomial p value
+    """
+
+    with open(output_file, "w") as outfile:
+        outfile.write("run_number,data_points,depletions,depletions_binomial_p,adj_depletions_binomial_p,significant_depletions,significant_depletions_binomial_p,adj_significant_depletions_binomial_p\n")
+        for i, file in enumerate(os.scandir(output_dir)):
+            data = pd.read_csv(file.path)
+            depletions = data["normalised_density"] < 0
+            significant = data["p_value"] < 0.05
+            rows = data.shape[0]
+            binom_test_depletions = scipy.stats.binom_test(depletions.sum(), rows, p = 0.05, alternative = "greater")
+            binom_test_significant_depletions = scipy.stats.binom_test(significant.sum(), rows, p = 0.05, alternative = "greater")
+            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, rows, depletions.sum(), binom_test_depletions, binom_test_depletions*rows, significant.sum(), binom_test_significant_depletions, binom_test_significant_depletions*rows))

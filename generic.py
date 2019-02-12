@@ -532,6 +532,10 @@ def reverse_complement(base):
     }
     return(reverse_comps[base])
 
+def complement_sequence(sequence):
+    nts = list(sequence)
+    new_nts = [reverse_complement(i) for i in nts]
+    return "".join(new_nts)
 
 def run_in_parallel(input_list, args, func, kwargs_dict = None, workers = None, onebyone = False):
     '''

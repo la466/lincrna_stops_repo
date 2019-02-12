@@ -9,10 +9,36 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11], ints=[3])
-    input_bed, input_fasta, output_directory, required_simulations, extract_sequences, clean_run, density_sim, get_exon_dint_controls, get_intron_dint_controls, exon_region_density, compare_stop_density, sim_orf_lengths = args.input_bed, args.input_fasta, args.output_directory, args.required_simulations, args.extract_sequences, args.clean_run, args.density_sim, args.get_exon_dint_controls, args.get_intron_dint_controls, args.exon_region_density, args.compare_stop_density, args.sim_orf_lengths
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13], ints=[], opt_flags = [3])
+    input_bed, \
+    input_fasta, \
+    output_directory, \
+    required_simulations, \
+    extract_sequences, \
+    clean_run, density_sim,  \
+    get_exon_dint_controls, \
+    get_intron_dint_controls, \
+    exon_region_density, \
+    compare_stop_density, \
+    sim_orf_lengths, \
+    sim_stop_density, \
+    sim_stop_density_within_genes = \
+    args.input_bed, \
+    args.input_fasta, \
+    args.output_directory, \
+    args.required_simulations, \
+    args.extract_sequences, \
+    args.clean_run, \
+    args.density_sim, \
+    args.get_exon_dint_controls, \
+    args.get_intron_dint_controls, \
+    args.exon_region_density, \
+    args.compare_stop_density, \
+    args.sim_orf_lengths, \
+    args.sim_stop_density, \
+    args.sim_stop_density_within_genes
 
     lincrna_output_directory = "{0}/tests/lincrna".format(output_directory)
     gen.create_output_directories(lincrna_output_directory)
@@ -72,6 +98,38 @@ def main():
             simopc.sim_orf_length(lincRNA_multi_exon_fasta, required_simulations, sim_orf_length_output_file)
         ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file)
         ltests.calculate_lengths(lincRNA_multi_exon_fasta, lincRNA_length_output_file, families_file = lincRNA_multi_exon_families)
+
+    sim_stop_density_output_dir = "{0}/stop_density_simulations_all_genes".format(lincrna_output_directory)
+    sim_stop_density_output_file = "{0}/stop_density_simulation_all_genes_outputs.csv".format(lincrna_output_directory)
+    if sim_stop_density:
+        runs = 10
+        if clean_run:
+            gen.remove_directory(sim_stop_density_output_dir)
+        gen.create_output_directories(sim_stop_density_output_dir)
+        # if we need to run the simulations
+        if len(os.listdir(sim_stop_density_output_dir)) < runs:
+            required_runs = list(range(runs - len(os.listdir(sim_stop_density_output_dir))))
+            for run in required_runs:
+                output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
+                ltests.sim_stop_density(lincRNA_multi_exon_fasta, output_file, simulations = int(required_simulations), families_file = lincRNA_multi_exon_families)
+        # process the outputs
+        ltests.process_sim_stop_density_outputs(sim_stop_density_output_dir, sim_stop_density_output_file)
+
+    sim_stop_density_within_gene_output_dir = "{0}/stop_density_simulations_within_genes".format(lincrna_output_directory)
+    sim_stop_density_within_gene_output_file = "{0}/stop_density_simulation_within_genes_outputs.csv".format(lincrna_output_directory)
+    if sim_stop_density_within_genes:
+        runs = 10
+        if clean_run:
+            gen.remove_directory(sim_stop_density_within_gene_output_dir)
+        gen.create_output_directories(sim_stop_density_within_gene_output_dir)
+        # if we need to run the simulations
+        if len(os.listdir(sim_stop_density_within_gene_output_dir)) < runs:
+            required_runs = list(range(runs - len(os.listdir(sim_stop_density_within_gene_output_dir))))
+            for run in required_runs:
+                output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_within_gene_output_dir, run + 1)
+                ltests.sim_stop_density_within_genes(lincRNA_multi_exon_fasta, output_file, simulations = int(required_simulations), families_file = lincRNA_multi_exon_families)
+        # process the outputs
+        ltests.process_sim_stop_density_within_gene_outputs(sim_stop_density_within_gene_output_dir, sim_stop_density_within_gene_output_file)
 
 
 if __name__ == "__main__":
