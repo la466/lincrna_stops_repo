@@ -49,16 +49,24 @@ binom_test <- function(data, ycol = "density", group = NULL) {
   return(b)
 }
 
-filepath = "clean_run/motif_tests/int3_densities.csv"
+filepath = "clean_run/motif_tests/int3_densities.test.csv"
 file = read.csv(filepath, head = T)
 
 head(file)
+nrow(file)
 file$gc = substr(file$gc_content, 0, 3)
 file$purine = substr(file$purine_content, 0, 3)
 stops =  file[file$codons == "TAA_TAG_TGA",]
-gc_matched = file[file$gc == stops$gc,]
+gc_matched = file[file$gc == stops$gc & file$codons != "TAA_TAG_TGA",]
 
+nrow(gc_matched)
+plot(gc_matched$density, cex = 0.6, pch = 16)
+points(stops$density, col = "red", pch = 16)
 
+stops$density
+nrow(gc_matched[gc_matched$density < stops$density])
+binom.test(nrow(gc_matched[gc_matched$density < stops$density,]), nrow(gc_matched), alternative = "l")
+binom.test(nrow(gc_matched[gc_matched$nd < stops$nd,]), nrow(gc_matched))
 
 plot1 = density_scatterplot(gc_matched, ycol = "nd", xlab = "GC matched codon sets (sorted alphabetically)", ylab = "ND")
 plot2 = density_boxplot(gc_matched, ycol = "nd")
