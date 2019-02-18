@@ -8,6 +8,7 @@ import collections
 from useful_motif_sets import dinucleotides, nucleotides, stops
 import multiprocessing as mp
 from progressbar import ProgressBar
+import os
 
 def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory, simulations = None):
 
@@ -885,3 +886,88 @@ def simulate_sequence_stop_density(simulations, sequences, nucleotide_probabilit
     #                 outfile.write(">{0}\n{1}\n".format(i+1,seq))
     #
     # return output_files
+
+
+def simulate_lincrna_stop_codon_density(simulations, sequence_list, output_directory, output_filelist, inverse = None):
+    """
+    Calculate stop codon densities in lincRNA sequences and simulations
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if simulations:
+        for i, simulation_id in enumerate(simulations):
+            gen.print_parallel_status(i, simulations)
+            # check if the output file doesnt already exist
+            if simulation_id not in output_filelist:
+                test_seq_list = sequence_list
+                # if not the real set, shuffle the sequences
+                if simulation_id != "real":
+                    np.random.seed()
+                    shuffled_sequences = {}
+                    for id in test_seq_list:
+                        seq = list(test_seq_list[id])
+                        np.random.shuffle(seq)
+                        shuffled_sequences[id] = "".join(seq)
+                    test_seq_list = shuffled_sequences
+
+                test_seqs = [test_seq_list[i] for i in test_seq_list]
+                density = seqo.calc_motif_density(test_seqs, stops)
+                gc = seqo.calc_seqs_gc(["".join(test_seqs)])[0]
+                # write the results to file
+                output_file = "{0}/output_{1}.txt".format(output_directory, simulation_id)
+                with open(output_file, "w") as outfile:
+                    outfile.write("{0},{1},{2}\n".format(simulation_id, gc, density))
+                new_outputs[simulation_id] = output_file
+
+    return new_outputs
+
+def simulate_lincrna_codon_set_density(simulations, sequence_list, codon_sets, output_directory, output_filelist):
+    """
+    Calculate stop codon densities in lincRNA sequences and simulations
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if simulations:
+        for i, simulation_id in enumerate(simulations):
+            gen.print_parallel_status(i, simulations)
+            # check if the output file doesnt already exist
+            if simulation_id not in output_filelist:
+                test_seq_list = sequence_list
+                # if not the real set, shuffle the sequences
+                if simulation_id != "real":
+                    np.random.seed()
+                    shuffled_sequences = {}
+                    for id in test_seq_list:
+                        seq = list(test_seq_list[id])
+                        np.random.shuffle(seq)
+                        shuffled_sequences[id] = "".join(seq)
+                    test_seq_list = shuffled_sequences
+
+                test_seqs = [test_seq_list[i] for i in test_seq_list]
+                densities = {i: seqo.calc_motif_density(test_seqs, codon_sets[i]) for i in codon_sets}
+                gc = seqo.calc_seqs_gc(["".join(test_seqs)])[0]
+                # write the results to file
+                output_file = "{0}/output_{1}.txt".format(output_directory, simulation_id)
+                with open(output_file, "w") as outfile:
+                    outfile.write("{0},{1},{2}\n".format(simulation_id, gc, ",".join(gen.stringify([densities[i] for i in sorted(densities)]))))
+                new_outputs[simulation_id] = output_file
+
+    return new_outputs

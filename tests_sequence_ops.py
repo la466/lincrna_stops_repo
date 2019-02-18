@@ -285,3 +285,39 @@ class Tests(unittest.TestCase):
         expected = [[i.split(",") for i in set.split("|")] for set in gen.read_fasta(expected_file)[1]]
         observed = [retain_only_fourfold_codons(i) for i in inputs]
         self.assertEqual(expected, observed)
+
+    def test_retrieve_alignments(self):
+        input_file1 = "test_data/sequence_ops/test_retrieve_alignments/input1.fasta"
+        input_file2 = "test_data/sequence_ops/test_retrieve_alignments/input2.fasta"
+        input_links = "test_data/sequence_ops/test_retrieve_alignments/input_links.bed"
+        expected_file = "test_data/sequence_ops/test_retrieve_alignments/expected.fasta"
+        observed_file = "test_data/sequence_ops/test_retrieve_alignments/observed.fasta"
+        gen.remove_file(observed_file)
+        retrieve_alignments(input_file1, input_file2, input_links, observed_file)
+        expected = gen.read_many_fields(expected_file, "\t")
+        observed = gen.read_many_fields(observed_file, "\t")
+        self.assertEqual(expected, observed)
+
+    def test_extract_alignment_overlaps_stops(self):
+        input_file = "test_data/sequence_ops/test_extract_alignment_overlaps/input.fasta"
+        expected_file = "test_data/sequence_ops/test_extract_alignment_overlaps/expected.fasta"
+
+        expected = []
+        expected_parts = gen.read_fasta(expected_file)[1]
+        for set in expected_parts:
+            seq_set = set.split("|")
+            seq_set_parts = [[[k for k in j.split(",") if len(k)] for j in i.split(";")] for i in seq_set]
+            outputs = []
+            for i in range(len(seq_set_parts[0])):
+                outputs.append([seq_set_parts[0][i], seq_set_parts[1][i]])
+            expected.append(outputs)
+
+
+        input_seqs = [i.split(",") for i in gen.read_fasta(input_file)[1]]
+        overlap_sets = [[3,4,5,6,7,8,13,14,15,16,17,18], [1,2,3,4,5,6,7,8,9,23,24,25,26,27,28,42,43,44,45,46,47], [3,4,5,6,7,8,15,16,17,18,19,20,21]]
+        observed = []
+        for i, input_set in enumerate(input_seqs):
+            a, b, c, d, e, f = extract_alignment_overlaps(overlap_sets[i], input_set, stop_overlaps = True)
+            observed.append([a,b,c,d,e,f])
+
+        self.assertEqual(expected, observed)

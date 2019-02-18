@@ -791,6 +791,61 @@ def calc_ese_ds(alignment_file, cds_fasta, exons_fasta, motif_file, output_file,
     # get the finishing time
     gen.get_time(start_time)
 
+def calc_ese_ds_random_overlaps(alignment_file, cds_fasta, exons_fasta, motif_file, output_file, simulations = None, controls_directory = None, families_file = None):
+    """
+    Calculate the ds scores in ESEs.
+
+    Args:
+        alignment_file (str): path to file containing sequence alignments
+        exons_fasta (str): path to file contaning exon sequences
+        motif_file (str): path to file containing motifs
+        output_file (str): path to output file
+        simulations (int): if set, the number of simulants to run
+        controls_directory (path): if set, the path to simulants
+        families_file (path): if set, use to choose one gene member per family
+    """
+
+    start_time = time.time()
+
+    # get all the names of the multi exon sequences
+    exon_names = gen.read_fasta(exons_fasta)[0]
+    # now get all the sequence alignments which match the names of the multi exon genes
+    alignment_names, alignment_seqs = gen.read_fasta(alignment_file)
+    alignments = {name: alignment_seqs[i].split(",") for i, name in enumerate(alignment_names) if name in exon_names}
+
+    # if we want to group into paralagous families
+    if families_file:
+        alignments = sequo.pick_random_family_member(families_file, alignments)
+
+    # now create a list filepaths to motif sets test
+    # we first want the real motifs, then the number of simulated sets
+    motif_set_filepaths = {"real": motif_file}
+    if simulations and controls_directory:
+        for i, file in enumerate(os.listdir(controls_directory)[:simulations]):
+            motif_set_filepaths[i+1] = "{0}/{1}".format(controls_directory, file)
+    elif simulations and not controls_directory:
+        print("\nPlease provide both the number of simulations and the controls directory...\n")
+        raise Exception
+
+    # set up the temporary output_directory to hold results
+    temp_output_directory = "temp_ds_random_overlaps_outputs"
+    gen.create_output_directories(temp_output_directory)
+
+    # set up the test
+    args = [motif_set_filepaths, alignments, temp_output_directory]
+    # run the function
+    outputs = simoc.run_simulation_function(list(motif_set_filepaths), args, sequo.ese_ds_random_overlaps_wrapper, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,ese_ds,non_ese_ds,ese_stop_ds,ese_non_stop_ds\n")
+        for file in outputs:
+            outfile.write("{0}\n".format(",".join(gen.read_many_fields(file, "\t")[0])))
+
+    # remove temp output directory
+    gen.remove_directory(temp_output_directory)
+    # get the finishing time
+    gen.get_time(start_time)
+
 def calc_non_ese_ds(alignment_file, cds_fasta, exons_fasta, motif_file, output_file, simulations = None, controls_directory = None, families_file = None):
     """
     Calculate the ds scores for stop codons not in ESEs.
@@ -1134,3 +1189,44 @@ def calc_ds_mutation(simulations, alignment_file, cds_fasta, ortholog_cds_fasta,
             if results[0] != "real":
                 results[0] = int(results[0])+1
             outfile.write("{0},{1}\n".format(results[0], ",".join(results[1:])))
+
+
+def ese_ds(alignments_fasta, cds_fasta, motif_file, output_file, families_file = None):
+    """
+    Wrapper for calculating the ds scores in motifs and also ds scores for stop
+    codons in motifs.
+
+    Args:
+        alignments_fasta (str): path to alignments file
+        cds_fasta (str): path to file containing cds sequences
+        motif_set (str): path to file containing motifs
+        output_file (str): path to output file
+        families_file (str): if set, the path
+    """
+    # first get a list of all multi-exon cds
+    cds_names = gen.read_fasta(cds_fasta)[0]
+    # now get the alignments that correspond to these sequences
+    alignment_ids, alignment_sequences = gen.read_fasta(alignments_fasta)
+    alignment_sequences = {id: alignment_sequences[i].split(",") for i, id in enumerate(alignment_ids) if id in cds_names}
+    # if the families file exists, pick only one member at random to keep
+    if families_file:
+        sequo.pick_random_family_member(families_file, alignment_sequences)
+    # now generate the output for the ds scores
+    # first set up a dictionary containing the paths to the motif files
+    motif_sets = {"real": motif_file}
+    # and now get the ids of these motif sets
+    motif_set_ids = list(motif_sets)
+    # set up a temporary directory to hold the outputs
+    temp_dir = "temp_ds_outputs_dir"
+    gen.create_output_directories(temp_dir)
+    # run the test
+    args = [alignment_sequences, motif_sets, temp_dir]
+    outputs = simoc.run_simulation_function(motif_set_ids, args, sequo.calculate_motifs_stop_ds, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,hit_ds,hit_stop_ds,hit_non_stop_ds,non_hit_ds,non_hit_stop_ds,non_hit_non_stop_ds\n")
+        for file in outputs:
+            data = gen.read_many_fields(file, "\t")[0][0]
+            outfile.write("{0}\n".format(data))
+    # remove the temp directory
+    gen.remove_directory(temp_dir)
