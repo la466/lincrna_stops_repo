@@ -49,38 +49,54 @@ binom_test <- function(data, ycol = "density", group = NULL) {
   return(b)
 }
 
+## need to do tht python script for this, removes any cases with stop codon in 
 filepath = "clean_run/motif_tests/int3_densities.test.csv"
 file = read.csv(filepath, head = T)
 
-head(file)
-nrow(file)
 file$gc = substr(file$gc_content, 0, 3)
 file$purine = substr(file$purine_content, 0, 3)
 stops =  file[file$codons == "TAA_TAG_TGA",]
 gc_matched = file[file$gc == stops$gc & file$codons != "TAA_TAG_TGA",]
 
-nrow(gc_matched)
-plot(gc_matched$density, cex = 0.6, pch = 16)
-points(stops$density, col = "red", pch = 16)
+density = ggplot() +
+  geom_histogram(aes(gc_matched$density), bins = 30, col = "black", fill = "RoyalBlue") + 
+  geom_vline(xintercept = stops$density, lty = 1, cex = 2, col = "red") + 
+  labs(x = "Codon set density", y = "Frequency")
+normalised_density = ggplot() +
+  geom_histogram(aes(gc_matched$nd), bins = 30, col = "black", fill = "RoyalBlue") + 
+  geom_vline(xintercept = stops$nd, lty = 1, cex = 2, col = "red") + 
+  labs(x = "Codon set normalised density (ND)", y = "Frequency")
 
-stops$density
-nrow(gc_matched[gc_matched$density < stops$density])
-binom.test(nrow(gc_matched[gc_matched$density < stops$density,]), nrow(gc_matched), alternative = "l")
-binom.test(nrow(gc_matched[gc_matched$nd < stops$nd,]), nrow(gc_matched))
+library(ggpubr)
+library(gridExtra)
+plot = ggarrange(
+  density,
+  normalised_density,
+  labels = c("A", "B")
+)
+ggsave("clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
 
-plot1 = density_scatterplot(gc_matched, ycol = "nd", xlab = "GC matched codon sets (sorted alphabetically)", ylab = "ND")
-plot2 = density_boxplot(gc_matched, ycol = "nd")
-plot1
-plot2
-binom_test(gc_matched, ycol = "nd")
-binom_test(gc_matched, ycol = "nd", group = "purine")
+binom.test(nrow(gc_matched[gc_matched$density <= stops$density,]), nrow(gc_matched), alternative = "l")
+binom.test(nrow(gc_matched[gc_matched$nd <= stops$nd,]), nrow(gc_matched), alternative = "l")
 
-cairo_pdf(filename = "clean_run/plots/gc_matched_codons_nd.pdf", width = 10)
-plot1
-dev.off()
-cairo_pdf("clean_run/plots/gc_matched_codons_purine_nd.pdf", width = 10)
-plot2
-dev.off()
+purine_matched = gc_matched[gc_matched$purine_content == stops$purine_content,]
+binom.test(nrow(purine_matched[purine_matched$nd <= stops$nd,]), nrow(purine_matched), alternative = "l")
+
+
+data$colour <- ifelse(data$purine == stops$purine, "a", "b")
+purine_plot = ggplot(data, aes(x = data$purine, y = data$nd)) + 
+  stat_boxplot(geom ='errorbar') +
+  geom_boxplot(aes(fill=data$colour)) +
+  scale_fill_manual(values=c("RoyalBlue", "#dddddd")) +
+  geom_hline(yintercept = stops$nd, lty=2) +
+  labs(x = "Codon set purine content", y="ND") + 
+  annotate("text", x=min(as.numeric(data$purine)), hjust=0.2, y= stops$nd + 0.05, label="TAA,TAG,TGA", cex=3) +
+  annotate("text", x=min(as.numeric(data$purine)), hjust=0.1, y= stops$nd - 0.05, label=round(stops$nd,3), cex=3) +
+  theme(legend.position="none") +
+  scale_x_discrete(labels = c("0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4", "0.4-0.5", "0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1", "1")) +
+  stat_summary(fun.data = get_n, fun.args = list("vjust" = 0.1), geom = "text", aes(group = "purine"), size=3)
+
+ggsave(plot = purine_plot, filename = "clean_run/plots/codon_sets_purine.pdf", width = 10, height = 7)
 
 
 filepath = "clean_run/motif_tests/ises_wang_densities.csv"

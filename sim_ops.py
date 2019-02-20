@@ -1,5 +1,6 @@
 import generic as gen
 import seq_ops as seqo
+import sequence_ops as sequo
 import ops
 import numpy as np
 import random
@@ -968,6 +969,50 @@ def simulate_lincrna_codon_set_density(simulations, sequence_list, codon_sets, o
                 output_file = "{0}/output_{1}.txt".format(output_directory, simulation_id)
                 with open(output_file, "w") as outfile:
                     outfile.write("{0},{1},{2}\n".format(simulation_id, gc, ",".join(gen.stringify([densities[i] for i in sorted(densities)]))))
+                new_outputs[simulation_id] = output_file
+
+    return new_outputs
+
+
+def lincrna_motif_nd(simulations, sequence_list, motif_file, output_directory, output_filelist):
+    """
+    Calculate stop codon densities in lincRNA sequences and simulations
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if simulations:
+        query_motifs = sequo.read_motifs(motif_file)
+        for i, simulation_id in enumerate(simulations):
+            gen.print_parallel_status(i, simulations)
+            # check if the output file doesnt already exist
+            if simulation_id not in output_filelist:
+                test_seq_list = sequence_list
+                # if not the real set, shuffle the sequences
+                if simulation_id != "real":
+                    np.random.seed()
+                    shuffled_sequences = {}
+                    for id in test_seq_list:
+                        seq = list(test_seq_list[id])
+                        np.random.shuffle(seq)
+                        shuffled_sequences[id] = "".join(seq)
+                    test_seq_list = shuffled_sequences
+
+                test_seqs = [test_seq_list[i] for i in test_seq_list]
+                densities = {motif: seqo.calc_motif_density(test_seqs, [motif]) for motif in query_motifs}
+
+                # write the results to file
+                output_file = "{0}/output_{1}.txt".format(output_directory, simulation_id)
+                with open(output_file, "w") as outfile:
+                    [outfile.write("{0},{1}\n".format(motif, densities[motif])) for motif in sorted(densities)]
                 new_outputs[simulation_id] = output_file
 
     return new_outputs

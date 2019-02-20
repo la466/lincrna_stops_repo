@@ -1,5 +1,6 @@
-
-
+stop_density_simulations = read.csv("clean_run/tests/lincrna/stop_density_simulation_outputs.csv", head = T)
+median(stop_density_simulations$stop_codon_density)
+median(stop_density_simulations$median_simulated_stop_codon_density)
 
 
 

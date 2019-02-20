@@ -320,3 +320,51 @@ def process_sim_stop_density_within_gene_outputs(output_dir, output_file):
             binom_test_depletions = scipy.stats.binom_test(depletions.sum(), rows, p = 0.05, alternative = "greater")
             binom_test_significant_depletions = scipy.stats.binom_test(significant.sum(), rows, p = 0.05, alternative = "greater")
             outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, rows, depletions.sum(), binom_test_depletions, binom_test_depletions*rows, significant.sum(), binom_test_significant_depletions, binom_test_significant_depletions*rows))
+
+
+def calculcate_motif_nd(input_fasta, motif_file, output_file, simulations = None, families_file = None):
+
+    # get the sequences
+    names, sequences = gen.read_fasta(input_fasta)
+    sequence_list = {name: sequences[i] for i, name in enumerate(names)}
+
+    if families_file:
+        sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    # create a temporary output directory
+    temp_dir = "temp_lincrna_motif_nd"
+    gen.create_output_directories(temp_dir)
+    # get a list of the output files that might have already been created
+    # set up the simulation
+    simulation_list = ["real"]
+    simulation_list.extend(list(range(simulations)))
+    # get a list of the output files that might have already been created
+    output_filelist = {}
+    for file in os.listdir(temp_dir):
+        if "real" not in file:
+            output_filelist[int(file.split(".")[0].split("_")[-1])] = "{0}/{1}".format(temp_dir, file)
+        else:
+            output_filelist[file.split(".")[0].split("_")[-1]] = "{0}/{1}".format(temp_dir, file)
+
+    args = [sequence_list, motif_file, temp_dir, output_filelist]
+    # run the simulation
+    outputs = simoc.run_simulation_function(simulation_list, args, simo.lincrna_motif_nd, sim_run = False)
+    # join all outputs
+    outputs = {**output_filelist, **outputs}
+    real_output = outputs["real"]
+    sim_outputs = {i: outputs[i] for i in outputs if i != "real"}
+
+    real_densities = {i[0]: float(i[1]) for i in gen.read_many_fields(real_output, ",")}
+    sim_densities = collections.defaultdict(lambda: [])
+    for sim_id in sorted(sim_outputs):
+        data = gen.read_many_fields(sim_outputs[sim_id], ",")
+        [sim_densities[i[0]].append(float(i[1])) for i in data]
+
+    nds = {motif: np.divide(real_densities[motif] - np.mean(sim_densities[motif]), np.std(sim_densities[motif])) for motif in real_densities}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("motif,density,nd\n")
+        [outfile.write("{0},{1},{2}\n".format(motif, real_densities[motif], nds[motif])) for motif in sorted(nds)]
+
+    # remove the temp directory
+    gen.remove_directory(temp_dir)

@@ -9,13 +9,14 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "motif_nd"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13], ints=[], opt_flags = [3])
+    args = gen.parse_arguments(description, arguments, flags = [5,6,7,8,9,10,11,12,13,14,15], opt_flags = [3,4])
     input_bed, \
     input_fasta, \
     output_directory, \
     required_simulations, \
+    motif_file, \
     extract_sequences, \
     clean_run, density_sim,  \
     get_exon_dint_controls, \
@@ -24,11 +25,13 @@ def main():
     compare_stop_density, \
     sim_orf_lengths, \
     sim_stop_density, \
-    sim_stop_density_within_genes = \
+    sim_stop_density_within_genes, \
+    motif_nd = \
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
     args.required_simulations, \
+    args.motif_file, \
     args.extract_sequences, \
     args.clean_run, \
     args.density_sim, \
@@ -38,7 +41,8 @@ def main():
     args.compare_stop_density, \
     args.sim_orf_lengths, \
     args.sim_stop_density, \
-    args.sim_stop_density_within_genes
+    args.sim_stop_density_within_genes, \
+    args.motif_nd
 
     lincrna_output_directory = "{0}/tests/lincrna".format(output_directory)
     gen.create_output_directories(lincrna_output_directory)
@@ -130,6 +134,10 @@ def main():
                 ltests.sim_stop_density_within_genes(lincRNA_multi_exon_fasta, output_file, simulations = int(required_simulations), families_file = lincRNA_multi_exon_families)
         # process the outputs
         ltests.process_sim_stop_density_within_gene_outputs(sim_stop_density_within_gene_output_dir, sim_stop_density_within_gene_output_file)
+
+    motif_nd_output_file = "{0}/motif_nd.csv".format(lincrna_output_directory)
+    if motif_nd:
+        ltests.calculcate_motif_nd(lincRNA_multi_exon_fasta, motif_file, motif_nd_output_file, simulations = int(required_simulations), families_file = lincRNA_multi_exon_families)
 
 
 if __name__ == "__main__":
