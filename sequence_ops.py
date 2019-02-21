@@ -12,7 +12,6 @@ import numpy as np
 from Bio.Phylo.PAML import codeml
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
-from conservation import Alignment_Functions
 import copy
 import sys
 from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold, one_away_codons
@@ -1514,7 +1513,7 @@ def extract_aligment_sequence_parts(cds_pairs, reverse = False):
         raise Exception
 
     # setup the muscle alignment
-    alignment_functions = Alignment_Functions(muscle_exe)
+    alignment_functions = cons.Alignment_Functions(muscle_exe)
 
     kept_sequence1 = []
     kept_sequence2 = []
@@ -1562,7 +1561,7 @@ def extract_alignments(seq1, seq2, muscle_exe = None):
         raise Exception
 
     # setup the muscle alignment
-    alignment_functions = Alignment_Functions(muscle_exe)
+    alignment_functions = cons.Alignment_Functions(muscle_exe)
     # get the alignments for the sequences
     seq1_iupac_protein = Seq(seq1, IUPAC.unambiguous_dna).translate()
     seq2_iupac_protein = Seq(seq2, IUPAC.unambiguous_dna).translate()
@@ -2369,8 +2368,57 @@ def group_family_results(result_list, families):
             outputs["group_{0}".format(list_id)].append(result_list[id])
         else:
             outputs[id].append(result_list[id])
-
     return outputs
+
+def return_median_family_id(result_list, families):
+    """
+    Group the results of sequences in paralagous family together. Return the
+    id of the result with the median value
+
+    Args:
+        result_list (dict): dictionary of results with transcript ids a keys
+        families (list): list of lists containing families
+
+    Returns:
+        outputs (dict): dictionary containing list of outputs sorted by families,
+            dict[id] = id
+    """
+
+    # get a list of all ids that are part of the families file
+    family_ids = []
+    [family_ids.extend(i) for i in families]
+
+    seen_ids = []
+    outputs = collections.defaultdict(lambda: [[],[]])
+
+    for id in result_list:
+        if id in family_ids:
+            list_id = [i for i, lst in enumerate(families) if id in lst][0]
+            outputs["group_{0}".format(list_id)][0].append(result_list[id])
+            outputs["group_{0}".format(list_id)][1].append(id)
+        else:
+            outputs[id][0].append(result_list[id])
+            outputs[id][1].append(id)
+
+    output_ids = {}
+    for id in outputs:
+        median = np.nanmedian(outputs[id][0])
+        if np.isfinite(median):
+            if median in outputs[id][0]:
+                median_id = outputs[id][1][outputs[id][0].index(median)]
+            else:
+                sorted_values = sorted(outputs[id][0])
+                mid = int(np.divide(len(sorted_values), 2))
+                values = [sorted_values[mid-1], sorted_values[+1]]
+                chosen_value = np.random.choice(values)
+                median_id = outputs[id][1][outputs[id][0].index(chosen_value)]
+        else:
+            median_id = outputs[id][1][0]
+        output_ids[id] = median_id
+
+    return output_ids
+
+
 
 def return_median_family_result(result_list, families):
     """

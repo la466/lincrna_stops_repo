@@ -154,20 +154,33 @@ def density_simulation(exons_fasta, introns_fasta, simulations, families_file = 
             outfile.write("{0},{1},{2}\n".format(id, np.median(nd_exon[i]), np.median(nd_intron[i])))
 
 
-def process_length_sim(input_file, output_file):
+def process_length_sim(input_file, output_file, families_file = None):
 
     data = pd.read_csv(input_file)
     ids = list(data)[1:]
-    with open(output_file, "w") as outfile:
-        outfile.write("id,gc,real,mean_sims,normalised_length,z_score\n")
-        for id in ids:
-            gc = data[id][0]
-            real = data[id][1]
-            sims = data[id][2:]
+    z_scores = {}
 
-            normalised_length = np.divide(real - np.mean(sims), np.mean(sims))
-            z = np.divide(real - np.mean(sims), np.std(sims))
-            outfile.write("{0},{1},{2},{3},{4},{5}\n".format(id, gc, real, sims.mean(), normalised_length, z))
+    for id in ids:
+        # gc = data[id][0]
+        real = data[id][1]
+        sims = data[id][2:]
+        z = np.divide(real - np.nanmean(sims), np.nanstd(sims))
+        z_scores[id] = z
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        z_score_ids = sequo.return_median_family_id(z_scores, families)
+    else:
+        z_score_ids = {i: i for i in z_scores}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,gc,real,mean_sims,z_score\n")
+        for id in z_score_ids:
+            loc_id = z_score_ids[id]
+            gc = data[loc_id][0]
+            real = data[loc_id][1]
+            sims = data[loc_id][2:]
+            outfile.write("{0},{1},{2},{3},{4}\n".format(id, gc, real, sims.mean(), z_scores[loc_id]))
 
 
 def calculate_lengths(exons_fasta, output_file, families_file = None):

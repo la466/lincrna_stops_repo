@@ -65,6 +65,11 @@ def calc_eff_p(real_value, sim_values, greater = True):
     p = (n + 1)/(m + 1)
     return(p)
 
+def check_files_exists(filepath_list):
+    for filepath in filepath_list:
+        if not os.path.isfile(filepath):
+            raise Exception("\n\nRequired file: {0}\n".format(filepath))
+
 def create_directory(path):
     '''
     Create new directory if doesn't already exist
