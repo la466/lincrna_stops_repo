@@ -3170,3 +3170,21 @@ def extract_alignment_overlaps(overlaps, sequences, stop_overlaps = None):
         return overlap_set, overlap_stops, overlap_non_stops, non_overlaps, non_overlap_stops, non_overlap_non_stops
     else:
         return overlap_set, non_overlaps
+
+
+def chunk_overlaps(overlaps):
+    overlaps = sorted(list(set(overlaps)))
+    new_overlaps = []
+    new_set = []
+    for i in overlaps:
+        new_set.append(i)
+        if i+1 not in overlaps:
+            new_overlaps.append(new_set)
+            new_set = []
+    return new_overlaps
+
+def return_overlap_motifs(sequence, motifs):
+    overlaps = sequence_overlap_indicies(sequence, motifs)
+    chunked_overlaps = chunk_overlaps(overlaps)
+    overlap_motifs = ["".join([sequence[i] for i in chunk]) for chunk in chunked_overlaps]
+    return overlap_motifs

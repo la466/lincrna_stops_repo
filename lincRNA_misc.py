@@ -77,10 +77,10 @@ def main():
     sim_orf_length_output_file = "{0}/orf_length_sim.csv".format(output_directory)
     sim_orf_length_z_file = "{0}/orf_length_sim_z.csv".format(output_directory)
     if orf_length_sim:
-        simopc.sim_orf_length(multi_exon_transcript_sequences_fasta, 6, sim_orf_length_output_file)
+        simopc.sim_orf_length(multi_exon_transcript_sequences_fasta, 1000, sim_orf_length_output_file)
         ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file, families_file = multi_exon_families_file)
-        # ltests.calculate_lengths(lincRNA_multi_exon_fasta, lincRNA_length_output_file, families_file = lincRNA_multi_exon_families)
 
+    
 
 if __name__ == "__main__":
     main()
