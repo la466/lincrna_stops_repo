@@ -28,6 +28,19 @@ def calc_motif_density(seq_list, motif_set):
     density = np.divide(seq_hits, seq_nts)
     return density
 
+def calc_motif_counts(seq_list, motif_set):
+
+    motif_count = 0
+
+    for motif in motif_set:
+        motif_search = re.compile("(?=({0}))".format(motif))
+        for i, seq in enumerate(seq_list):
+            matches = re.finditer(motif_search, seq)
+            matches = [i for i in matches]
+            motif_count += len(matches)
+
+    return motif_count
+
 def get_exon_reading_frame(exon_seq, cds_seq):
     """
     Given a sequence, get the reading frame, i.e. the frame containing no
