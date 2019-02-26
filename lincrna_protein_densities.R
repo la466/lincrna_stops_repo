@@ -229,18 +229,28 @@ for (type in types) {
   }
 }
 
+correlations[nrow(correlations)+1,] <- NA
+correlations_all[nrow(correlations_all)+1,] <- NA
+cors = rbind(correlations, correlations_all, correlations_flanks)
+write.csv(cors, file = "clean_run/tests/ese_densities/intron_size_ese_density_stop_non_stop_correlations.csv", row.names = F, na = "")
+
+
 cor_outputs = data.frame(
   motif_set = character(),
+  ese_rho = double(),
+  ese_p = double(),
   stop_ese_rho = double(),
   stop_ese_p = double(),
-  non_stop_ese_rho = double(),double(),cor2$p.value,
+  non_stop_ese_rho = double(),
+  non_stop_ese_p = double(),
   fischers_z = double(),
-  diff_p = double(),
+  diff_p = double()
 )
 
 for (type in types) {
   data = read.csv(paste("clean_run/tests/ese_densities/PESE_non_coding_ese_densities", type, ".csv", sep = ""), head = T)
   data = data[log10(data$intron_size) != 0,]
+  cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
   cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
   cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
 
@@ -248,6 +258,8 @@ for (type in types) {
   
   cor_output = data.frame(
     motif_set = paste("PESE", type, sep = ""),
+    ese_rho = cor$estimate,
+    ese_p = cor$p.value,
     stop_ese_rho = cor1$estimate,
     stop_ese_p = cor1$p.value,
     non_stop_ese_rho = cor2$estimate,
@@ -255,8 +267,10 @@ for (type in types) {
     fischers_z = z1,
     diff_p = p_from_z(z1)
   )
+  cor_outputs = rbind(cor_outputs, cor_output)
 }
 
+write.csv(cor_outputs, file = "clean_run/tests/ese_densities/intron_size_ese_density_stop_non_stop_correlations_non_coding.csv", row.names = F, na = "")
 
 
 
@@ -265,10 +279,6 @@ cor2 = cor.test(log10(lincrna$intron_size), lincrna$non_stop_ese_density, method
 
 
 
-correlations[nrow(correlations)+1,] <- NA
-correlations_all[nrow(correlations_all)+1,] <- NA
-cors = rbind(correlations, correlations_all, correlations_flanks)
-write.csv(cors, file = "clean_run/tests/ese_densities/intron_size_ese_density_stop_non_stop_correlations.csv", row.names = F, na = "")
 
 
 f = read.csv(paste("clean_run/tests/ese_densities/", "INT3", "_lincrna_ese_densities_flanks.csv", sep = ""), head = T)
