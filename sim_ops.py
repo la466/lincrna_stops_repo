@@ -10,6 +10,7 @@ from useful_motif_sets import dinucleotides, nucleotides, stops
 import multiprocessing as mp
 from progressbar import ProgressBar
 import os
+import copy
 
 def generate_dint_controls(input_ids, input_seqs, dinucleotide_content, nucleotide_content, output_directory, simulations = None):
 
@@ -930,6 +931,46 @@ def simulate_lincrna_stop_codon_density(simulations, sequence_list, output_direc
                 new_outputs[simulation_id] = output_file
 
     return new_outputs
+
+def simulate_lincrna_stop_codon_density_within_genes(id_list, sequence_list, output_directory, output_filelist, simulations):
+    """
+    Calculate stop codon densities in lincRNA sequences and simulations
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if len(id_list):
+        np.random.seed()
+        for i, id in enumerate(id_list):
+            gen.print_parallel_status(i, id_list)
+
+            simulated_seqs = []
+            seq = sequence_list[id]
+            nts = list(seq)
+            for i in range(simulations):
+                sim_nts = copy.deepcopy(nts)
+                np.random.shuffle(sim_nts)
+                simulated_seqs.append("".join(sim_nts))
+
+            real_density = seqo.calc_motif_density([seq], stops)
+            sim_densities = [seqo.calc_motif_density([sim_seq], stops) for sim_seq in simulated_seqs]
+
+            output_file = "{0}/{1}.txt".format(output_directory, id)
+            with open(output_file, "w") as outfile:
+                outfile.write("{0},{1}\n".format(real_density, ",".join(gen.stringify(sim_densities))))
+            new_outputs[id] = output_file
+
+    return new_outputs
+
+
 
 def simulate_lincrna_codon_set_density(simulations, sequence_list, codon_sets, output_directory, output_filelist):
     """
