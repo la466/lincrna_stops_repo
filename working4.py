@@ -49,12 +49,13 @@ non_coding_files = {
 filesets = [
     # lincrna_files,
     # pc_files,
-    non_coding_files
+    # non_coding_files,
+    lincrna_files2
 ]
 
 ese_sets = [
-    # "source_data/motif_sets/int3.txt",
-    # "source_data/motif_sets/RESCUE.txt",
+    "source_data/motif_sets/int3.txt",
+    "source_data/motif_sets/RESCUE.txt",
     # "source_data/motif_sets/ke400.txt",
     # "source_data/motif_sets/ESR.txt",
     "source_data/motif_sets/PESE.txt",
@@ -170,7 +171,7 @@ def calculate_densities(filesets, all_sequences = False, flanks = None, noncodin
 
         soc.run_simulation_function(ese_sets, [exon_list, intron_list, fileset], run_densities, kwargs_dict = {"all_sequences": all_sequences, "flanks": flanks}, sim_run = False)
 
-# calculate_densities(filesets)
+calculate_densities(filesets)
 # calculate_densities(filesets, all_sequences = True)
-# calculate_densities(filesets, flanks = True)
-calculate_densities(filesets, flanks = True, noncoding = True)
+calculate_densities(filesets, flanks = True)
+# calculate_densities(filesets, flanks = True, noncoding = True)
