@@ -242,7 +242,7 @@ def sim_stop_density(input_fasta, output_file, simulations = None, families_file
     sim_outputs = {i: outputs[i] for i in outputs if i != "real"}
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,gc,stop_codon_density\n")
+        outfile.write("id,seq_count,gc,stop_codon_density\n")
         # real data
         outfile.write("{0}\n".format(gen.read_many_fields(real_output, "\t")[0][0]))
         # simulation data
@@ -263,7 +263,7 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None):
         test_col = "stop_codon_density"
 
     with open(output_file, "w") as outfile:
-        outfile.write("run_number,gc,density,median_simulated_density,normalised_density,p_value,adj_p_value\n")
+        outfile.write("run_number,seq_count,gc,density,median_simulated_density,normalised_density,p_value,adj_p_value\n")
         for i, file in enumerate(os.scandir(output_dir)):
             data = pd.read_csv(file.path)
             real = data[data['id'] == "real"]
@@ -272,7 +272,7 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None):
             p = np.divide(less_than.sum() + 1, len(sims) + 1)
             median_sims = sims[test_col].median()
             nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
-            outfile.write("{0},{1},{2},{3},{4},{5},{6}\n".format(i+1, real["gc"][0], real[test_col][0], median_sims, nd, p, p*len(os.listdir(output_dir))))
+            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["gc"][0], real[test_col][0], median_sims, nd, p, p*len(os.listdir(output_dir))))
 
 
 def sim_stop_density_within_genes(input_fasta, output_file, simulations = None, families_file = None):

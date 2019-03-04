@@ -926,7 +926,7 @@ def simulate_lincrna_stop_codon_density(simulations, sequence_list, output_direc
                 # write the results to file
                 output_file = "{0}/output_{1}.txt".format(output_directory, simulation_id)
                 with open(output_file, "w") as outfile:
-                    outfile.write("{0},{1},{2}\n".format(simulation_id, gc, density))
+                    outfile.write("{0},{1},{2},{3}\n".format(simulation_id, len(test_seqs), gc, density))
                 new_outputs[simulation_id] = output_file
 
     return new_outputs
