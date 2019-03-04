@@ -932,6 +932,72 @@ def simulate_lincrna_stop_codon_density(simulations, sequence_list, output_direc
 
     return new_outputs
 
+def simulate_lincrna_stop_codon_density_removed_motifs(simulations, sequence_list, output_directory, output_filelist, motifs, inverse = None):
+    """
+    Calculate stop codon densities in lincRNA sequences and simulations
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if simulations:
+        np.random.seed()
+        overlap_positions = {}
+        overlap_lengths = {}
+        for id in sequence_list:
+            sequence = sequence_list[id]
+            overlaps = sequo.sequence_overlap_indicies(sequence, motifs)
+            overlap_positions[id] = overlaps
+            overlaps = sequo.chunk_overlaps(overlaps)
+            overlap_length_list = [len(i) for i in overlaps]
+            overlap_lengths[id] = overlap_length_list
+
+        for i, simulation_id in enumerate(simulations):
+            gen.print_parallel_status(i, simulations)
+            # check if the output file doesnt already exist
+            if simulation_id not in output_filelist:
+
+
+                if simulation_id != "real":
+                    new_overlaps = {}
+                    for id in sequence_list:
+                        sequence = sequence_list[id]
+                        new_overlap_list = []
+                        lengths = overlap_lengths[id]
+                        for length in lengths:
+                            choices = [i for i in list(range(0, len(sequence) - length))]
+                            if len(choices):
+                                start = np.random.choice(choices)
+                                new_overlap_list.extend(list(range(start, start + length)))
+                        new_overlaps[id] = list(set(new_overlap_list))
+                    overlap_positions = new_overlaps
+
+
+                hits = []
+                for id in sequence_list:
+                    overlaps = overlap_positions[id]
+                    overlaps = [i for i in list(range(len(sequence_list[id]))) if i not in overlaps]
+                    chunked_overlaps = sequo.chunk_overlaps(overlaps)
+                    overlap_motifs = ["".join([sequence_list[id][i] for i in chunk]) for chunk in chunked_overlaps]
+                    hits.extend(overlap_motifs)
+                # [test_kept.extend(sequo.return_overlap_motifs(i, motifs, inverse = True)) for i in test_seqs]
+                density = seqo.calc_motif_density(hits, stops)
+                gc = seqo.calc_seqs_gc(["".join(hits)])[0]
+                # write the results to file
+                output_file = "{0}/output_{1}.txt".format(output_directory, simulation_id)
+                with open(output_file, "w") as outfile:
+                    outfile.write("{0},{1},{2},{3}\n".format(simulation_id, len(sequence_list), gc, density))
+                new_outputs[simulation_id] = output_file
+
+    return new_outputs
+
 def simulate_lincrna_stop_codon_density_within_genes(id_list, sequence_list, output_directory, output_filelist, simulations):
     """
     Calculate stop codon densities in lincRNA sequences and simulations

@@ -11,10 +11,10 @@ B
 * repeat above but also consider only for sets with the same purine content
 
 C
-* repeat stop depletion in lincRNA sequences (hangueuer) without grouping the family results
-* repeat the stop depletion using the cabili sequences
+[*] repeat stop depletion in lincRNA sequences (hangueuer) without grouping the family results
+[*] repeat the stop depletion using the cabili sequences
 * repeat the analysis in single exon cases for both hangueuer and cabili
-
+[*] repeat removing everything that has been called ese
 
 D
 * do with ND, then report Z score results

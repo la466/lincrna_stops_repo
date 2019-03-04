@@ -252,6 +252,60 @@ def sim_stop_density(input_fasta, output_file, simulations = None, families_file
     # remove the temp directory
     gen.remove_directory(temp_dir)
 
+def sim_stop_density_removed_motifs(input_fasta, output_file, motif_file, simulations = None, families_file = None):
+    """
+    Wrapper to calculate and simulate the stop codon density in lincRNA sequences.
+
+    Args:
+        input_fasta (str): path to input fasta containing sequences
+        output_file (str): path to output file
+        motif_file (str): path to file containing motifs
+        simulations (int): if set, the number of simulations to run
+        families_file (str): if set, the path to the file containing the paralogous families
+    """
+    # get the motifs
+    motifs = sequo.read_motifs(motif_file)
+    # get the sequences
+    names, sequences = gen.read_fasta(input_fasta)
+    sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
+
+    if families_file:
+        sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    # create a temporary output directory
+    temp_dir = "temp_lincrna_sim_remove"
+    gen.remove_directory(temp_dir)
+    gen.create_output_directories(temp_dir)
+    # set up the simulation
+    simulation_list = ["real"]
+    simulation_list.extend(list(range(simulations)))
+    # get a list of the output files that might have already been created
+    output_filelist = {}
+    for file in os.listdir(temp_dir):
+        if "real" not in file:
+            output_filelist[int(file.split(".")[0].split("_")[-1])] = "{0}/{1}".format(temp_dir, file)
+        else:
+            output_filelist[file.split(".")[0].split("_")[-1]] = "{0}/{1}".format(temp_dir, file)
+
+    args = [sequence_list, temp_dir, output_filelist, motifs]
+    # run the simulation
+    outputs = simoc.run_simulation_function(simulation_list, args, simo.simulate_lincrna_stop_codon_density_removed_motifs, sim_run = False)
+    # join all outputs
+    outputs = {**output_filelist, **outputs}
+    real_output = outputs["real"]
+    sim_outputs = {i: outputs[i] for i in outputs if i != "real"}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,seq_count,gc,stop_codon_density\n")
+        # real data
+        outfile.write("{0}\n".format(gen.read_many_fields(real_output, "\t")[0][0]))
+        # simulation data
+        for sim_id in sorted(sim_outputs):
+            data = gen.read_many_fields(sim_outputs[sim_id], "\t")[0][0]
+            outfile.write("{0},{1}\n".format(sim_id + 1, ",".join(data.split(",")[1:])))
+    # remove the temp directory
+    gen.remove_directory(temp_dir)
+
 
 def process_sim_stop_density_outputs(output_dir, output_file, test_col = None):
     """

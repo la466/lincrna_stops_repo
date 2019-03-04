@@ -3184,8 +3184,10 @@ def chunk_overlaps(overlaps):
             new_set = []
     return new_overlaps
 
-def return_overlap_motifs(sequence, motifs):
+def return_overlap_motifs(sequence, motifs, inverse = None):
     overlaps = sequence_overlap_indicies(sequence, motifs)
+    if inverse:
+        overlaps = [i for i in list(range(len(sequence))) if i not in overlaps]
     chunked_overlaps = chunk_overlaps(overlaps)
     overlap_motifs = ["".join([sequence[i] for i in chunk]) for chunk in chunked_overlaps]
     return overlap_motifs
