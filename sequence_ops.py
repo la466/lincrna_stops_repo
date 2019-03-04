@@ -2546,6 +2546,7 @@ def pick_random_family_member(families_file, seqs_dict, output_file = None):
         seqs_dict (dict): dictionary but only containing one entry per family
     """
 
+    np.random.seed()
     families = gen.read_many_fields(families_file, "\t")
     new_families = []
     for fam in families:
@@ -2575,7 +2576,7 @@ def pick_random_family_member(families_file, seqs_dict, output_file = None):
 
     if output_file:
         with open(output_file, "w") as outfile:
-            [outfile.write("{0}\n".format(i)) for i in chosen_family_members]
+            [outfile.write("{0}\n".format(i)) for i in sorted(chosen_family_members)]
 
     return seqs_dict
 
@@ -3188,3 +3189,33 @@ def return_overlap_motifs(sequence, motifs):
     chunked_overlaps = chunk_overlaps(overlaps)
     overlap_motifs = ["".join([sequence[i] for i in chunk]) for chunk in chunked_overlaps]
     return overlap_motifs
+
+
+def motif_excess_test(filelist, motifs):
+
+    outputs = []
+
+    if len(filelist):
+        for i, file in enumerate(filelist):
+            gen.print_parallel_status(i, filelist)
+            # read the sequences
+            sequences = gen.read_many_fields(file, ",")[0]
+            # get the sequence regions
+            core_motif_hits = []
+            flank_motif_hits = []
+            for seq in sequences:
+                if len(seq) > 211:
+                    flank_sequences = [seq[2:69], seq[-69:2]]
+                    midpoint = int(len(seq) / 2)
+                    core_sequence = seq[midpoint-33:midpoint+34]
+                    core_motif_hits.extend(return_overlap_motifs(core_sequence, motifs))
+                    [flank_motif_hits.extend(return_overlap_motifs(seq, motifs)) for seq in flank_sequences]
+            # now calculate the density of stops in the set of motifs
+            core_stop_density = seqo.calc_motif_density(core_motif_hits, stops)
+            flank_stop_density = seqo.calc_motif_density(flank_motif_hits, stops)
+            # calculate the excess
+            excess = np.divide(flank_stop_density - core_stop_density, core_stop_density) * 100
+            # add to the outputs
+            outputs.append([file.split("/")[-1].split(".")[0], core_stop_density, flank_stop_density, excess])
+
+    return outputs

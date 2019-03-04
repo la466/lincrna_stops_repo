@@ -1016,3 +1016,31 @@ def lincrna_motif_nd(simulations, sequence_list, motif_file, output_directory, o
                 new_outputs[simulation_id] = output_file
 
     return new_outputs
+
+
+def shuffle_sequences(iterations, sequences, output_directory):
+    """
+    Given a number of iterations, shuffle a list of sequences
+
+    Args:
+        iterations (list): list of iterations to repeat over
+        sequences (list): list of sequnces
+        output_directory (str): path to output file
+    """
+
+    if len(iterations):
+        for i, iteration in enumerate(iterations):
+            np.random.seed()
+            gen.print_parallel_status(i, iterations)
+            # shuffle the sequences
+            shuffled_sequences = []
+            for seq in sequences:
+                nts = list(seq)
+                np.random.shuffle(nts)
+                shuffled_sequences.append("".join(nts))
+            # get the output filename
+            output_file = "{0}/sim_{1}.txt".format(output_directory, iteration+1)
+            with open(output_file, "w") as outfile:
+                outfile.write("{0}\n".format(",".join(shuffled_sequences)))
+    # generic return
+    return []

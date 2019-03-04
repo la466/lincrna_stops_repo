@@ -11,6 +11,7 @@ from progressbar import ProgressBar
 import random
 import pandas as pd
 import scipy.stats
+import shutil
 
 def stop_density_test(input_fasta, output_file, required_simulations, families_file = None):
     simoc.simulate_sequence_stop_density(input_fasta, output_file, required_simulations, families_file = families_file)
@@ -213,7 +214,7 @@ def sim_stop_density(input_fasta, output_file, simulations = None, families_file
     """
     # get the sequences
     names, sequences = gen.read_fasta(input_fasta)
-    sequence_list = {name: sequences[i] for i, name in enumerate(names)}
+    sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
 
     if families_file:
         sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
@@ -286,7 +287,7 @@ def sim_stop_density_within_genes(input_fasta, output_file, simulations = None, 
     """
     # get the sequences
     names, sequences = gen.read_fasta(input_fasta)
-    sequence_list = {name: sequences[i] for i, name in enumerate(names)}
+    sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
 
     if families_file:
         sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
@@ -381,3 +382,48 @@ def calculcate_motif_nd(input_fasta, motif_file, output_file, simulations = None
 
     # remove the temp directory
     gen.remove_directory(temp_dir)
+
+
+
+def excess_test(input_fasta, motif_file, output_file, simulations = None, families_file = None):
+    """
+    """
+
+    if not simulations:
+        simulations = 1000
+
+
+    # read in the motifs
+    motifs = sequo.read_motifs(motif_file)
+    # read in the sequences
+    names, seqs = gen.read_fasta(input_fasta)
+    seq_list = collections.defaultdict(lambda: [])
+    [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
+
+    if families_file:
+        seq_list = sequo.pick_random_family_member(families_file, seq_list)
+
+    seqs = []
+    [seqs.extend(seq_list[i]) for i in seq_list]
+
+    # create output directory
+    temp_dir = "temp_sim_seqs"
+    gen.create_output_directories(temp_dir)
+    # write the set of real sequences to a temp file
+    with open("{0}/real.txt".format(temp_dir), "w") as temp_output:
+        temp_output.write("{0}\n".format(",".join(seqs)))
+    # simulate the sequences
+    simoc.run_simulation_function(list(range(simulations)), [seqs, temp_dir], simo.shuffle_sequences, sim_run = False)
+    # get the temp files
+    filelist = ["{0}/{1}".format(temp_dir, i) for i in os.listdir(temp_dir)]
+    # calculate the excesses
+    outputs = simoc.run_simulation_function(filelist, [motifs], sequo.motif_excess_test, sim_run = False)
+    # write to file
+    with open(output_file, "w") as outfile:
+        outfile.write("id,core_density,flank_density,excess\n")
+        [outfile.write("{0}\n".format(",".join(gen.stringify(output)))) for output in outputs]
+    # delete the temp directory
+    gen.remove_directory(temp_dir)
+
+
+    # now calculate the densities
