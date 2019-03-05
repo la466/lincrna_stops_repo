@@ -159,29 +159,69 @@ def process_length_sim(input_file, output_file, families_file = None):
 
     data = pd.read_csv(input_file)
     ids = list(data)[1:]
+    nds = {}
     z_scores = {}
+    gcs = {}
+    empirical_ps = {}
+    reals = {}
+    means = {}
 
     for id in ids:
-        # gc = data[id][0]
+        gc = data[id][0]
+        gcs[id] = gc
         real = data[id][1]
+        reals[id] = real
         sims = data[id][2:]
+        nd = np.divide(real - np.nanmean(sims), np.nanmean(sims))
+        nds[id] = nd
+        empirical_ps[id] = np.divide(len([i for i in sims if i >= real]) + 1, len(sims) + 1)
         z = np.divide(real - np.nanmean(sims), np.nanstd(sims))
         z_scores[id] = z
-
-    if families_file:
-        families = gen.read_many_fields(families_file, "\t")
-        z_score_ids = sequo.return_median_family_id(z_scores, families)
-    else:
-        z_score_ids = {i: i for i in z_scores}
+        means[id] = np.nanmean(sims)
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,gc,real,mean_sims,z_score\n")
-        for id in z_score_ids:
-            loc_id = z_score_ids[id]
-            gc = data[loc_id][0]
-            real = data[loc_id][1]
-            sims = data[loc_id][2:]
-            outfile.write("{0},{1},{2},{3},{4}\n".format(id, gc, real, sims.mean(), z_scores[loc_id]))
+        outfile.write("id,gc,real,mean_sims,nd,empirical_p,z,p\n")
+
+        if families_file:
+            families = gen.read_many_fields(families_file, "\t")
+            reals = sequo.group_family_results(reals, families)
+            nds, nd_groups = sequo.group_family_results(nds, families, return_groups = True)
+            z_scores = sequo.group_family_results(z_scores, families)
+            gcs = sequo.group_family_results(gcs, families)
+            means = sequo.group_family_results(means, families)
+
+            print(len(z_scores))
+
+            for id in z_scores:
+                real = np.nanmedian(reals[id])
+                gc = np.nanmedian(gcs[id])
+                z = np.nanmedian(z_scores[id])
+                nd = np.nanmedian(nds[id])
+                mean = np.nanmedian(means[id])
+
+                if not np.isnan(nd):
+                    if nd in nds[id]:
+                        index = nds[id].index(nd)
+                    else:
+                        mid_percentile = np.nanpercentile(nds[id],50,interpolation='nearest')
+                        index = nds[id].index(mid_percentile)
+                    loc_id = nd_groups[id][index]
+                    empirical_p = empirical_ps[loc_id]
+                else:
+                    empirical_p = "nan"
+
+                p = scipy.stats.norm.sf(abs(z))*2
+                outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, gc, real, mean, nd, empirical_p, z, p))
+        else:
+            for id in z_scores:
+                real = reals[id]
+                gc = gcs[id]
+                z = z_scores[id]
+                nd = nds[id]
+                mean = means[id]
+                empirical_p = empirical_ps[id]
+                p = scipy.stats.norm.sf(abs(z))*2
+                outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, gc, real, mean, nd, empirical_p, z, p))
 
 
 def calculate_lengths(exons_fasta, output_file, families_file = None):

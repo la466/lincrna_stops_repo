@@ -23,33 +23,40 @@ from scipy.stats import chisquare
 
 
 motifs = "source_data/motif_sets/int3.txt"
-seqs_file = "clean_run/lincrna/lincRNA.multi_exon.fasta"
+# seqs_file = "clean_run/lincrna/lincRNA.multi_exon.exons.fasta"
+seqs_file = "clean_run/genome_sequences/human/human.cds.clean_coding_exons.fasta"
 
 motifs = sequo.read_motifs(motifs)
 
 names, seqs = gen.read_fasta(seqs_file)
-seq_list = {name: seqs[i] for i, name in enumerate(names[:50])}
-
-def calc_non_hit_densities(sequences):
-
-    non_hit_motifs = []
-    for sequence in sequences:
-        non_hits = sequo.return_overlap_motifs(sequence, motifs, inverse = True)
-        non_hit_motifs.extend(non_hits)
-    density = seqo.calc_motif_density(non_hit_motifs, stops)
-    print(density)
+seq_list = {name: seqs[i] for i, name in enumerate(names)}
 
 
-sim_seqs = {}
+nts = 0
+all_overlaps1 = []
+all_overlaps2 = []
 
-for sim in list(range(3)):
-    simulated_seqs = []
-    for id in seq_list:
-        seq = seq_list[id]
-        nts = list(seq)
-        np.random.shuffle(nts)
-        simulated_seqs.append("".join(nts))
-    sim_seqs[sim] = simulated_seqs
+for id in seq_list:
+    sequence = seq_list[id]
+    three_prime_flank = sequence[:200]
+    nts += len(three_prime_flank)
+    overlaps = sequo.sequence_overlap_indicies(three_prime_flank, ["CCC", "TTT", "CGT"])
+    # overlaps = [len(three_prime_flank) - i for i in overlaps]
+    all_overlaps2.extend(overlaps)
 
-calc_non_hit_densities([seq_list[i] for i in seq_list])
-[calc_non_hit_densities(sim_seqs[sim]) for sim in sim_seqs]
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+
+densities = []
+ilist = []
+for i in range(200):
+    ilist.append(i)
+    density = np.divide(all_overlaps2.count(i), nts)
+    densities.append(density)
+
+fig, ax = plt.subplots()
+ax.plot(ilist, densities)
+ax.set(xlabel='Position', ylabel='Density')
+ax.grid()
+plt.show()

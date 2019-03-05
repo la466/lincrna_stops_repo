@@ -2345,7 +2345,7 @@ def get_transcript_and_orthologs(input_file1, input_file2, ortholog_transcript_l
     return sequences
 
 
-def group_family_results(result_list, families):
+def group_family_results(result_list, families, return_groups = None):
     """
     Group the results of sequences in paralagous family together
 
@@ -2362,13 +2362,20 @@ def group_family_results(result_list, families):
     [family_ids.extend(i) for i in families]
 
     outputs = collections.defaultdict(lambda: [])
+    returned_groups = collections.defaultdict(lambda: [])
     for id in result_list:
         if id in family_ids:
             list_id = [i for i, lst in enumerate(families) if id in lst][0]
             outputs["group_{0}".format(list_id)].append(result_list[id])
+            if return_groups:
+                returned_groups["group_{0}".format(list_id)].append(id)
         else:
             outputs[id].append(result_list[id])
-    return outputs
+            returned_groups[id].append(id)
+    if return_groups:
+        return outputs, returned_groups
+    else:
+        return outputs
 
 def return_median_family_id(result_list, families):
     """

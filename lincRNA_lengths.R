@@ -2,6 +2,8 @@ library(ggplot2)
 
 file = read.csv("clean_run/tests/lincrna/sim_orf_lengths_zs.csv", head = T)
 
+cor.test(file$gc, file$normalised_length, method = "spearman")
+
 head(file)
 
 nrow(file[file$z_score > 0,])
@@ -49,3 +51,38 @@ cor.test(lengths_file$gc, lengths_file$length, method = "spearman")
 
 hist(lengths_file$gc)
 
+
+
+file = read.csv("clean_run/tests/lincrna/cabili/orf_length_sim.csv", head = T)
+head(file)
+
+plot(file$gc, file$z_score)
+nrow(file[file$z_score > 1.96,])
+nrow(file)
+binom.test(273, 1921, p = 0.05, alternative = "g")
+
+
+
+file = read.csv("clean_run/tests/lincrna/orf_lengths/hangauer_sim_orf_lengths_zs_grouped.csv", head = T)
+
+nrow(file[file$nd > 0,])
+binom.test(nrow(file[file$nd > 0,]), nrow(file), alternative = "g")
+binom.test(nrow(file[file$nd > 0 & file$empirical_p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+binom.test(nrow(file[file$nd < 0 & file$empirical_p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+binom.test(nrow(file[file$z > 0,]), nrow(file), alternative = "g")
+binom.test(nrow(file[file$z > 0 & file$p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+binom.test(nrow(file[file$z < 0 & file$p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+
+cor.test(file$gc, file$nd, method = "spearman")
+cor.test(file$gc, file$z, method = "spearman")
+
+file = read.csv("clean_run/tests/lincrna/orf_lengths/cabili_sim_orf_lengths_zs_grouped.csv", head = T)
+nrow(file[file$nd > 0,])
+binom.test(nrow(file[file$nd > 0,]), nrow(file), alternative = "g")
+binom.test(nrow(file[file$nd > 0 & file$empirical_p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+binom.test(nrow(file[file$nd < 0 & file$empirical_p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+
+binom.test(nrow(file[file$z > 0 & file$p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
+
+cor.test(file$gc, file$nd, method = "spearman")
+cor.test(file$gc, file$z, method = "spearman")

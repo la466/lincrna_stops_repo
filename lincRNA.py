@@ -2,6 +2,7 @@ import generic as gen
 import containers as cont
 import lincRNA_tests as ltests
 import sim_ops_containers as simopc
+import sequence_ops as sequo
 import main_tests_ops as mto
 import seq_ops as seqo
 import time
@@ -59,7 +60,7 @@ def main():
     required_simulations = int(required_simulations) if required_simulations else None
 
     lincrna_output_directory = "{0}/tests/lincrna".format(output_directory)
-    gen.create_output_directories(lincrna_output_directory)
+    # gen.create_output_directories(lincrna_output_directory)
 
     # set a start time
     start = time.time()
@@ -108,14 +109,27 @@ def main():
     if density_sim:
         ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
 
-    sim_orf_length_output_file = "{0}/sim_orf_lengths.csv".format(lincrna_output_directory)
-    lincRNA_length_output_file = "{0}/lincRNA_lengths.csv".format(lincrna_output_directory)
-    sim_orf_length_z_file = "{0}/sim_orf_lengths_zs.csv".format(lincrna_output_directory)
+
+
+    # sim_orf_length_z_file = "{0}/sim_orf_lengths_zs.csv".format(output_directory)
     if sim_orf_lengths:
+        sim_orf_length_output_file = "{0}/{1}sim_orf_lengths.csv".format(output_directory, "{0}_".format(output_prefix) if output_prefix else None)
+        if families_file:
+            sim_orf_length_z_file = "{0}/{1}sim_orf_lengths_zs_grouped.csv".format(output_directory, "{0}_".format(output_prefix) if output_prefix else None)
+        else:
+            sim_orf_length_z_file = "{0}/{1}sim_orf_lengths_zs.csv".format(output_directory, "{0}_".format(output_prefix) if output_prefix else None)
+
+        names, seqs = gen.read_fasta(input_fasta)
+        families = gen.read_many_fields(families_file, "\t")
+        li = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
+        print(len(li))
+        li_g = sequo.group_family_results(li, families)
+        print(len(li_g))
+        # only run the simulation if not there or wanted
         if not os.path.isfile(sim_orf_length_output_file) or clean_run:
-            simopc.sim_orf_length(lincRNA_multi_exon_fasta, required_simulations, sim_orf_length_output_file)
-        ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file)
-        ltests.calculate_lengths(lincRNA_multi_exon_fasta, lincRNA_length_output_file, families_file = families_file)
+            simopc.sim_orf_length(input_fasta, required_simulations, sim_orf_length_output_file)
+        ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file, families_file = families_file)
+
 
 
 

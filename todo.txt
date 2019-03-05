@@ -17,8 +17,8 @@ C
 [*] repeat removing everything that has been called ese
 
 D
-* do with ND, then report Z score results
-* repeat with cabili
+[*] do with ND, then report Z score results
+[*] repeat with cabili
 
 E
 * do with another set of ESEs?
