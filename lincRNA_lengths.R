@@ -62,8 +62,18 @@ nrow(file)
 binom.test(273, 1921, p = 0.05, alternative = "g")
 
 
+gc_zscore_plot = function(data) {
+  plot = ggplot(data = data, aes(x = data$gc, y = data$z)) + 
+    geom_point(col = ifelse(data$p < 0.05, "blue", "black"), size = 1) + 
+    geom_smooth(method = "lm", se = FALSE, col = "black", fullrange=TRUE) + 
+    geom_hline(yintercept = 0, lty = 2) + 
+    labs(x = "GC", y = "Z score")
+  return(plot)
+}
 
 file = read.csv("clean_run/tests/lincrna/orf_lengths/hangauer_sim_orf_lengths_zs_grouped.csv", head = T)
+plot1 = gc_zscore_plot(file)
+
 
 nrow(file[file$nd > 0,])
 binom.test(nrow(file[file$nd > 0,]), nrow(file), alternative = "g")
@@ -77,6 +87,9 @@ cor.test(file$gc, file$nd, method = "spearman")
 cor.test(file$gc, file$z, method = "spearman")
 
 file = read.csv("clean_run/tests/lincrna/orf_lengths/cabili_sim_orf_lengths_zs_grouped.csv", head = T)
+plot2 = gc_zscore_plot(file)
+
+
 nrow(file[file$nd > 0,])
 binom.test(nrow(file[file$nd > 0,]), nrow(file), alternative = "g")
 binom.test(nrow(file[file$nd > 0 & file$empirical_p < 0.05,]), nrow(file), p = 0.05,  alternative = "g")
@@ -86,3 +99,11 @@ binom.test(nrow(file[file$z > 0 & file$p < 0.05,]), nrow(file), p = 0.05,  alter
 
 cor.test(file$gc, file$nd, method = "spearman")
 cor.test(file$gc, file$z, method = "spearman")
+
+library(ggpubr)
+plot = ggarrange(
+  plot1,
+  plot2,
+  labels = c("A", "B")
+)
+ggsave(plot = plot, "clean_run/plots/lincrna_orf_length_sims.pdf", width = 10, height = 5)
