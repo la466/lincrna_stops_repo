@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "motif_nd", "excess_test", "single_exon"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "motif_nd", "excess_test", "single_exon", "substitution_rate", "dinucleotide_substitution_rate"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [7,8,9,10,11,12,13,14,15,16,17,18,19,20], opt_flags = [3,4,5,6])
+    args = gen.parse_arguments(description, arguments, flags = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22], opt_flags = [3,4,5,6])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -33,7 +33,9 @@ def main():
     sim_stop_density_removed_motifs, \
     motif_nd, \
     excess_test, \
-    single_exon = \
+    single_exon,\
+    substitution_rate,\
+    dinucleotide_substitution_rate = \
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
@@ -54,7 +56,9 @@ def main():
     args.sim_stop_density_removed_motifs, \
     args.motif_nd, \
     args.excess_test, \
-    args.single_exon
+    args.single_exon, \
+    args.substitution_rate, \
+    args.dinucleotide_substitution_rate
 
     # make required simultions an int
     required_simulations = int(required_simulations) if required_simulations else None
@@ -203,13 +207,33 @@ def main():
         ltests.process_sim_stop_density_outputs(sim_output_dir, sim_output_file)
 
 
+    if substitution_rate:
+        if not families_file or not motif_file:
+            print("\nPlease provide families file and motif file.\n")
+            raise Exception
+        gen.check_files_exists([families_file, motif_file])
+        if output_prefix:
+            output_file = "{0}/{1}_{2}_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        else:
+            output_file = "{0}/{1}_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+        ltests.calc_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
 
+
+    if dinucleotide_substitution_rate:
+        if not families_file or not motif_file:
+            print("\nPlease provide families file and motif file.\n")
+            raise Exception
+        gen.check_files_exists([families_file, motif_file])
+        if output_prefix:
+            output_file = "{0}/{1}_{2}_dinucleotide_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        else:
+            output_file = "{0}/{1}_dinucleotide_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+        ltests.calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
 
 
     motif_nd_output_file = "{0}/motif_nd.csv".format(lincrna_output_directory)
     if motif_nd:
         ltests.calculcate_motif_nd(lincRNA_multi_exon_fasta, motif_file, motif_nd_output_file, simulations = int(required_simulations), families_file = lincRNA_multi_exon_families)
-
 
     if excess_test:
         gen.check_files_exists([input_fasta, motif_file])

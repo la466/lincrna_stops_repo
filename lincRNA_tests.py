@@ -5,12 +5,13 @@ import seq_ops as seqo
 import sequence_ops as sequo
 import os
 import collections
-from useful_motif_sets import stops, codon_map
+from useful_motif_sets import stops, codon_map, dinucleotides
 import numpy as np
 from progressbar import ProgressBar
 import random
 import pandas as pd
 import scipy.stats
+import scipy
 import shutil
 
 def stop_density_test(input_fasta, output_file, required_simulations, families_file = None):
@@ -521,3 +522,148 @@ def excess_test(input_fasta, motif_file, output_file, simulations = None, famili
 
 
     # now calculate the densities
+
+def calc_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = None):
+    """
+    Given a set of motifs and alignments, calculate the substitution rates between
+    for nucleotides that are part of stop codons and those that aren't.
+
+    Args:
+        input_fasta (str): path to input fasta
+        motif_file (str): path to motif file
+        required_simulations (int): number of simulations
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+    if not required_simulations:
+        required_simulations = 1000
+    # read in motifs
+    motifs = sequo.read_motifs(motif_file)
+    # read in alignments
+    names, seqs = gen.read_fasta(input_fasta)
+    seq_list = collections.defaultdict(lambda: [])
+    [seq_list[name.split(".")[0]].append(seqs[i].split(",")) for i, name in enumerate(names)]
+    # pick a random family member
+    seq_list = sequo.pick_random_family_member(families_file, seq_list)
+
+    temp_dir = "temp_sub_rates"
+    gen.create_output_directories(temp_dir)
+
+    # set the arguments
+    sim_randomisations = {"real": False}
+    for i in range(required_simulations):
+        sim_randomisations[i+1] = True
+    args = [motifs, seq_list, sim_randomisations, temp_dir]
+
+    outputs = simoc.run_simulation_function(list(sim_randomisations), args, simoc.calculate_substitution_rates, sim_run = False)
+    real_file = [i for i in outputs if "real" in i][0]
+    sim_files = [i for i in outputs if i != real_file]
+
+    # write to file
+    with open(output_file, "w") as outfile:
+        outfile.write("id,ese_rate,non_ese_rate,,ese_stop_rate,ese_non_stop_rate,,non_ese_stop_rate,non_ese_non_stop_rate,,relative_ese_rate,relative_non_ese_rate,relative_difference\n")
+        outfile.write("{0}\n".format(gen.read_many_fields(real_file, "\t")[0][0]))
+        [outfile.write("{0}\n".format(gen.read_many_fields(sim_file, "\t")[0][0])) for sim_file in sim_files]
+
+    # remove the temp dir
+    gen.remove_directory(temp_dir)
+
+
+def calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = None):
+    """
+    Given a set of motifs and alignments, calculate the substitution rates for
+    each dinucleotide. Then also compare the expected number of those that
+    contribute to stop codons with those that dont
+
+    Args:
+        input_fasta (str): path to input fasta
+        motif_file (str): path to motif file
+        required_simulations (int): number of simulations
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+
+    # read in motifs
+    motifs = sequo.read_motifs(motif_file)
+    # read in alignments
+    names, seqs = gen.read_fasta(input_fasta)
+    seq_list = collections.defaultdict(lambda: [])
+    [seq_list[name.split(".")[0]].append(seqs[i].split(",")) for i, name in enumerate(names)]
+    # pick a random family member
+    seq_list = sequo.pick_random_family_member(families_file, seq_list)
+
+    args = [seq_list, motifs]
+    outputs = simoc.run_simulation_function(list(seq_list), args, sequo.get_dinucleotide_substitutions, sim_run = False)
+
+    motif_dint_counts = collections.defaultdict(lambda: 0)
+    motif_dint_subs = collections.defaultdict(lambda: 0)
+    non_motif_dint_counts = collections.defaultdict(lambda: 0)
+    non_motif_dint_subs = collections.defaultdict(lambda: 0)
+
+    # gather the results
+    for i, output in enumerate(outputs):
+        if i+4 % 4 == 0:
+            for dint in output:
+                motif_dint_counts[dint] += output[dint]
+        if i+4 % 4 == 1:
+            for dint in output:
+                motif_dint_subs[dint] += output[dint]
+        if i+4 % 4 == 2:
+            for dint in output:
+                non_motif_dint_counts[dint] += output[dint]
+        if i+4 % 4 == 3:
+            for dint in output:
+                non_motif_dint_subs[dint] += output[dint]
+
+
+    # get the substitution rates in motifs and not in motifs
+    motif_sub_rates = sequo.calc_dinucleotide_substitution_rates(motif_dint_subs, motif_dint_counts)
+    non_motif_sub_rates = sequo.calc_dinucleotide_substitution_rates(non_motif_dint_subs, non_motif_dint_counts)
+    # define the dinucleotides in stops and not in stops
+    stop_dints = ["TA", "TG", "GA", "AA", "AG"]
+    non_stop_dints = [i for i in dinucleotides if i not in stop_dints]
+
+    # do a chisquare test to determine whether the stop dints sub are underrepresented
+    motif_chisquare_outputs = sequo.calc_dint_chisquare(motif_dint_subs, motif_dint_counts, stop_dints, non_stop_dints)
+    non_motif_chisquare_outputs = sequo.calc_dint_chisquare(non_motif_dint_subs, non_motif_dint_counts, stop_dints, non_stop_dints)
+
+    # get the mean rates and percentage difference
+    motif_stop_average_rate = np.mean([motif_sub_rates[i] for i in stop_dints])
+    motif_non_stop_average_rate = np.mean([motif_sub_rates[i] for i in non_stop_dints])
+    non_motif_stop_average_rate = np.mean([non_motif_sub_rates[i] for i in stop_dints])
+    non_motif_non_stop_average_rate = np.mean([non_motif_sub_rates[i] for i in non_stop_dints])
+    # diffs
+    motif_diff = np.divide(motif_stop_average_rate - motif_non_stop_average_rate, motif_non_stop_average_rate)*100
+    non_motif_diff = np.divide(non_motif_stop_average_rate - non_motif_non_stop_average_rate, non_motif_non_stop_average_rate)*100
+
+    with open(output_file, "w") as outfile:
+        outfile.write("within_motifs\n")
+        outfile.write("\n")
+        outfile.write(",counts,subs,expected_subs\n")
+        outfile.write("stop_dints,{0},{1},{2}\n".format(motif_chisquare_outputs[0], motif_chisquare_outputs[1], motif_chisquare_outputs[2]))
+        outfile.write("non_stop_dints,{0},{1},{2}\n".format(motif_chisquare_outputs[3], motif_chisquare_outputs[4], motif_chisquare_outputs[5]))
+        outfile.write("totals,{0},{1},{2}".format(motif_chisquare_outputs[6], motif_chisquare_outputs[7], motif_chisquare_outputs[6] + motif_chisquare_outputs[7]))
+        outfile.write("\n")
+        outfile.write("\nchiquare_test\n")
+        outfile.write("statistic:,{0}\n".format(motif_chisquare_outputs[-1].statistic))
+        outfile.write("p_value:,{0}\n".format(motif_chisquare_outputs[-1].pvalue))
+        outfile.write("\n\noutside_motifs\n")
+        outfile.write("\n")
+        outfile.write(",counts,subs,expected_subs\n")
+        outfile.write("stop_dints,{0},{1},{2}\n".format(non_motif_chisquare_outputs[0], non_motif_chisquare_outputs[1], non_motif_chisquare_outputs[2]))
+        outfile.write("non_stop_dints,{0},{1},{2}\n".format(non_motif_chisquare_outputs[3], non_motif_chisquare_outputs[4], non_motif_chisquare_outputs[5]))
+        outfile.write("totals,{0},{1},{2}".format(non_motif_chisquare_outputs[6], non_motif_chisquare_outputs[7], non_motif_chisquare_outputs[6] + non_motif_chisquare_outputs[7]))
+        outfile.write("\n")
+        outfile.write("\nchiquare_test\n")
+        outfile.write("statistic:,{0}\n".format(non_motif_chisquare_outputs[-1].statistic))
+        outfile.write("p_value:,{0}\n".format(non_motif_chisquare_outputs[-1].pvalue))
+
+        outfile.write("\n\naverage_rates\n")
+        outfile.write(",stop_dints,non_stop_dints,diff\n")
+        outfile.write("within_motifs,{0},{1},{2}\n".format(motif_stop_average_rate, motif_non_stop_average_rate, motif_diff))
+        outfile.write("outside_motifs,{0},{1},{2}\n".format(non_motif_stop_average_rate, non_motif_non_stop_average_rate, non_motif_diff))
+
+        outfile.write("\n\nindividual_rates\n")
+        outfile.write("dint,within_motifs,outside_motifs\n")
+        for dint in sorted(motif_sub_rates):
+            outfile.write("{0},{1},{2}\n".format(dint, motif_sub_rates[dint], non_motif_sub_rates[dint]))

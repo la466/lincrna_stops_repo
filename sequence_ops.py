@@ -19,6 +19,7 @@ from progressbar import ProgressBar
 import multiprocessing as mp
 import itertools as it
 import time
+import scipy.stats
 
 pbar = ProgressBar()
 
@@ -3228,3 +3229,126 @@ def motif_excess_test(filelist, motifs):
             outputs.append([file.split("/")[-1].split(".")[0], core_stop_density, flank_stop_density, excess])
 
     return outputs
+
+
+def get_sub_rate(seq1, seq2):
+    """
+    Given two sequences, calculate the rate at which nucleotides differ between
+    between the two sequences.
+
+    Args:
+        seq1 (str): sequence 1
+        seq2 (str): sequence 2
+
+    Returns:
+        sub_rate (list):
+    """
+    subs = len([i for i in range(len(seq1)) if seq1[i] in nucleotides and seq2[i] in nucleotides and seq1[i] != seq2[i]])
+    total_nts = len([i for i in range(len(seq1)) if seq1[i] in nucleotides and seq2[i] in nucleotides])
+    sub_rate = np.divide(subs, total_nts)
+    return sub_rate
+
+
+def get_dinucleotide_substitutions(ids, sequence_list, motifs):
+    """
+    Given a list of sequence ids and sequences, predict hits, then calculate the
+    number of each dinucleotide and subs for each dinucleotide for both the hits
+    and non hits
+
+    Args:
+        ids (list): list of sequence ids
+        sequence_list (dict): sequences
+        motifs (list): list of motifs
+
+    Return:
+        outputs (list): list of counts and subs for hits and non hits
+    """
+
+    outputs = []
+
+    motif_dint_count = collections.defaultdict(lambda: 0)
+    motif_dint_sub = collections.defaultdict(lambda: 0)
+    non_motif_dint_count = collections.defaultdict(lambda: 0)
+    non_motif_dint_sub = collections.defaultdict(lambda: 0)
+
+    if len(ids):
+        for i, id in enumerate(ids):
+            gen.print_parallel_status(i, ids)
+
+            sequences = sequence_list[id][0]
+            human = sequences[0]
+            mac = sequences[1]
+            # get predicted hits to motifs and chunk to get motifs
+            hits = sequence_overlap_indicies(human, motifs)
+            non_hits = [i for i in range(len(human)) if i not in hits]
+            chunked_hits = chunk_overlaps(hits)
+            chunked_non_hits = chunk_overlaps(non_hits)
+            # get the motif sequences
+            hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_hits]
+            hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_hits]
+            non_hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_non_hits]
+            non_hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_non_hits]
+
+            # for each motif hit in the hit motifs, go through each position,
+            # get the dinucleotide and see whether it is different
+            for i, hit in enumerate(hit_human_motifs):
+                human_motif = hit
+                mac_motif = hit_mac_motifs[i]
+
+                for pos in range(len(human_motif)-1):
+                    if human_motif[pos] in nucleotides and mac_motif[pos] in nucleotides:
+                        motif_dint_count[human_motif[pos:pos+2]] += 1
+                        if human_motif[pos:pos+2] != mac_motif[pos:pos+2]:
+                            motif_dint_sub[human_motif[pos:pos+2]] += 1
+            # for each non hit in the non hit motifs, go through each position,
+            # get the dinucleotide and see whether it is different
+            for i, non_hit in enumerate(non_hit_human_motifs):
+                human_motif = non_hit
+                mac_motif = non_hit_mac_motifs[i]
+                for pos in range(len(human_motif)-1):
+                    if human_motif[pos] in nucleotides and mac_motif[pos] in nucleotides:
+                        non_motif_dint_count[human_motif[pos:pos+2]] += 1
+                        if human_motif[pos:pos+2] != mac_motif[pos:pos+2]:
+                            non_motif_dint_sub[human_motif[pos:pos+2]] += 1
+
+    #unpickle
+    motif_dint_count = unpickle(motif_dint_count)
+    motif_dint_sub = unpickle(motif_dint_sub)
+    non_motif_dint_count = unpickle(non_motif_dint_count)
+    non_motif_dint_sub = unpickle(non_motif_dint_sub)
+    output = [motif_dint_count, motif_dint_sub, non_motif_dint_count, non_motif_dint_sub]
+    return output
+
+def unpickle(list):
+    return {i: list[i] for i in list}
+
+def calc_dinucleotide_substitution_rates(subs, counts):
+    """
+    Calculate the substitution rates given the sub counts and total counts.
+
+    Args:
+        subs (dict): counts of substitutions for each dint
+        counts (dict): total counts for each dint
+
+    Returns:
+        sub_rates (dict): the sub rates
+    """
+    sub_rates = {}
+    for dint in sorted(counts):
+        sub_rates[dint] = np.divide(subs[dint], counts[dint])
+    return sub_rates
+
+
+def calc_dint_chisquare(subs, counts, group1, group2):
+
+    total_counts = sum(counts.values())
+    total_subs = sum(subs.values())
+    group1_subs = sum([subs[i] for i in subs if i in group1])
+    group2_subs = sum([subs[i] for i in subs if i in group2])
+    group1_totals = sum([counts[i] for i in counts if i in group1])
+    group2_totals = sum([counts[i] for i in counts if i in group2])
+    expected_subs_group1 = np.divide(group1_totals, total_counts)*total_subs
+    expected_subs_group2 = np.divide(group2_totals, total_counts)*total_subs
+    chisquare = scipy.stats.chisquare([group1_subs, group2_subs], f_exp = [expected_subs_group1, expected_subs_group2])
+    output = [group1_totals, group1_subs, expected_subs_group1, group2_totals, group2_subs, expected_subs_group2, total_counts, total_subs, chisquare]
+    return output

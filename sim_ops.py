@@ -1151,3 +1151,24 @@ def shuffle_sequences(iterations, sequences, output_directory):
                 outfile.write("{0}\n".format(",".join(shuffled_sequences)))
     # generic return
     return []
+
+
+def get_random_overlaps(sequence, chunked_hits):
+    """
+    Given a sequence and the indices that a set of motifs hit, generate random
+    overlaps for the chunked indices
+
+    Args:
+        sequence (str): sequence
+        chunked_hits (list): list of lists containing indices of motif hits
+    Returns:
+        new_hits (list): a set of new random overlapping positions
+    """
+    new_overlaps = []
+    for chunk in chunked_hits:
+        chunk_length = len(chunk)
+        start = np.random.choice(list(range(len(sequence) - len(chunk))))
+        new_overlaps.extend(list(range(start, start+len(chunk))))
+    new_overlaps = list(set(new_overlaps))
+    new_hits = new_overlaps
+    return new_hits

@@ -48,15 +48,6 @@ seq_list = sequo.pick_random_family_member(families_file, seq_list)
 query = "".join([seq_list[i][0][0] for i in seq_list])
 # print(query)
 
-def get_random_overlaps(sequence, chunked_hits):
-    new_overlaps = []
-    for chunk in chunked_hits:
-        chunk_length = len(chunk)
-        start = np.random.choice(list(range(len(sequence) - len(chunk))))
-        new_overlaps.extend(list(range(start, start+len(chunk))))
-    new_overlaps = list(set(new_overlaps))
-    hits = new_overlaps
-    return hits
 
 def get_nt_comp(sequence):
     nts = ["A", "C", "G", "T"]
@@ -64,12 +55,6 @@ def get_nt_comp(sequence):
     for nt in nts:
         nt_comp.append(np.divide(sequence.count(nt), len(sequence)))
     return nt_comp
-
-def get_sub_rate(seq1, seq2):
-    nts = ["A", "C", "G", "T"]
-    subs = len([i for i in range(len(seq1)) if seq1[i] in nts and seq2[i] in nts and seq1[i] != seq2[i]])
-    nts = len([i for i in range(len(seq1)) if seq1[i] in nts and seq2[i] in nts])
-    return np.divide(subs, nts)
 
 # def calc_rate(iterations, randomise = None):
 #     outputs = []
@@ -243,6 +228,17 @@ def calc_dint_rate(iterations, randomise = None):
             print(scipy.stats.chisquare([stop_dint_subs, non_stop_dint_subs], f_exp = [expected_stop_dints, expected_non_stop_dints]))
 
 
+            total_hit_dints = sum(non_hit_dint_count.values())
+            total_hit_dint_subs = sum(non_hit_dint_sub.values())
+            stop_dint_subs = sum([non_hit_dint_sub[i] for i in non_hit_dint_sub if i in stop_dints])
+            non_stop_dint_subs = sum([non_hit_dint_sub[i] for i in non_hit_dint_sub if i in non_stop_dints])
+            total_stop_dints = sum([non_hit_dint_count[i] for i in non_hit_dint_count if i in stop_dints])
+            total_non_stop_dints = sum([non_hit_dint_count[i] for i in non_hit_dint_count if i in non_stop_dints])
+            expected_stop_dints = np.divide(total_stop_dints, total_hit_dints)*total_hit_dint_subs
+            expected_non_stop_dints = np.divide(total_non_stop_dints, total_hit_dints)*total_hit_dint_subs
+
+            print(expected_stop_dints, stop_dint_subs, expected_non_stop_dints, non_stop_dint_subs)
+            print(scipy.stats.chisquare([stop_dint_subs, non_stop_dint_subs], f_exp = [expected_stop_dints, expected_non_stop_dints]))
 
             hit_stop_dint_rate = np.mean([dint_sub_rates[i] for i in stop_dints])
             hit_non_stop_dint_rate = np.mean([dint_sub_rates[i] for i in non_stop_dints])
@@ -251,60 +247,14 @@ def calc_dint_rate(iterations, randomise = None):
 
             print(hit_stop_dint_rate)
             print(hit_non_stop_dint_rate)
+            print(np.divide(hit_stop_dint_rate - hit_non_stop_dint_rate, hit_non_stop_dint_rate)*100)
             print(non_hit_stop_dint_rate)
             print(non_hit_non_stop_dint_rate)
-            print(scipy.stats.ranksums([dint_sub_rates[i] for i in sorted(stop_dints)], [dint_sub_rates[i] for i in non_stop_dints]))
+            print(np.divide(non_hit_stop_dint_rate - non_hit_non_stop_dint_rate, non_hit_non_stop_dint_rate)*100)
 
-            print(hit_stop_dint_rate, hit_non_stop_dint_rate, non_hit_stop_dint_rate, non_hit_non_stop_dint_rate)
+            [print(i, dint_sub_rates[i]) for i in sorted(dint_sub_rates)]
+            [print(i, dint_sub_rates[i]) for i in sorted(non_dint_sub_rates)]
 
-
-            #         hit_stop_hits = [sequo.sequence_overlap_indicies(motif, stops) for motif in hit_human_motifs]
-            #         all_hit_stop_human_motifs.append("".join(["".join([hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_stop_hits)]))
-            #         all_hit_stop_mac_motifs.append("".join(["".join([hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_stop_hits)]))
-            #
-            #         hit_non_stop_hits = [[i for i in list(range(len(motif))) if i not in hit_stop_hits[no]] for no, motif in enumerate(hit_human_motifs)]
-            #         all_hit_non_stop_human_motifs.append("".join(["".join([hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_non_stop_hits)]))
-            #         all_hit_non_stop_mac_motifs.append("".join(["".join([hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_non_stop_hits)]))
-            #
-            #
-            #
-            #         non_hit_stop_hits = [sequo.sequence_overlap_indicies(motif, stops) for motif in non_hit_human_motifs]
-            #         all_non_hit_stop_human_motifs.append("".join(["".join([non_hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_stop_hits)]))
-            #         all_non_hit_stop_mac_motifs.append("".join(["".join([non_hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_stop_hits)]))
-            #
-            #         non_hit_non_stop_hits = [[i for i in list(range(len(motif))) if i not in non_hit_stop_hits[no]] for no, motif in enumerate(non_hit_human_motifs)]
-            #         all_non_hit_non_stop_human_motifs.append("".join(["".join([non_hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_non_stop_hits)]))
-            #         all_non_hit_non_stop_mac_motifs.append("".join(["".join([non_hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_non_stop_hits)]))
-            #
-            #         all_hit_human_motifs.append("".join(hit_human_motifs))
-            #         all_hit_mac_motifs.append("".join(hit_mac_motifs))
-            #         all_non_hit_human_motifs.append("".join(non_hit_human_motifs))
-            #         all_non_hit_mac_motifs.append("".join(non_hit_mac_motifs))
-            #
-            #
-            # all_hit_human_motifs = "".join(all_hit_human_motifs)
-            # all_hit_mac_motifs = "".join(all_hit_mac_motifs)
-            # all_non_hit_human_motifs = "".join(all_non_hit_human_motifs)
-            # all_non_hit_mac_motifs = "".join(all_non_hit_mac_motifs)
-            # all_hit_stop_human_motifs = "".join(all_hit_stop_human_motifs)
-            # all_hit_stop_mac_motifs = "".join(all_hit_stop_mac_motifs)
-            # all_hit_non_stop_human_motifs = "".join(all_hit_non_stop_human_motifs)
-            # all_hit_non_stop_mac_motifs = "".join(all_hit_non_stop_mac_motifs)
-            # all_non_hit_stop_human_motifs = "".join(all_non_hit_stop_human_motifs)
-            # all_non_hit_stop_mac_motifs = "".join(all_non_hit_stop_mac_motifs)
-            # all_non_hit_non_stop_human_motifs = "".join(all_non_hit_non_stop_human_motifs)
-            # all_non_hit_non_stop_mac_motifs = "".join(all_non_hit_non_stop_mac_motifs)
-            #
-            #
-            #
-            # hit_rate = get_sub_rate(all_hit_human_motifs, all_hit_mac_motifs)
-            # non_hit_rate = get_sub_rate(all_non_hit_human_motifs, all_non_hit_mac_motifs)
-            # hit_stop_rate = get_sub_rate(all_hit_stop_human_motifs, all_hit_stop_mac_motifs)
-            # hit_non_stop_rate = get_sub_rate(all_hit_non_stop_human_motifs, all_hit_non_stop_mac_motifs)
-            # non_hit_stop_rate = get_sub_rate(all_non_hit_stop_human_motifs, all_non_hit_stop_mac_motifs)
-            # non_hit_non_stop_rate = get_sub_rate(all_non_hit_non_stop_human_motifs, all_non_hit_non_stop_mac_motifs)
-            # output = [hit_rate, non_hit_rate, hit_stop_rate, hit_non_stop_rate, non_hit_stop_rate, non_hit_non_stop_rate]
-            # outputs.append(output)
 
     return outputs
 
