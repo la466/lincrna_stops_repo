@@ -25,8 +25,10 @@ E
 
 F
 
-G
-* do a substiution analysis, comparing sites in stops and non stops as in Schuler
+I
+[*] do a substiution analysis, comparing sites in stops and non stops as in Schuler - working10
+* clean up this script, run for protein coding genes properly
+
 * try to do a substitution analysis on lincRNA
   - upload bed to galaxy server
   - stitch gene blocks
