@@ -2,3 +2,4 @@ working4: ese densities as intron sizes increase
 working5:
 working6: ese overlaps
 working7: density of eses in overlaps simulation
+working10: clean alignments into exons and introns

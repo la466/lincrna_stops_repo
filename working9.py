@@ -27,14 +27,14 @@ motifs = "source_data/motif_sets/int3.txt"
 # seqs_file = "clean_run/lincrna/lincRNA.multi_exon.exons.fasta"
 # seqs_file = "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta"
 
-# seqs_file = "clean_run/genome_sequences/human/human.cds.clean_coding_exons.fasta"
-# families_file = "clean_run/genome_sequences/human/human.cds.families.bed"
+seqs_file = "clean_run/genome_sequences/human/human.cds.clean_coding_exons.fasta"
+families_file = "clean_run/genome_sequences/human/human.cds.families.bed"
 
 motifs = sequo.read_motifs(motifs)
 
 names, seqs = gen.read_fasta(seqs_file)
 seq_list = collections.defaultdict(lambda: [])
-[seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names) if len(seqs[i]) > 280]
+[seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names[:3000]) if len(seqs[i]) > 211]
 
 # seq_list = sequo.pick_random_family_member(families_file, seq_list)
 
@@ -72,17 +72,27 @@ def get_real(flanks, cores, flank_excess):
     [core_stops.extend(sequo.return_overlap_motifs(core, stops)) for core in core_motifs]
     core_stop_density = np.divide(len(core_stops), len(core_motifs))
 
-    if flank_excess > 0:
-        factor = 1+flank_excess
-    else:
-        factor = 1- flank_excess
+    flank_density = np.divide(sum([len(i) for i in flank_motifs]), sum([len(i) for i in flanks]))
+    core_density = np.divide(sum([len(i) for i in core_motifs]), sum([len(i) for i in cores]))
+    print(flank_density)
+    print(core_density)
+    print(flank_stop_density)
+    print(core_stop_density)
 
-    expected_flank = factor*core_stop_density
-
+    # if flank_excess > 0:
+    #     factor = 1+flank_excess
+    # else:
+    #     factor = 1- flank_excess
+    #
+    # expected_flank = factor*core_stop_density
+    #
+    # print(flank_stop_density)
     # print(core_stop_density)
-    # print(flank_stop_density, expected_flank)
-    diff = flank_stop_density - expected_flank
-    return diff*100
+    #
+    # # print(core_stop_density)
+    # # print(flank_stop_density, expected_flank)
+    # diff = flank_stop_density - expected_flank
+    # return diff*100
 
 def get_sims(iterations, flanks, cores, flank_excess):
     outputs = []
@@ -128,6 +138,8 @@ def get_sims(iterations, flanks, cores, flank_excess):
             expected_flank = factor*core_stop_density
             diff = (flank_stop_density - expected_flank)*100
             outputs.append(diff)
+
+
     return(outputs)
 
 
@@ -136,10 +148,10 @@ core_density = seqo.calc_motif_density(cores, motifs)
 flank_excess = np.divide(flank_density - core_density, core_density)
 
 
-outputs = soc.run_simulation_function(list(range(100)), [flanks, cores, flank_excess], get_sims, sim_run = False)
+# outputs = soc.run_simulation_function(list(range(5)), [flanks, cores, flank_excess], get_sims, sim_run = False)
 real = get_real(flanks, cores, flank_excess)
 
-less = [i for i in outputs if i <= real]
+# less = [i for i in outputs if i <= real]
 
 print(real)
-print(len(less))
+# print(len(less))

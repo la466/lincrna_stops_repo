@@ -58,9 +58,17 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, kwa
             [flattened_outputs.extend(i) for i in results]
             outputs = flattened_outputs
         elif isinstance(results[0], dict):
-            flattened_outputs = {}
-            [flattened_outputs.update(i) for i in results]
-            outputs = flattened_outputs
+            keys = list(results[0].keys())
+            if isinstance(results[0][keys[0]], list):
+                flattened_outputs = collections.defaultdict(lambda: [])
+                for result in results:
+                    for key in result:
+                        flattened_outputs[key].extend(result[key])
+                outputs = flattened_outputs
+            else:
+                flattened_outputs = {}
+                [flattened_outputs.update(i) for i in results]
+                outputs = flattened_outputs
         outputs = flattened_outputs
 
     else:
