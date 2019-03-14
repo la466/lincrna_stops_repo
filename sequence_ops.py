@@ -1212,8 +1212,8 @@ def ese_ds_mutation_wrapper(ids, motif_set_filepaths, alignments, output_directo
                     overlap_one_away_codons = [retain_only_fourfold_codons(i) for i in overlap_one_away_codons]
                     overlap_other_codons = [retain_only_fourfold_codons(i) for i in overlap_other_codons]
 
-                    overlap_one_away_codons = convert_fourfold_to_gcn(overlap_one_away_codons)
-                    overlap_other_codons = convert_fourfold_to_gcn(overlap_other_codons)
+                    # overlap_one_away_codons = convert_fourfold_to_gcn(overlap_one_away_codons)
+                    # overlap_other_codons = convert_fourfold_to_gcn(overlap_other_codons)
 
                 one_away_strings = []
                 other_strings = []
@@ -1227,7 +1227,7 @@ def ese_ds_mutation_wrapper(ids, motif_set_filepaths, alignments, output_directo
                 other_ds = calc_strings_ds(other_strings)
 
                 with open(output_file, "w") as outfile:
-                    outfile.write("{0},{1},{2},{3}\n".format(id, one_away_ds, other_ds, len(motif_set)))
+                    outfile.write("{0},{1},{2}\n".format(id, one_away_ds, other_ds))
 
     return outputs
 
