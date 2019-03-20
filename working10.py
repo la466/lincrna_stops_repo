@@ -28,12 +28,15 @@ import scipy.stats
 # motifs = "source_data/motif_sets/RESCUE.txt"
 # seqs_file = "clean_run/lincrna/lincRNA.multi_exon.exons.fasta"
 # seqs_file = "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta"
+#
 
-alignments_file = "source_data/cabili_full_alignments.fasta"
-bed_file = "source_data/cabili_clean_transcripts.bed"
+# alignments_file = "source_data/cabili_full_alignments.fasta"
+# bed_file = "source_data/cabili_clean_transcripts.bed"
+#
+# output_exon_file = "clean_run/genome_sequences/lincrna/cabili/exon_alignments.fasta"
+# output_intron_file = "clean_run/genome_sequences/lincrna/cabili/intron_alignments.fasta"
 
-output_exon_file = "clean_run/genome_sequences/lincrna/cabili/exon_alignments.fasta"
-output_intron_file = "clean_run/genome_sequences/lincrna/cabili/intron_alignments.fasta"
+
 
 bed_entries = gen.read_many_fields(bed_file, "\t")
 entries = collections.defaultdict(lambda: collections.defaultdict())

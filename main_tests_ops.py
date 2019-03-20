@@ -947,7 +947,7 @@ def calc_ese_ds_mutation(alignment_file, cds_fasta, exons_fasta, motif_file, out
     outputs = simoc.run_simulation_function(list(motif_set_filepaths), args, sequo.ese_ds_mutation_wrapper, sim_run = False)
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,one_away_ds,others_ds,one_way_motif_count,others_motif_count\n")
+        outfile.write("id,one_away_ds,others_ds\n")
         for file in outputs:
             outfile.write("{0}\n".format(",".join(gen.read_many_fields(file, "\t")[0])))
 

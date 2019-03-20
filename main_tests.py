@@ -106,9 +106,13 @@ def main():
     if generate_gc_matched_stop_sets:
         seqo.get_gc_matched_motifs(stops, gc_matched_stops_sets_file)
 
+    match_density = True
     motif_simulations_directory = "{0}/dinucleotide_controls/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
+    if match_density:
+        motif_simulations_directory += "_matched_stops"
+
     if generate_motif_dinucleotide_controls:
-        simopc.generate_motif_dinucleotide_controls(ese_file, 10000, motif_simulations_directory, match_density = True)
+        simopc.generate_motif_dinucleotide_controls(ese_file, 10000, motif_simulations_directory, match_density = match_density)
 
     gc_control_exon_output_directory = "{0}/clean_exon_gc_controls".format(output_directory)
     if generate_gc_controls_exons:
@@ -210,7 +214,7 @@ def main():
         # run the test
         mto.calc_ese_ds_random_overlaps(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_randomise_overlap_output_file, simulations = simulations, controls_directory = ese_overlap_randomise_dir, families_file = families_file)
 
-    ese_ds_mutation_output_file = "{0}/ese_ds_mutation.csv".format(ds_output_directory)
+    ese_ds_mutation_output_file = "{0}/ese_ds_mutation1.csv".format(ds_output_directory)
     if ese_ds_mutation:
         # if the sequence alignments file doesnt exist, create it
         if not os.path.isfile(alignments_file):

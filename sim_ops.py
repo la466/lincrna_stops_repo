@@ -396,34 +396,37 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
 
     output_files = []
 
-    pbar = ProgressBar()
+
 
     if len(simulations):
-        for sim_no, simulation in enumerate(pbar(simulations)):
+        for sim_no, simulation in enumerate(simulations):
             generated_set = False
+            passed_counter = 0
             while not generated_set:
                 # set the seed
                 set_seed(seeds, simulation)
-
-                # print the simulation number out
-                # print("(W{0}) {1}/{2}: {3}".format(mp.current_process().name.split("-")[-1], sim_no+1, len(simulations), id))
+                gen.print_parallel_status(sim_no, simulations)
 
                 simulated_seqs = []
                 # Generate a list of nucleotide matched sequences
                 for i, seq in enumerate(seqs):
                     generated_seq = False
                     seq_seed = get_seq_seed(seq_seeds, sim_no, i)
-
-                    if match_density:
-                        stop_density = seqo.calc_seqs_codon_set_density([seq], codon_set = stops)
+                    passed = False
 
                     while not generated_seq:
                         sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
-                        if match_density:
-                            sim_density = seqo.calc_seqs_codon_set_density([sim_seq], codon_set = stops)
-
                         if sim_seq not in simulated_seqs:
-                            if not match_density or match_density and stop_density == sim_density:
+                            if match_density:
+                                stops_in_true = len(re.findall("(TAA|TAG|TGA)", seq))
+                                stops_in_sim = len(re.findall("(TAA|TAG|TGA)", sim_seq))
+                                if stops_in_true == stops_in_sim:
+                                    passed = True
+                                    passed_counter += 1
+                            else:
+                                passed = True
+
+                            if passed:
                                 generated_seq = True
                                 simulated_seqs.append(sim_seq)
                 if sorted(seqs) != sorted(simulated_seqs):
