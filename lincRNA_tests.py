@@ -667,3 +667,23 @@ def calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simul
         outfile.write("dint,within_motifs,outside_motifs\n")
         for dint in sorted(motif_sub_rates):
             outfile.write("{0},{1},{2}\n".format(dint, motif_sub_rates[dint], non_motif_sub_rates[dint]))
+
+
+def calc_gc(input_fasta, output_file, families_file = None):
+
+    # get sequences
+    names, seqs = gen.read_fasta(input_fasta)
+    seq_list = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("run,count,median_gc\n")
+        if families_file:
+            for i in range(10):
+                chosen_seqs = sequo.pick_random_family_member(families_file, seq_list)
+                gcs = [seqo.calc_seq_gc(chosen_seqs[id]) for id in chosen_seqs]
+                median_gc = np.median(gcs)
+                outfile.write("{0},{1},{2}\n".format(i+1, len(chosen_seqs), median_gc))
+        else:
+            gcs = [seqo.calc_seq_gc(seq_list[id]) for id in seq_list]
+            median_gc = np.median(gcs)
+            outfile.write("all_seqs,{0},{1}\n".format(len(seq_list), median_gc))

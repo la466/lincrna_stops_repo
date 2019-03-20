@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "extract_sequences", "clean_run", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "motif_nd", "excess_test", "single_exon", "substitution_rate", "dinucleotide_substitution_rate"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "motif_nd", "excess_test", "single_exon", "substitution_rate", "dinucleotide_substitution_rate"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22], opt_flags = [3,4,5,6])
+    args = gen.parse_arguments(description, arguments, flags = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23], opt_flags = [3,4,5,6])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -22,6 +22,7 @@ def main():
     output_prefix, \
     extract_sequences, \
     clean_run, \
+    calc_gc, \
     density_sim,  \
     get_exon_dint_controls, \
     get_intron_dint_controls, \
@@ -45,6 +46,7 @@ def main():
     args.output_prefix, \
     args.extract_sequences, \
     args.clean_run, \
+    args.calc_gc, \
     args.density_sim, \
     args.get_exon_dint_controls, \
     args.get_intron_dint_controls, \
@@ -92,6 +94,12 @@ def main():
     # single_exon_sequence_density_simulation = "{0}/lincrna/tests/lincRNA.single_exon.full_sequence.stop_density_simulation.csv".format(output_directory)
     # if stop_density_test:
     #     ltests.stop_density_test(lincRNA_single_exon_fasta, single_exon_sequence_density_simulation, required_simulations, families_file = lincRNA_single_exon_families)
+
+
+    if calc_gc:
+        output_file = "{0}/{1}_gc.csv".format(output_directory, output_prefix)
+        ltests.calc_gc(input_fasta, output_file, families_file = families_file)
+
 
     exon_dint_control_directory = "{0}/lincrna/exon_dinucleotide_controls".format(output_directory)
     if get_exon_dint_controls:
