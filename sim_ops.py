@@ -1001,6 +1001,48 @@ def simulate_lincrna_stop_codon_density_removed_motifs(simulations, sequence_lis
 
     return new_outputs
 
+def simulate_lincrna_stop_codon_density_removed_motifs_sim_seq(simulations, sequence_list, output_directory, motif_files):
+    """
+    Calculate stop codon densities in lincRNA sequences and simulations
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+        motif_files (dict): dictionary containing paths to motif files
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if simulations:
+        for i, simulation in enumerate(simulations):
+            gen.print_parallel_status(i, simulations)
+
+            #read in the motifs
+            motifs = sequo.read_motifs(motif_files[simulation])
+            # get all the motifs that arent hits
+            hits = []
+            for id in sequence_list:
+                sequence = sequence_list[id]
+                overlaps = sequo.sequence_overlap_indicies(sequence, motifs)
+                non_overlaps = [i for i in list(range(len(sequence_list[id]))) if i not in overlaps]
+                chunked_overlaps = sequo.chunk_overlaps(non_overlaps)
+                overlap_motifs = ["".join([sequence_list[id][i] for i in chunk]) for chunk in chunked_overlaps]
+                hits.extend(overlap_motifs)
+            density = seqo.calc_motif_density(hits, stops)
+            gc = seqo.calc_seqs_gc(["".join(hits)])[0]
+            # write the results to file
+            output_file = "{0}/output_{1}.txt".format(output_directory, simulation)
+            with open(output_file, "w") as outfile:
+                outfile.write("{0},{1},{2},{3}\n".format(simulation, len(sequence_list), gc, density))
+            new_outputs[simulation] = output_file
+    return new_outputs
+
+
+
 def simulate_lincrna_stop_codon_density_within_genes(id_list, sequence_list, output_directory, output_filelist, simulations):
     """
     Calculate stop codon densities in lincRNA sequences and simulations

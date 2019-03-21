@@ -137,3 +137,25 @@ lm = lm(sims$non_stops_mutation_ds ~ sims$stop_mutation_ds)
 expected = lm$coefficients[1] + (lm$coefficients[1] * real$stop_mutation_ds)
 expected
 real$non_stops_mutation_ds
+
+
+
+file = read.csv("clean_run/tests/ese_ds/ese_ds_mutation1.csv", head = T)
+head(file)
+nrow(file)
+
+file$relative = file$one_away_ds / file$others_ds
+real = file[file$id == "real",]
+sims = file[file$id != "real",]
+
+real$one_away_ds
+
+mean(real$relative)
+
+nrow(sims[sims$one_away_ds <= real$one_away_ds,]) / nrow(sims)
+nrow(sims[sims$others_ds <= real$others_ds,]) / nrow(sims)
+
+hist(sims$others_ds)
+abline(v = real$others_ds)
+
+head(file)

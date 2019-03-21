@@ -24,8 +24,8 @@ from scipy.stats import chisquare
 # eses = sequo.read_motifs("source_data/motif_sets/int3.txt")
 
 ese_sets = {
-    "int3": sequo.read_motifs("source_data/motif_sets/int3.txt"),
-    # "RESCUE": sequo.read_motifs("source_data/motif_sets/RESCUE.txt"),
+    # "int3": sequo.read_motifs("source_data/motif_sets/int3.txt"),
+    "RESCUE": sequo.read_motifs("source_data/motif_sets/RESCUE.txt"),
 }
 
 # eses = sequo.read_motifs("source_data/motif_sets/ke400.txt")

@@ -347,8 +347,59 @@ def sim_stop_density_removed_motifs(input_fasta, output_file, motif_file, simula
     # remove the temp directory
     gen.remove_directory(temp_dir)
 
+def sim_stop_density_removed_motifs_seq_sim(input_fasta, output_file, motif_file, sim_dir, simulations = None, families_file = None):
+    """
+    Wrapper to calculate and simulate the stop codon density in lincRNA sequences.
 
-def process_sim_stop_density_outputs(output_dir, output_file, test_col = None):
+    Args:
+        input_fasta (str): path to input fasta containing sequences
+        output_file (str): path to output file
+        motif_file (str): path to file containing motifs
+        sim_dir (str): path to simulation directory
+        simulations (int): if set, the number of simulations to run
+        families_file (str): if set, the path to the file containing the paralogous families
+    """
+    # get the motifs
+    motifs = sequo.read_motifs(motif_file)
+    # get the sequences
+    names, sequences = gen.read_fasta(input_fasta)
+    sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
+
+    if families_file:
+        sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    # create a temporary output directory
+    temp_dir = "temp_lincrna_sim_remove"
+    gen.remove_directory(temp_dir)
+    gen.create_output_directories(temp_dir)
+    # set up the simulation
+    motif_files = {"real": motif_file}
+    random_motif_files = np.random.choice(list(range(len(os.listdir(sim_dir)))), simulations)
+    for i, file in enumerate(random_motif_files):
+        motif_files["sim_{0}".format(i+1)] = "{0}/{1}".format(sim_dir, os.listdir(sim_dir)[file])
+    simulation_list = list(motif_files)
+
+    args = [sequence_list, temp_dir, motif_files]
+    # run the simulation
+    outputs = simoc.run_simulation_function(simulation_list, args, simo.simulate_lincrna_stop_codon_density_removed_motifs_sim_seq, sim_run = False)
+    # join all outputs
+    # outputs = {**output_filelist, **outputs}
+    real_output = outputs["real"]
+    sim_outputs = {i: outputs[i] for i in outputs if i != "real"}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,seq_count,gc,stop_codon_density\n")
+        # real data
+        outfile.write("{0}\n".format(gen.read_many_fields(real_output, "\t")[0][0]))
+        # simulation data
+        for sim_id in sorted(sim_outputs):
+            data = gen.read_many_fields(sim_outputs[sim_id], "\t")[0][0]
+            outfile.write("{0}\n".format(",".join(data.split(","))))
+    # remove the temp directory
+    gen.remove_directory(temp_dir)
+
+
+def process_sim_stop_density_outputs(output_dir, output_file, test_col = None, reverse = None):
     """
     Wrapper to calculate p value for lincRNA stop codon density after shuffling
     of sequences
@@ -363,8 +414,11 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None):
             data = pd.read_csv(file.path)
             real = data[data['id'] == "real"]
             sims = data[data['id'] != "real"]
-            less_than = sims[test_col] <= real[test_col][0]
-            p = np.divide(less_than.sum() + 1, len(sims) + 1)
+            if reverse:
+                count_list = sims[test_col] >= real[test_col][0]
+            else:
+                count_list = sims[test_col] <= real[test_col][0]
+            p = np.divide(count_list.sum() + 1, len(sims) + 1)
             median_sims = sims[test_col].median()
             nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
             outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["gc"][0], real[test_col][0], median_sims, nd, p, p*len(os.listdir(output_dir))))

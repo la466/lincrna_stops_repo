@@ -14,10 +14,10 @@ import os
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_randomise_overlap", "ese_ds_mutation", "non_ese_stop_ds", "ese_ds_test"]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_randomise_overlap", "ese_ds_mutation", "non_ese_stop_ds", "ese_ds_test", "match_density"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], ints=[], opt_flags=[2,3])
+    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], ints=[], opt_flags=[2,3])
     input_directory, \
     output_directory, \
     simulations, \
@@ -48,7 +48,8 @@ def main():
     ese_ds_randomise_overlap, \
     ese_ds_mutation, \
     non_ese_stop_ds, \
-    ese_ds_test = \
+    ese_ds_test, \
+    match_density = \
     args.input_directory, \
     args.output_directory, \
     args.simulations, \
@@ -79,7 +80,8 @@ def main():
     args.ese_ds_randomise_overlap, \
     args.ese_ds_mutation, \
     args.non_ese_stop_ds, \
-    args.ese_ds_test
+    args.ese_ds_test, \
+    args.match_density
 
     if simulations:
         simulations = int(simulations)
@@ -99,20 +101,20 @@ def main():
     coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_coding_exons.fasta".format(input_directory)
     non_coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_non_coding_exons.fasta".format(input_directory)
 
-    ese_file = "source_data/motif_sets/int3.txt"
+    # ese_file = "source_data/motif_sets/int3.txt"
 
     # get the set of codons with the same gc content as stop codons
     gc_matched_stops_sets_file = "{0}/stops_gc_matched_motifs.bed".format(output_directory)
     if generate_gc_matched_stop_sets:
         seqo.get_gc_matched_motifs(stops, gc_matched_stops_sets_file)
 
-    match_density = True
     motif_simulations_directory = "{0}/dinucleotide_controls/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
     if match_density:
         motif_simulations_directory += "_matched_stops"
 
     if generate_motif_dinucleotide_controls:
-        simopc.generate_motif_dinucleotide_controls(ese_file, 10000, motif_simulations_directory, match_density = match_density)
+        print(motif_simulations_directory)
+        simopc.generate_motif_dinucleotide_controls(ese_file, simulations, motif_simulations_directory, match_density = match_density)
 
     gc_control_exon_output_directory = "{0}/clean_exon_gc_controls".format(output_directory)
     if generate_gc_controls_exons:

@@ -52,7 +52,6 @@ def main():
     output_file = "{0}/{1}_densities.csv".format(test_output_directory, motif_file.split("/")[-1].split(".")[0])
     codon_combinations_file = "{0}/codon_combinations.txt".format(output_directory)
     if motif_codon_densities:
-
         if not os.path.isfile(codon_combinations_file):
             seqo.generate_all_motif_combinations(stops, codon_combinations_file)
 
