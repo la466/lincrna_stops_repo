@@ -31,8 +31,7 @@ get_stats <- function(filepath, title) {
   return(output_data)
 }
 
-file = "test.csv"
-
+output_file = "clean_run/tests/motif_overlaps/motif_overlaps_outputs.csv"
 
 rownames = c("", "Non-overlap density:", "Non-overlap ND:", "Non-overlap P (tail-greater):", "Overlap density:", "Overlap ND:", "Overlap P (tail-less):")
 data1 = get_stats("clean_run/tests/motif_overlaps/protein_coding_int3_motif_overlap_density.csv", "Protein Coding INT3")
@@ -40,4 +39,5 @@ data2 = get_stats("clean_run/tests/motif_overlaps/protein_coding_int3_motif_over
 data3 = get_stats("clean_run/tests/motif_overlaps/protein_coding_int3_motif_overlap_density.csv", "LincRNA INT3")
 data4 = get_stats("clean_run/tests/motif_overlaps/protein_coding_int3_motif_overlap_density.csv", "LincRNA INT3")
 dataframe = data.frame(rownames, data1, data2, data3, data4)
-write.table(dataframe, file = file,row.names=FALSE, col.names = FALSE, sep = ",")
+write.table(dataframe, file = output_file,row.names=FALSE, col.names = FALSE, sep = ",")
+
