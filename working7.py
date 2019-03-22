@@ -45,8 +45,8 @@ lincrna_files = {
 }
 
 filesets = [
-    # pc_fileset,
-    lincrna_files,
+    pc_fileset,
+    # lincrna_files,
 ]
 
 def get_sequences(fileset):
