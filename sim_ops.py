@@ -952,44 +952,31 @@ def simulate_lincrna_stop_codon_density_removed_motifs(simulations, sequence_lis
 
     if simulations:
         np.random.seed()
-        overlap_positions = {}
-        overlap_lengths = {}
-        for id in sequence_list:
-            sequence = sequence_list[id]
-            overlaps = sequo.sequence_overlap_indicies(sequence, motifs)
-            overlap_positions[id] = overlaps
-            overlaps = sequo.chunk_overlaps(overlaps)
-            overlap_length_list = [len(i) for i in overlaps]
-            overlap_lengths[id] = overlap_length_list
-
         for i, simulation_id in enumerate(simulations):
             gen.print_parallel_status(i, simulations)
             # check if the output file doesnt already exist
             if simulation_id not in output_filelist:
 
-
-                if simulation_id != "real":
-                    new_overlaps = {}
-                    for id in sequence_list:
-                        sequence = sequence_list[id]
-                        new_overlap_list = []
-                        lengths = overlap_lengths[id]
-                        for length in lengths:
-                            choices = [i for i in list(range(0, len(sequence) - length))]
-                            if len(choices):
-                                start = np.random.choice(choices)
-                                new_overlap_list.extend(list(range(start, start + length)))
-                        new_overlaps[id] = list(set(new_overlap_list))
-                    overlap_positions = new_overlaps
-
-
                 hits = []
                 for id in sequence_list:
-                    overlaps = overlap_positions[id]
-                    overlaps = [i for i in list(range(len(sequence_list[id]))) if i not in overlaps]
-                    chunked_overlaps = sequo.chunk_overlaps(overlaps)
+                    sequence = sequence_list[id]
+                    overlaps = sequo.sequence_overlap_indicies(sequence, motifs)
+                    non_overlaps = [i for i in list(range(len(sequence_list[id]))) if i not in overlaps]
+                    chunked_overlaps = sequo.chunk_overlaps(non_overlaps)
                     overlap_motifs = ["".join([sequence_list[id][i] for i in chunk]) for chunk in chunked_overlaps]
                     hits.extend(overlap_motifs)
+
+                if simulation_id != "real":
+                    hit_lengths = [len(i) for i in hits]
+                    all_nts = list("".join(hits))
+                    np.random.shuffle(all_nts)
+                    nt_index = 0
+                    new_hits = []
+                    for length in hit_lengths:
+                        new_hits.append("".join(all_nts[nt_index:nt_index+length]))
+                        nt_index += length
+                    hits = new_hits
+
                 # [test_kept.extend(sequo.return_overlap_motifs(i, motifs, inverse = True)) for i in test_seqs]
                 density = seqo.calc_motif_density(hits, stops)
                 gc = seqo.calc_seqs_gc(["".join(hits)])[0]
