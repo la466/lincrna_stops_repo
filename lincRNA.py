@@ -216,7 +216,7 @@ def main():
                 run_output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_output_dir, run + 1)
                 ltests.sim_stop_density_removed_motifs(input_fasta, run_output_file, motif_file, simulations = int(required_simulations), families_file = families_file)
         # process the outputs
-        ltests.process_sim_stop_density_outputs(sim_output_dir, sim_output_file)
+        ltests.process_sim_stop_density_outputs(sim_output_dir, sim_output_file, reverse = True)
 
     if sim_stop_density_removed_motifs_sim_seqs:
         if families_file:
