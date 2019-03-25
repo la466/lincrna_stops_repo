@@ -14,14 +14,18 @@ import os
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_randomise_overlap", "ese_ds_mutation", "non_ese_stop_ds", "ese_ds_test", "match_density"]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "input_fasta", "input_fasta2", "families_file", "output_prefix", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_randomise_overlap", "ese_ds_mutation", "non_ese_stop_ds", "ese_ds_test", "match_density", "intron_length_test"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], ints=[], opt_flags=[2,3])
+    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], ints=[], opt_flags=[2,3,4,5,6,7])
     input_directory, \
     output_directory, \
     simulations, \
     ese_file, \
+    input_fasta, \
+    input_fasta2, \
+    families_file, \
+    output_prefix, \
     clean_run, \
     generate_gc_matched_stop_sets, \
     generate_motif_dinucleotide_controls, \
@@ -49,11 +53,16 @@ def main():
     ese_ds_mutation, \
     non_ese_stop_ds, \
     ese_ds_test, \
-    match_density = \
+    match_density, \
+    intron_length_test = \
     args.input_directory, \
     args.output_directory, \
     args.simulations, \
     args.ese_file, \
+    args.input_fasta, \
+    args.input_fasta2, \
+    args.families_file, \
+    args.output_prefix, \
     args.clean_run, \
     args.generate_gc_matched_stop_sets, \
     args.generate_motif_dinucleotide_controls, \
@@ -81,7 +90,8 @@ def main():
     args.ese_ds_mutation, \
     args.non_ese_stop_ds, \
     args.ese_ds_test, \
-    args.match_density
+    args.match_density, \
+    args.intron_length_test
 
     if simulations:
         simulations = int(simulations)
@@ -237,6 +247,16 @@ def main():
         mto.calc_non_ese_ds(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, non_ese_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
 
 
+
+    if intron_length_test:
+        output_file = "{0}/{1}_{2}_ese_densities.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0], output_prefix)
+        output_file_flanks = "{0}/{1}_{2}_ese_densities_flanks.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0], output_prefix)
+        # run on whole sequence
+        mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file, flanks = None, families_file = families_file)
+        # run on flanks
+        mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_flanks, flanks = True, families_file = families_file)
+
+
     exon_regions_directory = "{0}/tests/exon_regions".format(output_directory)
     gen.create_output_directories(exon_regions_directory)
     exon_region_density_file = "{0}/exon_regions_density.csv".format(exon_regions_directory)
@@ -245,11 +265,6 @@ def main():
     exon_region_excess_file = "{0}/exon_regions_excess.csv".format(exon_regions_directory)
     if exon_region_excess:
         mto.exon_region_excess(cds_fasta, coding_exons_fasta, exon_region_excess_file, families_file = families_file)
-
-    non_coding_exons_dir = "{0}/tests/non_coding_exons".format(output_directory)
-    non_coding_exons_file = "{0}/non_coding_exons.csv".format(non_coding_exons_dir)
-    if non_coding_exons:
-        mto.non_coding_exons(non_coding_exons_fasta, non_coding_exons_file, families_file = families_file)
 
     gen.create_output_directories("{0}/tests/intron_density".format(output_directory))
     intron_density_sim_file = "{0}/intron_density/motif_sets_intron_density.csv".format(output_directory)

@@ -11,6 +11,7 @@ import numpy as np
 import collections
 import zipfile
 import os
+import re
 import multiprocessing as mp
 from progressbar import ProgressBar
 from useful_motif_sets import stops
@@ -1230,3 +1231,86 @@ def ese_ds(alignments_fasta, cds_fasta, motif_file, output_file, families_file =
             outfile.write("{0}\n".format(data))
     # remove the temp directory
     gen.remove_directory(temp_dir)
+
+
+def intron_length_test(exons_fasta, introns_fasta, motif_file, output_file, flanks = None, families_file = None):
+
+    # get the exon fasta
+    exon_names, exon_seqs = gen.read_fasta(exons_fasta)
+    # get the introns fasta
+    intron_names, intron_seqs = gen.read_fasta(introns_fasta)
+
+    # if limited to flanks, extract the flanks
+    if flanks:
+        # get all the exon flanks
+        exon_list = collections.defaultdict(lambda: collections.defaultdict())
+        for i, name in enumerate(exon_names):
+            if len(exon_seqs[i]) > 211 and "N" not in exon_seqs[i]:
+                exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
+        exon_list = {i: exon_list[i] for i in exon_list}
+
+
+        intron_list = collections.defaultdict(lambda: [])
+
+        # get only those that flank an included exon
+        for i, name in enumerate(intron_names):
+            intron_id = name.split(".")[0]
+            if intron_id in exon_list:
+                intron_flanking_exons = [int(i) for i in name.split(".")[-1].split("(")[0].split("-")]
+                if intron_flanking_exons[0] in exon_list[intron_id] or intron_flanking_exons[1] in exon_list[intron_id]:
+                    intron_list[name.split(".")[0]].append(intron_seqs[i])
+        intron_list = {i: intron_list[i] for i in intron_list}
+
+        temp_exon_list = collections.defaultdict(lambda: [])
+        for id in exon_list:
+            flanks = []
+            for exon_id in exon_list[id]:
+                flanks.append(exon_list[id][exon_id][2:69])
+                flanks.append(exon_list[id][exon_id][-69:-2])
+            temp_exon_list[id] = flanks
+        exon_list = temp_exon_list
+        exon_list = {i: exon_list[i] for i in exon_list}
+
+    else:
+        # if not flanks or is non coding exons
+        exon_list = collections.defaultdict(lambda: [])
+        [exon_list[name.split(".")[0]].append(exon_seqs[i]) for i, name in enumerate(exon_names)]
+        exon_list = {i: exon_list[i] for i in exon_list if "N" not in exon_list[i]}
+
+        intron_list = collections.defaultdict(lambda: [])
+        [intron_list[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if name.split(".")[0] in exon_list]
+        intron_list = {i: intron_list[i] for i in intron_list}
+
+    run_intron_length_density_test(motif_file, exon_list, intron_list, output_file, families_file = families_file)
+
+
+
+def run_intron_length_density_test(motif_file, exon_list, intron_list, output_file, families_file = None):
+
+    # get the sizes
+    exon_sizes = {i: np.median([len(exon) for exon in exon_list[i]]) for i in exon_list}
+    intron_sizes = {i: np.median([len(intron) for intron in intron_list[i]]) for i in intron_list}
+
+    # read in the motifs
+    motifs = sequo.read_motifs(motif_file)
+
+    stop_motifs = [i for i in motifs if len(re.findall("(?=(TAA|TAG|TGA))", i))]
+    non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
+    motif_densities = {i: seqo.calc_motif_density(exon_list[i], motifs) for i in exon_list}
+    stop_motif_densities = {i: seqo.calc_motif_density(exon_list[i], stop_motifs) for i in exon_list}
+    non_stop_motif_densities = {i: seqo.calc_motif_density(exon_list[i], non_stop_motifs) for i in exon_list}
+
+    # group by family
+    families = gen.read_many_fields(families_file, "\t")
+    motif_densities = sequo.group_family_results(motif_densities, families)
+    stop_motif_densities = sequo.group_family_results(stop_motif_densities, families)
+    non_stop_motif_densities = sequo.group_family_results(non_stop_motif_densities, families)
+    exon_sizes = sequo.group_family_results(exon_sizes, families)
+    intron_sizes = sequo.group_family_results(intron_sizes, families)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,exon_size,intron_size,ese_density,stop_ese_density,non_stop_ese_density\n")
+        for id in motif_densities:
+            if id in intron_sizes:
+                outfile.write("{0},{1},{2},{3},{4},{5}\n".format(id, np.median(exon_sizes[id]), np.median(intron_sizes[id]), np.median(motif_densities[id]), np.median(stop_motif_densities[id]), np.median(non_stop_motif_densities[id])))

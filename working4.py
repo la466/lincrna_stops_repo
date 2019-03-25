@@ -128,7 +128,6 @@ def calculate_densities(filesets, all_sequences = False, flanks = None, noncodin
                 if len(exon_seqs[i]) > 207 and "N" not in exon_seqs[i]:
                     exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
             exon_list = {i: exon_list[i] for i in exon_list}
-            # exon_sizes = {i: np.median([len(exon_list[i][exon_id]) for exon_id in exon_list[i]]) for i in exon_list}
 
             intron_names, intron_seqs = gen.read_fasta(fileset["introns_file"])
             intron_list = collections.defaultdict(lambda: [])
