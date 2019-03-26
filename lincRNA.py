@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "motif_nd", "excess_test", "single_exon", "substitution_rate", "dinucleotide_substitution_rate"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25], opt_flags = [3,4,5,6,7])
+    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29], opt_flags = [3,4,5,6,7])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -38,7 +38,11 @@ def main():
     excess_test, \
     single_exon,\
     substitution_rate,\
-    dinucleotide_substitution_rate = \
+    substitution_rate_motif,\
+    dinucleotide_substitution_rate,\
+    motif_overlap, \
+    motif_overlap_density, \
+    clean_alignments = \
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
@@ -64,7 +68,11 @@ def main():
     args.excess_test, \
     args.single_exon, \
     args.substitution_rate, \
-    args.dinucleotide_substitution_rate
+    args.substitution_rate_motif, \
+    args.dinucleotide_substitution_rate, \
+    args.motif_overlap, \
+    args.motif_overlap_density, \
+    args.clean_alignments
 
     # make required simultions an int
     required_simulations = int(required_simulations) if required_simulations else None
@@ -252,6 +260,14 @@ def main():
             output_file = "{0}/{1}_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
         ltests.calc_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
 
+    if substitution_rate_motif:
+        gen.check_files_exists([families_file, motif_file])
+        if output_prefix:
+            output_file = "{0}/{1}_{2}_substitution_rates_motif.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        else:
+            output_file = "{0}/{1}_substitution_rates_motif.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+        ltests.calc_substitution_rates_motif(input_fasta, motif_file, required_simulations, sim_dir, output_file, families_file = families_file)
+
 
     if dinucleotide_substitution_rate:
         if not families_file or not motif_file:
@@ -278,6 +294,23 @@ def main():
             excess_test_output_file = "{0}/{1}_stop_codon_excesses.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
         # run the test
         ltests.excess_test(input_fasta, motif_file, excess_test_output_file, simulations = required_simulations, families_file = families_file)
+
+    if motif_overlap:
+        gen.check_files_exists([input_fasta, motif_file, families_file])
+        output_file = "{0}/motif_overlaps/{1}_{2}_motif_overlap_chisquare.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        runs = 10
+        ltests.motif_overlap_test(input_fasta, motif_file, output_file, runs = runs, families_file = families_file)
+
+    if motif_overlap_density:
+        gen.check_files_exists([input_fasta, motif_file, families_file])
+        output_file = "{0}/motif_overlaps/{1}_{2}_motif_overlap_density.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        runs = 10
+        ltests.motif_overlap_density_test(input_fasta, motif_file, output_file, runs = runs, families_file = families_file)
+
+    if clean_alignments:
+        output_exon_file = "{0}/clean_exon_alignments.fasta"
+        output_intron_file = "{0}/clean_intron_alignments.fasta"
+        ltests.clean_alignments(input_bed, input_fasta, output_exon_file, output_intron_file)
 
 
 if __name__ == "__main__":

@@ -622,6 +622,53 @@ def calc_substitution_rates(input_fasta, motif_file, required_simulations, outpu
     # remove the temp dir
     gen.remove_directory(temp_dir)
 
+def calc_substitution_rates_motif(input_fasta, motif_file, required_simulations, controls_dir, output_file, families_file = None):
+    """
+    Given a set of motifs and alignments, calculate the substitution rates between
+    for nucleotides that are part of stop codons and those that aren't.
+
+    Args:
+        input_fasta (str): path to input fasta
+        motif_file (str): path to motif file
+        required_simulations (int): number of simulations
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+    if not required_simulations:
+        required_simulations = 1000
+    # read in motifs
+    motifs = sequo.read_motifs(motif_file)
+    # read in alignments
+    names, seqs = gen.read_fasta(input_fasta)
+    seq_list = collections.defaultdict(lambda: [])
+    [seq_list[name.split(".")[0]].append(seqs[i].split(",")) for i, name in enumerate(names)]
+    # pick a random family member
+    seq_list = sequo.pick_random_family_member(families_file, seq_list)
+    seq_list = {i: seq_list[i] for i in seq_list}
+
+    temp_dir = "temp_sub_rates_motifs"
+    gen.create_output_directories(temp_dir)
+
+    # set the arguments
+    # sim_randomisations = {"real": False}
+    motif_files = {"real": motif_file}
+    for i in range(required_simulations):
+        motif_files[i+1] = "{0}/{1}".format(controls_dir, os.listdir(controls_dir)[i])
+    args = [motif_file, motif_files, seq_list, temp_dir]
+
+    outputs = simoc.run_simulation_function(list(motif_files), args, simoc.calculate_substitution_rates_motifs, sim_run = False)
+    real_file = [i for i in outputs if "real" in i][0]
+    sim_files = [i for i in outputs if i != real_file]
+
+    # write to file
+    with open(output_file, "w") as outfile:
+        outfile.write("id,ese_rate,non_ese_rate,ese_stop_rate,ese_non_stop_rate,non_ese_stop_rate,non_ese_non_stop_rate,relative_ese_rate,relative_non_ese_rate,relative_difference\n")
+        outfile.write("{0}\n".format(gen.read_many_fields(real_file, "\t")[0][0]))
+        [outfile.write("{0}\n".format(gen.read_many_fields(sim_file, "\t")[0][0])) for sim_file in sim_files]
+
+    # remove the temp dir
+    gen.remove_directory(temp_dir)
+
 
 def calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = None):
     """
@@ -741,3 +788,116 @@ def calc_gc(input_fasta, output_file, families_file = None):
             gcs = [seqo.calc_seq_gc(seq_list[id]) for id in seq_list]
             median_gc = np.median(gcs)
             outfile.write("all_seqs,{0},{1}\n".format(len(seq_list), median_gc))
+
+def motif_overlap_test(input_fasta, motif_file, output_file, runs = 1, families_file = None):
+    """
+    Wrapper for the test to ask whether stop containing motifs overlap than
+    non-stop containing motifs.
+
+    Args:
+        input_fasta (str): path to input fasta file
+        motif_file (str): path to motif file
+        output_file (str): path to output file
+        runs (int): the number of times to run the test
+        families_file (str): if set, path to the families_file
+    """
+
+    exon_names, exon_seqs = gen.read_fasta(input_fasta)
+    exon_list = collections.defaultdict(lambda: [])
+    for i, name in enumerate(exon_names):
+        exon_list[name.split(".")[0]].append(exon_seqs[i])
+    exon_list = {i: exon_list[i] for i in exon_list}
+
+    motifs = sequo.read_motifs(motif_file)
+
+    outputs = soc.run_simulation_function(list(range(runs)), [motifs, exon_list, families_file], sequo.calc_motif_overlaps, sim_run = False)
+    pvals = [i[-1].pvalue for i in outputs]
+    adj_pvals = [i*runs for i in pvals]
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,expected_stop_overlaps,observed_stop_overlaps,expected_non_stop_overlaps,observed_non_stop_overlaps,mean_stop_overlap_length,mean_non_stop_overlap_length,,chi_statistic,p_value,adj_p\n")
+        for i, output in enumerate(outputs):
+            outfile.write("run_{0},{1},,{2},{3},{4}\n".format(i+1, ",".join(gen.stringify(output[:-1])), output[-1].statistic, output[-1].pvalue, adj_pvals[i]))
+
+
+def motif_overlap_density_test(input_fasta, motif_file, output_file, runs = 1, families_file = None):
+    """
+    Wrapper for the test to ask whether overlapping motif hits have a higher density
+    of stop codons than those that do not overlap.
+
+    Args:
+        input_fasta (str): path to input fasta file
+        motif_file (str): path to motif file
+        output_file (str): path to output file
+        runs (int): the number of times to run the test
+        families_file (str): if set, path to the families_file
+    """
+
+    exon_names, exon_seqs = gen.read_fasta(input_fasta)
+    exon_list = collections.defaultdict(lambda: [])
+    for i, name in enumerate(exon_names):
+        exon_list[name.split(".")[0]].append(exon_seqs[i])
+    exon_list = {i: exon_list[i] for i in exon_list}
+
+    motifs = sequo.read_motifs(motif_file)
+
+    real_output = soc.run_simulation_function(list(range(runs)), [motifs, exon_list, families_file], sequo.calc_motif_overlap_density, sim_run = False)[0]
+    outputs = soc.run_simulation_function(list(range(runs)), [motifs, exon_list, families_file], sequo.calc_motif_overlap_density, kwargs_dict = {"sim": True}, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("sim_id,non_overlap_stop_density,overlap_stop_density\n")
+        outfile.write("real,{0},{1}\n".format(real_output[0], real_output[1]))
+        for i, output in enumerate(outputs):
+            outfile.write("sim_{0},{1},{2}\n".format(i+1,output[0], output[1]))
+
+
+
+def clean_alignments(input_bed, alignments_file, output_exon_file, output_intron_file):
+    """
+    Extract the exons and introns from a full alignments file. Note this uses alignements
+    extracted from https://usegalaxy.org/ which have spaces below each fasta entry.
+
+    Args:
+        input_bed (str): path to bed file
+        alignments_file (str): path to alignments file
+        output_exon_file (str): path to file containing exon alignment outputs
+        output_introns_file (str): path to file containing intron alignment outputs
+    """
+
+    # get the sequence coordinates to extract the parts
+    bed_entries = gen.read_many_fields(input_bed, "\t")
+    entries = collections.defaultdict(lambda: collections.defaultdict())
+    for entry in bed_entries:
+        entries[int(entry[1])][int(entry[2])] = entry
+
+    # now extract the parts
+    with open(output_exon_file, "w") as exon_outfile:
+        with open(output_intron_file, "w") as intron_outfile:
+            with open(alignments_file, "r") as input_file:
+                lines = input_file.readlines()
+                lines = [i.strip("\n") for i in lines]
+                for entry_id in range(0, len(lines), 5):
+                    if entry_id:
+                        human_name = lines[entry_id]
+                        human_seq = lines[entry_id+1]
+                        mac_name = lines[entry_id+2]
+                        mac_seq = lines[entry_id+3]
+
+                        if "N" not in human_seq and "N" not in mac_seq:
+                            # ensure that there isnt too many indels
+                            if np.divide(len([i for i in human_seq if i == "-"]), len(human_seq)) < 0.15 and np.divide(len([i for i in mac_seq if i == "-"]), len(mac_seq)) < 0.15:
+                                coordinates = [int(i) for i in human_name.split(":")[-1].split("-")]
+                                bed_entry = entries[coordinates[0]][coordinates[1]]
+                                id = bed_entry[3]
+                                exon_sizes = [int(i) for i in bed_entry[-2].split(",") if len(i)]
+                                exon_starts = [int(i) for i in bed_entry[-1].split(",") if len(i)]
+                                exon_coordinates = [[start, start + exon_sizes[i]] for i, start in enumerate(exon_starts)]
+                                intron_coordinates = [[start + exon_sizes[i], exon_starts[i+1]] for i, start in enumerate(exon_starts) if i+1 < len(exon_starts)]
+
+                                human_exon_sequences = [human_seq[i[0]:i[1]].upper() for i in exon_coordinates]
+                                mac_exon_sequences = [mac_seq[i[0]:i[1]].upper() for i in exon_coordinates]
+                                [exon_outfile.write(">{0}.{1}\n{2},{3}\n".format(id, i+1, human_exon_sequences[i], mac_exon_sequences[i])) for i in range(len(human_exon_sequences))]
+
+                                human_intron_sequences = [human_seq[i[0]:i[1]].upper() for i in intron_coordinates]
+                                mac_intron_sequences = [mac_seq[i[0]:i[1]].upper() for i in intron_coordinates]
+                                [intron_outfile.write(">{0}.{1}\n{2},{3}\n".format(id, i+1, human_intron_sequences[i], mac_intron_sequences[i])) for i in range(len(human_intron_sequences))]

@@ -1083,6 +1083,7 @@ def calculate_substitution_rates(iteration_list, motifs, seq_list, sim_randomisa
                 if sim_randomisations[iteration]:
                     hits = simo.get_random_overlaps(human, chunked_hits)
                     chunked_hits = sequo.chunk_overlaps(hits)
+
                 # now get all the non hit indicies and chunk together
                 non_hits = [i for i in range(len(human)) if i not in hits]
                 chunked_non_hits = sequo.chunk_overlaps(non_hits)
@@ -1142,6 +1143,196 @@ def calculate_substitution_rates(iteration_list, motifs, seq_list, sim_randomisa
             realtive_diff = relative_hit_rate - relative_non_hit_rate
 
             local_output = [iteration if iteration == "real" else "sim_{0}".format(iteration), hit_rate, non_hit_rate, "", hit_stop_rate, hit_non_stop_rate, "", non_hit_stop_rate, non_hit_non_stop_rate, "", relative_hit_rate, relative_non_hit_rate, realtive_diff]
+            output_file = "{0}/{1}.txt".format(output_directory, iteration)
+            with open(output_file, "w") as outfile:
+                outfile.write("{0}\n".format(",".join(gen.stringify(local_output))))
+            outputs.append(output_file)
+
+    return outputs
+
+def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files, seq_list, output_directory):
+    """
+    For a set of motifs, predict hits to the sequence and calcualte the rate of
+    substitution between stop nucleotides and non stop nucleotides both in the
+    hits and outside of the hits.
+
+    Args:
+        iteration_list (list): list of items to iterate over
+        motifs (list): list of motifs to predict hits to
+        seq_list (dict): set of alignment sequences
+        sim_randomisations (dict): set defining simulation or not
+        output_directory (str): path to output directory
+
+    Returns:
+        outputs (list): list of outputs
+    """
+
+    outputs = []
+    # check if the iteration exists
+    if iteration_list:
+        np.random.seed()
+        for iter, iteration in enumerate(iteration_list):
+            gen.print_parallel_status(iter, iteration_list)
+
+            # motifs = sequo.read_motifs(motif_files[iteration])
+            motifs = sequo.read_motifs(motif_file)
+
+            all_hit_human_motifs = []
+            all_hit_mac_motifs = []
+            all_non_hit_human_motifs = []
+            all_non_hit_mac_motifs = []
+            all_hit_stop_human_motifs = []
+            all_hit_stop_mac_motifs = []
+            all_hit_non_stop_human_motifs = []
+            all_hit_non_stop_mac_motifs = []
+            all_non_hit_stop_human_motifs = []
+            all_non_hit_stop_mac_motifs = []
+            all_non_hit_non_stop_human_motifs = []
+            all_non_hit_non_stop_mac_motifs = []
+
+            all_sequence = []
+            total_hits = []
+
+            # for each sequence id
+            for i, id in enumerate(seq_list):
+                # print(id)
+                # if id == "XLOC_013900":
+                # if i > 20 and i < 22:
+                if i:
+                    sequences = seq_list[id][0]
+                    human = sequences[0]
+                    mac = sequences[1]
+                    # get the overlaps and chunk into motif overlaps
+                    hits = sequo.sequence_overlap_indicies(human, motifs)
+                    chunked_hits = sequo.chunk_overlaps(hits)
+
+                    #all hits
+                    all_hits = hits
+                    # all_hits = sequo.sequence_overlap_indicies(human, motifs)
+                    chunked_hits = sequo.chunk_overlaps(all_hits)
+
+                    hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_hits]
+                    hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_hits]
+
+                    retained_hits = all_hits
+                    #get the overlaps and chunk into motif overlaps for motifs that are an ese in both cases
+                    retained_hits = []
+                    for motif in motifs:
+                        # predict hits to each motif
+                        hits = sequo.sequence_motif_overlap(human, motif)
+                        chunked_hits = sequo.chunk_overlaps(hits)
+                        # get the motifs
+                        hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_hits]
+                        hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_hits]
+                        # ask whether they are both in the motifs
+                        for j, motif in enumerate(hit_human_motifs):
+                            if motif in motifs and hit_mac_motifs[j] in motifs:
+                                retained_hits.extend(chunked_hits[j])
+
+                    # get a set of retained hits and chunk them
+                    retained_hits = list(set(retained_hits))
+                    chunked_retained_hits = sequo.chunk_overlaps(retained_hits)
+                    if iteration != "real":
+                        hits = simo.get_random_overlaps(human, chunked_retained_hits)
+                        chunked_retained_hits = sequo.chunk_overlaps(hits)
+                        # and get anything that is not a motif
+                        non_hits = [i for i in range(len(human)) if i not in hits]
+                        chunked_non_hits = sequo.chunk_overlaps(non_hits)
+                    else:
+                        non_hits = [i for i in range(len(human)) if i not in all_hits]
+                        chunked_non_hits = sequo.chunk_overlaps(non_hits)
+
+
+                    all_sequence.append(human)
+                    total_hits.append(len(chunked_retained_hits))
+
+                    ## all motifs
+                    # get all the parts of the sequences that are/are not a motif in both cases
+                    hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_retained_hits]
+                    hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_retained_hits]
+                    non_hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_non_hits]
+                    non_hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_non_hits]
+
+
+                    # add to global list
+                    all_hit_human_motifs.append("".join(hit_human_motifs))
+                    all_hit_mac_motifs.append("".join(hit_mac_motifs))
+                    all_non_hit_human_motifs.append("".join(non_hit_human_motifs))
+                    all_non_hit_mac_motifs.append("".join(non_hit_mac_motifs))
+
+                    ### stops specifically
+
+
+                    ## within motifs
+                    # now get all the parts of the motif hits that also hit stops
+                    hit_stop_hits = [sequo.sequence_overlap_indicies(motif, stops) for motif in hit_human_motifs]
+                    # get the parts of the motifs that hit stops
+                    hit_stop_human_motifs = ["".join([hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_stop_hits)]
+                    hit_stop_mac_motifs = ["".join([hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_stop_hits)]
+                    # and append to global list
+                    all_hit_stop_human_motifs.append("".join(hit_stop_human_motifs))
+                    all_hit_stop_mac_motifs.append("".join(hit_stop_mac_motifs))
+                    # get the parts of the motifs that dont hit stops
+                    # get the positions that arent part of a stop
+                    hit_non_stop_hits = [[i for i in range(len(motif)) if i not in hit_stop_hits[no]] for no, motif in enumerate(hit_human_motifs)]
+                    # get the parts of the motifs that dont hit stops
+                    hit_non_stop_human_motifs = ["".join([hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_non_stop_hits)]
+                    hit_non_stop_mac_motifs = ["".join([hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_non_stop_hits)]
+                    # and append to the global list
+                    all_hit_non_stop_human_motifs.append("".join(hit_non_stop_human_motifs))
+                    all_hit_non_stop_mac_motifs.append("".join(hit_non_stop_mac_motifs))
+
+
+                    ## for non motif hits
+                    non_hit_stop_hits = [sequo.sequence_overlap_indicies(motif, stops) for motif in non_hit_human_motifs]
+                    # get the parts of the motifs that hit stops
+                    non_hit_stop_human_motifs = ["".join([non_hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_stop_hits)]
+                    non_hit_stop_mac_motifs = ["".join([non_hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_stop_hits)]
+                    # add to global list
+                    all_non_hit_stop_human_motifs.append("".join(non_hit_stop_human_motifs))
+                    all_non_hit_stop_mac_motifs.append("".join(non_hit_stop_mac_motifs))
+                    # get the parts of the motifs that dont hits stops
+                    # get the positions
+                    non_hit_non_stop_hits = [[i for i in list(range(len(motif))) if i not in non_hit_stop_hits[no]] for no, motif in enumerate(non_hit_human_motifs)]
+                    # get the motif parts
+                    non_hit_non_stop_human_motifs = ["".join([non_hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_non_stop_hits)]
+                    non_hit_non_stop_mac_motifs = ["".join([non_hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(non_hit_non_stop_hits)]
+                    # add to global list
+                    all_non_hit_non_stop_human_motifs.append("".join(non_hit_non_stop_human_motifs))
+                    all_non_hit_non_stop_mac_motifs.append("".join(non_hit_non_stop_mac_motifs))
+
+
+            # now concatenate all of the various parts
+            all_hit_human_motifs = "".join(all_hit_human_motifs)
+            all_hit_mac_motifs = "".join(all_hit_mac_motifs)
+            all_non_hit_human_motifs = "".join(all_non_hit_human_motifs)
+            all_non_hit_mac_motifs = "".join(all_non_hit_mac_motifs)
+            all_hit_stop_human_motifs = "".join(all_hit_stop_human_motifs)
+            all_hit_stop_mac_motifs = "".join(all_hit_stop_mac_motifs)
+            all_hit_non_stop_human_motifs = "".join(all_hit_non_stop_human_motifs)
+            all_hit_non_stop_mac_motifs = "".join(all_hit_non_stop_mac_motifs)
+            all_non_hit_stop_human_motifs = "".join(all_non_hit_stop_human_motifs)
+            all_non_hit_stop_mac_motifs = "".join(all_non_hit_stop_mac_motifs)
+            all_non_hit_non_stop_human_motifs = "".join(all_non_hit_non_stop_human_motifs)
+            all_non_hit_non_stop_mac_motifs = "".join(all_non_hit_non_stop_mac_motifs)
+
+            # get the substitution rate for all of the parts
+            hit_rate = sequo.get_sub_rate(all_hit_human_motifs, all_hit_mac_motifs)
+            non_hit_rate = sequo.get_sub_rate(all_non_hit_human_motifs, all_non_hit_mac_motifs)
+            hit_stop_rate = sequo.get_sub_rate(all_hit_stop_human_motifs, all_hit_stop_mac_motifs)
+            hit_non_stop_rate = sequo.get_sub_rate(all_hit_non_stop_human_motifs, all_hit_non_stop_mac_motifs)
+            non_hit_stop_rate = sequo.get_sub_rate(all_non_hit_stop_human_motifs, all_non_hit_stop_mac_motifs)
+            non_hit_non_stop_rate = sequo.get_sub_rate(all_non_hit_non_stop_human_motifs, all_non_hit_non_stop_mac_motifs)
+            #
+            relative_hit_rate = np.divide(hit_stop_rate, hit_non_stop_rate)
+            relative_non_hit_rate = np.divide(non_hit_stop_rate, non_hit_non_stop_rate)
+            relative_diff = relative_hit_rate - relative_non_hit_rate
+
+            all_sequence = "".join(all_sequence)
+            density = np.divide(len(all_hit_human_motifs), len(all_sequence))
+
+            local_output = [iteration if iteration == "real" else "sim_{0}".format(iteration), hit_rate, non_hit_rate,  hit_stop_rate, hit_non_stop_rate,  non_hit_stop_rate, non_hit_non_stop_rate,  relative_hit_rate, relative_non_hit_rate, relative_diff]
+            # local_output = [iteration if iteration == "real" else "sim_{0}".format(iteration), hit_rate, non_hit_rate, sum(total_hits), density]
             output_file = "{0}/{1}.txt".format(output_directory, iteration)
             with open(output_file, "w") as outfile:
                 outfile.write("{0}\n".format(",".join(gen.stringify(local_output))))

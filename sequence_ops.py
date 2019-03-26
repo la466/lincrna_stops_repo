@@ -430,14 +430,14 @@ def chunk_indices(flat_list):
     return chunked_list
 
 
-def sequence_overlap_indicies(sequence, query_motifs):
+def sequence_overlap_indicies(sequence, query_motifs, list_set = True):
     """
     Given a sequence, return all indicies that one of the query motifs hit
 
     Args:
         sequence (str): a sequence
         query_motifs (list): list of motifs to identify in sequence
-
+        list_set (bool): if true, return only unique positions
     Returns:
         overlap_indices (list): list of sequence indicies
     """
@@ -445,6 +445,28 @@ def sequence_overlap_indicies(sequence, query_motifs):
     overlap_indices = []
     # compile a search string that has all the query motifs
     regex_pattern = re.compile("(?=({0}))".format("|".join(query_motifs)))
+    hits = re.finditer(regex_pattern, sequence)
+    for hit in hits:
+        overlap_indices.extend(range(hit.start(), hit.start() + len(hit.group(1))))
+    if list_set:
+        return sorted(list(set(overlap_indices)))
+    else:
+        return sorted(overlap_indices)
+
+def sequence_motif_overlap(sequence, query_motif):
+    """
+    Given a sequence, return all indicies that a motif hits
+
+    Args:
+        sequence (str): a sequence
+        query_motif (list): motif to search for
+    Returns:
+        overlap_indices (list): list of sequence indicies
+    """
+
+    overlap_indices = []
+    # compile a search string that has all the query motifs
+    regex_pattern = re.compile("(?=({0}))".format(query_motif))
     hits = re.finditer(regex_pattern, sequence)
     for hit in hits:
         overlap_indices.extend(range(hit.start(), hit.start() + len(hit.group(1))))
@@ -3352,3 +3374,109 @@ def calc_dint_chisquare(subs, counts, group1, group2):
     chisquare = scipy.stats.chisquare([group1_subs, group2_subs], f_exp = [expected_subs_group1, expected_subs_group2])
     output = [group1_totals, group1_subs, expected_subs_group1, group2_totals, group2_subs, expected_subs_group2, total_counts, total_subs, chisquare]
     return output
+
+
+def calc_overlaps(runs, motifs, exon_list, families_file):
+    """
+    Wrapper to ask whether there are a disproportionate number of motifs that overlap
+    that are not made up of motifs containing stop codons.
+
+    Args:
+        runs (list): list of runs to iterate over
+        motifs (list): list of motifs
+        exon_list (dict): dictionary of exon sequences
+        families_file (str): path to famililies file
+
+    Returns:
+        outputs (list): list containing results
+    """
+
+    outputs = []
+
+    if len(runs):
+        stop_motifs = [i for i in motifs if len(re.findall("(?=(TAA|TAG|TGA))", i))]
+        non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
+        for i, run in enumerate(runs):
+            np.random.seed()
+            gen.print_parallel_status(i, runs)
+            # get a list of random family members
+            data_exon_list = sequo.pick_random_family_member(families_file, exon_list)
+            temp_exon_list = []
+            for id in data_exon_list:
+                for seq in data_exon_list[id]:
+                    temp_exon_list.append(seq)
+            data_exon_list = temp_exon_list
+
+            stop_motif_hits = gen.flatten([sequo.return_overlap_motifs(seq, stop_motifs) for seq in data_exon_list])
+            non_stop_motif_hits = gen.flatten([sequo.return_overlap_motifs(seq, non_stop_motifs) for seq in data_exon_list])
+            total_hits = len(stop_motif_hits) + len(non_stop_motif_hits)
+
+            # anything longer than 6 nucleotides will be an overlap
+            stop_overlap_hits = [i for i in stop_motif_hits if len(i) > 6]
+            non_stop_overlap_hits = [i for i in non_stop_motif_hits if len(i) > 6]
+            total_overlapping_hits = len(stop_overlap_hits) + len(non_stop_overlap_hits)
+
+            # get the proporition of total hits that are overlapping
+            proportion_overlapping = np.divide(total_overlapping_hits, total_hits)
+
+            # now calcaulte the expected number of overlaps
+            expected_stop_overlaps = proportion_overlapping * len(stop_motif_hits)
+            expected_non_stop_overlaps = proportion_overlapping * len(non_stop_motif_hits)
+
+            # do the chisquare test
+            chi = chisquare([len(stop_overlap_hits), len(non_stop_overlap_hits)], f_exp=[expected_stop_overlaps, expected_non_stop_overlaps])
+            outputs.append([expected_stop_overlaps, len(stop_overlap_hits), expected_non_stop_overlaps, len(non_stop_overlap_hits), np.mean([len(i) for i in stop_overlap_hits]), np.mean([len(i) for i in non_stop_overlap_hits]), chi])
+
+    return outputs
+
+
+def calc_motif_overlap_density(runs, motifs, exon_list, families_file, sim = None):
+    """
+    Wrapper to ask whether overlapping hits to motifs containing more stop codons
+    than hits that dont overlap.
+
+    Args:
+        runs (list): list of runs to iterate over
+        motifs (list): list of motifs
+        exon_list (dict): dictionary of exon sequences
+        families_file (str): path to famililies file
+        sim (bool): if true, pick a random set of motifs to use as the overlaps
+
+    Returns:
+        outputs (list): list containing results
+    """
+
+    outputs = []
+    if len(runs):
+        np.random.seed()
+        for i, run in enumerate(runs):
+            gen.print_parallel_status(i, runs)
+            # pick a random family member
+            data_exon_list = sequo.pick_random_family_member(families_file, exon_list)
+
+            temp_exon_list = []
+            for id in data_exon_list:
+                for seq in data_exon_list[id]:
+                    temp_exon_list.append(seq)
+            data_exon_list = temp_exon_list
+
+            motif_hits = gen.flatten([sequo.return_overlap_motifs(seq, motifs) for seq in data_exon_list])
+
+            if sim:
+                #if a simulation, pick a random set of hits to be the overlaps
+                overlap_hit_length = len([i for i in motif_hits if len(i) > 6])
+                overlap_hits = np.random.choice(motif_hits, overlap_hit_length, replace = False)
+                non_overlap_hits = motif_hits
+            else:
+                # otherwise, use real overlaps
+                overlap_hits = [i for i in motif_hits if len(i) > 6]
+                non_overlap_hits = [i for i in motif_hits if len(i) == 6]
+
+            # calculat the stop codon density in those hits
+            stop_non_overlaps = seqo.calc_motif_density(overlap_hits, stops)
+            stop_overlaps = seqo.calc_motif_density(non_overlap_hits, stops)
+
+            outputs.append([stop_non_overlaps, stop_overlaps])
+
+    return outputs
