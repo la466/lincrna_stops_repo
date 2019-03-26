@@ -662,7 +662,7 @@ def calc_substitution_rates_motif(input_fasta, motif_file, required_simulations,
 
     # write to file
     with open(output_file, "w") as outfile:
-        outfile.write("id,ese_rate,non_ese_rate,ese_stop_rate,ese_non_stop_rate,non_ese_stop_rate,non_ese_non_stop_rate,relative_ese_rate,relative_non_ese_rate,relative_difference\n")
+        outfile.write("id,ese_rate,non_ese_rate,ese_stop_rate,ese_non_stop_rate,non_ese_stop_rate,non_ese_non_stop_rate,relative_ese_diff,relative_non_ese_diff,log_diff_ratio\n")
         outfile.write("{0}\n".format(gen.read_many_fields(real_file, "\t")[0][0]))
         [outfile.write("{0}\n".format(gen.read_many_fields(sim_file, "\t")[0][0])) for sim_file in sim_files]
 

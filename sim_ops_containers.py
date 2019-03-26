@@ -1324,15 +1324,14 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
             non_hit_stop_rate = sequo.get_sub_rate(all_non_hit_stop_human_motifs, all_non_hit_stop_mac_motifs)
             non_hit_non_stop_rate = sequo.get_sub_rate(all_non_hit_non_stop_human_motifs, all_non_hit_non_stop_mac_motifs)
             #
-            relative_hit_rate = np.divide(hit_stop_rate, hit_non_stop_rate)
-            relative_non_hit_rate = np.divide(non_hit_stop_rate, non_hit_non_stop_rate)
-            relative_diff = relative_hit_rate - relative_non_hit_rate
+            relative_hit_rate = hit_stop_rate - hit_non_stop_rate
+            relative_non_hit_rate = non_hit_stop_rate - non_hit_non_stop_rate
+            relative_diff = np.log(np.divide(relative_hit_rate, relative_non_hit_rate))
 
             all_sequence = "".join(all_sequence)
             density = np.divide(len(all_hit_human_motifs), len(all_sequence))
 
             local_output = [iteration if iteration == "real" else "sim_{0}".format(iteration), hit_rate, non_hit_rate,  hit_stop_rate, hit_non_stop_rate,  non_hit_stop_rate, non_hit_non_stop_rate,  relative_hit_rate, relative_non_hit_rate, relative_diff]
-            # local_output = [iteration if iteration == "real" else "sim_{0}".format(iteration), hit_rate, non_hit_rate, sum(total_hits), density]
             output_file = "{0}/{1}.txt".format(output_directory, iteration)
             with open(output_file, "w") as outfile:
                 outfile.write("{0}\n".format(",".join(gen.stringify(local_output))))
