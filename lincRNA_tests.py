@@ -642,7 +642,7 @@ def calc_substitution_rates_motif(input_fasta, motif_file, required_simulations,
     seq_list = collections.defaultdict(lambda: [])
     [seq_list[name.split(".")[0]].append(seqs[i].split(",")) for i, name in enumerate(names)]
     # pick a random family member
-    # seq_list = sequo.pick_random_family_member(families_file, seq_list)
+    seq_list = sequo.pick_random_family_member(families_file, seq_list)
     seq_list = {i: seq_list[i] for i in seq_list}
 
     temp_dir = "temp_sub_rates_motifs"
@@ -656,7 +656,7 @@ def calc_substitution_rates_motif(input_fasta, motif_file, required_simulations,
             motif_files[i+1] = "{0}/{1}".format(controls_dir, file)
     args = [motif_file, motif_files, seq_list, temp_dir]
 
-    outputs = simoc.run_simulation_function(list(motif_files), args, simoc.calculate_substitution_rates_motifs, sim_run = False, parallel = False)
+    outputs = simoc.run_simulation_function(list(motif_files), args, simoc.calculate_substitution_rates_motifs, sim_run = False, parallel = True)
     real_file = [i for i in outputs if "real" in i][0]
     sim_files = [i for i in outputs if i != real_file]
 

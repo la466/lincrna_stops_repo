@@ -1196,7 +1196,7 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
 
             # for each sequence id
             for i, id in enumerate(seq_list):
-                if i<50:
+                if i<1000:
                     sequences = seq_list[id][0]
                     human = sequences[0]
                     mac = sequences[1]
@@ -1240,6 +1240,7 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                             # print(human_motif, mac_motif, chunk)
 
                     #get the overlaps and chunk into motif overlaps for motifs that are an ese in both cases
+
                     retained_hits = []
                     for motif in motifs:
                         # predict hits to each motif
@@ -1266,16 +1267,19 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                     non_hits = [i for i in range(len(human)) if i not in all_hits]
                     chunked_non_hits = sequo.chunk_overlaps(non_hits)
 
+                    syn_chunked_hits = [[i for i in chunk if i%3 == 2] for chunk in chunked_retained_hits]
+                    syn_chunked_non_hits = [[i for i in chunk if i%3 == 2] for chunk in chunked_non_hits]
+
 
                     all_sequence.append(human)
                     total_hits.append(len(chunked_retained_hits))
 
                     ## all motifs
                     # get all the parts of the sequences that are/are not a motif in both cases
-                    hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_retained_hits]
-                    hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_retained_hits]
-                    non_hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in chunked_non_hits]
-                    non_hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_non_hits]
+                    hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in syn_chunked_hits]
+                    hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in syn_chunked_hits]
+                    non_hit_human_motifs = ["".join([human[i] for i in chunk]) for chunk in syn_chunked_non_hits]
+                    non_hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in syn_chunked_non_hits]
 
 
                     # add to global list
@@ -1290,15 +1294,21 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                     ## within motifs
                     # now get all the parts of the motif hits that also hit stops
                     hit_stop_hits = [sequo.sequence_overlap_indicies(motif, stops) for motif in hit_human_motifs]
+                    hit_non_stop_hits = [[i for i in range(len(motif)) if i not in hit_stop_hits[no]] for no, motif in enumerate(hit_human_motifs)]
+
+                    # hit_chunk_stop_hits = [[chunked_retained_hits[i][pos] for pos in chunk] for i, chunk in enumerate(hit_stop_hits)]
+                    # hit_chunk_non_stop_hits = [[chunked_retained_hits[i][pos] for pos in chunk] for i, chunk in enumerate(hit_non_stop_hits)]
+
+                    # hit_chunk_stop_hits()
+
+
+
                     # get the parts of the motifs that hit stops
                     hit_stop_human_motifs = ["".join([hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_stop_hits)]
                     hit_stop_mac_motifs = ["".join([hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_stop_hits)]
                     # and append to global list
                     all_hit_stop_human_motifs.append("".join(hit_stop_human_motifs))
                     all_hit_stop_mac_motifs.append("".join(hit_stop_mac_motifs))
-                    # get the parts of the motifs that dont hit stops
-                    # get the positions that arent part of a stop
-                    hit_non_stop_hits = [[i for i in range(len(motif)) if i not in hit_stop_hits[no]] for no, motif in enumerate(hit_human_motifs)]
                     # get the parts of the motifs that dont hit stops
                     hit_non_stop_human_motifs = ["".join([hit_human_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_non_stop_hits)]
                     hit_non_stop_mac_motifs = ["".join([hit_mac_motifs[i][pos] for pos in chunk]) for i, chunk in enumerate(hit_non_stop_hits)]
@@ -1326,7 +1336,7 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                     all_non_hit_non_stop_mac_motifs.append("".join(non_hit_non_stop_mac_motifs))
 
 
-
+            print(sum(total_hits))
             # now concatenate all of the various parts
             all_hit_human_motifs = "".join(all_hit_human_motifs)
             all_hit_mac_motifs = "".join(all_hit_mac_motifs)
@@ -1343,7 +1353,8 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
 
 
             # get the substitution rate for all of the parts
-            hit_rate = sequo.get_sub_rate(all_hit_human_motifs, all_hit_mac_motifs, p = True)
+            hit_rate = sequo.get_sub_rate(all_hit_human_motifs, all_hit_mac_motifs)
+            print(iteration, hit_rate)
             non_hit_rate = sequo.get_sub_rate(all_non_hit_human_motifs, all_non_hit_mac_motifs)
             hit_stop_rate = sequo.get_sub_rate(all_hit_stop_human_motifs, all_hit_stop_mac_motifs)
             hit_non_stop_rate = sequo.get_sub_rate(all_hit_non_stop_human_motifs, all_hit_non_stop_mac_motifs)

@@ -24,9 +24,40 @@ def calc_motif_density(seq_list, motif_set):
         hits = sorted(list(set(hits)))
         seq_nts += len(seq)
         seq_hits += len(hits)
-
     density = np.divide(seq_hits, seq_nts)
     return density
+
+def calc_motif_density_frame(seq_list, motif_set, frame = 0):
+
+    motif_length = max([len(i) for i in motif_set])
+    all_nts = 0
+    all_hits = []
+
+    for i, seq in enumerate(seq_list):
+        query_seq = seq[frame:]
+        for pos in range(0, len(query_seq) - motif_length, 3):
+            all_nts += 3
+            if query_seq[pos:pos+motif_length] in motif_set:
+                all_hits.extend(list(range(pos, pos + motif_length)))
+        # add because we also sample the last codon but dont see it in the count
+        all_nts += 3
+
+    all_hits = len(list(set(all_hits)))
+    density = np.divide(all_hits, all_nts)
+
+    return density
+
+def calc_motif_count_frame(seq_list, motif_set, frame = 0):
+
+    motif_length = max([len(i) for i in motif_set])
+    all_hits = []
+
+    for i, seq in enumerate(seq_list):
+        query_seq = seq[frame:]
+        for pos in range(0, len(query_seq) - motif_length, 3):
+            if query_seq[pos:pos+motif_length] in motif_set:
+                all_hits.append(query_seq[pos:pos+motif_length])
+    return all_hits
 
 def calc_motif_counts(seq_list, motif_set):
 
