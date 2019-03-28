@@ -23,12 +23,12 @@ import random
 
 
 
-file = "clean_run/tests/lincrna/substitution_rates/lincrna_int3_substitution_rates_motif.csv"
+motif_file = "source_data/motif_sets/int3.txt"
+motifs = sorted(sequo.read_motifs(motif_file))
 
-data = pd.read_csv(file)
-
-data.rename(columns={'relative_ese_rate':'relative_ese_diff'}, inplace=True)
-data.rename(columns={'relative_non_ese_rate':'relative_non_ese_diff'}, inplace=True)
-
-
-data.to_csv(path_or_buf = "clean_run/tests/lincrna/substitution_rates/lincrna_int3_substitution_rates_motif1.csv", index = False)
+cdir = "clean_run/dinucleotide_controls/int3_dinucleotide_controls_matched_stops"
+for file in os.listdir(cdir)[:10]:
+    path = "{0}/{1}".format(cdir, file)
+    motifs = sequo.read_motifs(path)
+    test = calc_subs(motifs)
+    print(sum(test))

@@ -863,7 +863,7 @@ def generate_exon_dinucleotide_controls(motifs_file, exons_fasta, required_simul
     args = [motifs, dinucleotide_content, nucleotide_content, output_directory]
     simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_dinucleotide_matched_seqs, kwargs_dict = kwargs)
 
-def generate_motif_dinucleotide_controls(motifs_file, required_simulations, output_directory, match_density = None):
+def generate_motif_dinucleotide_controls(motifs_file, required_simulations, output_directory, match_density = None, match_subs = None):
 
     motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t") if "#" not in i[0]]
     dinucleotide_content = seqo.get_dinucleotide_content(motifs)
@@ -877,7 +877,7 @@ def generate_motif_dinucleotide_controls(motifs_file, required_simulations, outp
 
     # create sets of motifs
     print("Simluating sequences...")
-    kwargs = {"match_density": match_density}
+    kwargs = {"match_density": match_density, "match_subs": match_subs}
     args = [motifs, dinucleotide_content, nucleotide_content, output_directory]
     simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_dinucleotide_matched_seqs, kwargs_dict = kwargs)
 
@@ -1174,8 +1174,9 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
         for iter, iteration in enumerate(iteration_list):
             gen.print_parallel_status(iter, iteration_list)
 
-            # motifs = sequo.read_motifs(motif_files[iteration])
-            motifs = sequo.read_motifs(motif_file)
+            motifs = sequo.read_motifs(motif_files[iteration])
+            motif_lengths = list(set([len(i) for i in motifs]))
+            # motifs = sequo.read_motifs(motif_file)
 
             all_hit_human_motifs = []
             all_hit_mac_motifs = []
@@ -1195,10 +1196,7 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
 
             # for each sequence id
             for i, id in enumerate(seq_list):
-                # print(id)
-                # if id == "XLOC_013900":
-                # if i > 20 and i < 22:
-                if i:
+                if i<50:
                     sequences = seq_list[id][0]
                     human = sequences[0]
                     mac = sequences[1]
@@ -1215,6 +1213,32 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                     hit_mac_motifs = ["".join([mac[i] for i in chunk]) for chunk in chunked_hits]
 
                     retained_hits = all_hits
+
+                    # retained_hits = []
+                    # for i, human_motif in enumerate(hit_human_motifs):
+                    #     mac_motif = hit_mac_motifs[i]
+                    #     chunk = chunked_hits[i]
+                    #
+                    #     # the motifs are both in the set, or the motifs are the same
+                    #     # in the case wherer ESEs overlap
+                    #     if human_motif in motifs and mac_motif in motifs or human_motif == mac_motif:
+                    #         retained_hits.extend(chunk)
+                    #     # otherwise elimimate sites that arent
+                    #     else:
+                    #         motif_retained = []
+                    #         for length in motif_lengths:
+                    #             for pos in range(0, len(human_motif)-length+1):
+                    #                 test_human = human_motif[pos:pos+length]
+                    #                 test_mac = mac_motif[pos:pos+length]
+                    #                 # print(test_human)
+                    #                 # print(test_mac)
+                    #                 if test_human in motifs and test_mac in motifs:
+                    #                     motif_retained.extend(chunk[pos:pos+length])
+                    #         motif_retained = sorted(list(set(motif_retained)))
+                    #         retained_hits.extend(motif_retained)
+                            # print(motif_lengths)
+                            # print(human_motif, mac_motif, chunk)
+
                     #get the overlaps and chunk into motif overlaps for motifs that are an ese in both cases
                     retained_hits = []
                     for motif in motifs:
@@ -1229,18 +1253,18 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                             if motif in motifs and hit_mac_motifs[j] in motifs:
                                 retained_hits.extend(chunked_hits[j])
 
+
                     # get a set of retained hits and chunk them
-                    retained_hits = list(set(retained_hits))
+                    retained_hits = sorted(list(set(retained_hits)))
+
+                    # print(all_hits, "\n")
+                    # print(retained_hits)
+                    # # print(test_retained)
+                    # print("\n\n")
+
                     chunked_retained_hits = sequo.chunk_overlaps(retained_hits)
-                    if iteration != "real":
-                        hits = simo.get_random_overlaps(human, chunked_retained_hits)
-                        chunked_retained_hits = sequo.chunk_overlaps(hits)
-                        # and get anything that is not a motif
-                        non_hits = [i for i in range(len(human)) if i not in hits]
-                        chunked_non_hits = sequo.chunk_overlaps(non_hits)
-                    else:
-                        non_hits = [i for i in range(len(human)) if i not in all_hits]
-                        chunked_non_hits = sequo.chunk_overlaps(non_hits)
+                    non_hits = [i for i in range(len(human)) if i not in all_hits]
+                    chunked_non_hits = sequo.chunk_overlaps(non_hits)
 
 
                     all_sequence.append(human)
@@ -1302,6 +1326,7 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
                     all_non_hit_non_stop_mac_motifs.append("".join(non_hit_non_stop_mac_motifs))
 
 
+
             # now concatenate all of the various parts
             all_hit_human_motifs = "".join(all_hit_human_motifs)
             all_hit_mac_motifs = "".join(all_hit_mac_motifs)
@@ -1316,16 +1341,17 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
             all_non_hit_non_stop_human_motifs = "".join(all_non_hit_non_stop_human_motifs)
             all_non_hit_non_stop_mac_motifs = "".join(all_non_hit_non_stop_mac_motifs)
 
+
             # get the substitution rate for all of the parts
-            hit_rate = sequo.get_sub_rate(all_hit_human_motifs, all_hit_mac_motifs)
+            hit_rate = sequo.get_sub_rate(all_hit_human_motifs, all_hit_mac_motifs, p = True)
             non_hit_rate = sequo.get_sub_rate(all_non_hit_human_motifs, all_non_hit_mac_motifs)
             hit_stop_rate = sequo.get_sub_rate(all_hit_stop_human_motifs, all_hit_stop_mac_motifs)
             hit_non_stop_rate = sequo.get_sub_rate(all_hit_non_stop_human_motifs, all_hit_non_stop_mac_motifs)
             non_hit_stop_rate = sequo.get_sub_rate(all_non_hit_stop_human_motifs, all_non_hit_stop_mac_motifs)
             non_hit_non_stop_rate = sequo.get_sub_rate(all_non_hit_non_stop_human_motifs, all_non_hit_non_stop_mac_motifs)
             #
-            relative_hit_rate = hit_stop_rate - hit_non_stop_rate
-            relative_non_hit_rate = non_hit_stop_rate - non_hit_non_stop_rate
+            relative_hit_rate = np.divide(hit_stop_rate, hit_non_stop_rate)
+            relative_non_hit_rate = np.divide(non_hit_stop_rate, non_hit_non_stop_rate)
             relative_diff = np.log(np.divide(relative_hit_rate, relative_non_hit_rate))
 
             all_sequence = "".join(all_sequence)

@@ -14,10 +14,10 @@ import os
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "input_fasta", "input_fasta2", "families_file", "output_prefix", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_randomise_overlap", "ese_ds_mutation", "non_ese_stop_ds", "ese_ds_test", "match_density", "intron_length_test"]
+    arguments = ["input_directory", "output_directory", "simulations", "ese_file", "input_fasta", "input_fasta2", "families_file", "output_prefix", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_ds", "cds_ds_all", "cds_codon_ds", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "cds_ds_mutation", "ese_ds", "ese_ds_randomise_overlap", "ese_ds_mutation", "non_ese_stop_ds", "ese_ds_test", "match_density", "match_subs", "intron_length_test"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], ints=[], opt_flags=[2,3,4,5,6,7])
+    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37], ints=[], opt_flags=[2,3,4,5,6,7])
     input_directory, \
     output_directory, \
     simulations, \
@@ -54,6 +54,7 @@ def main():
     non_ese_stop_ds, \
     ese_ds_test, \
     match_density, \
+    match_subs, \
     intron_length_test = \
     args.input_directory, \
     args.output_directory, \
@@ -91,6 +92,7 @@ def main():
     args.non_ese_stop_ds, \
     args.ese_ds_test, \
     args.match_density, \
+    args.match_subs, \
     args.intron_length_test
 
     if simulations:
@@ -121,10 +123,11 @@ def main():
     motif_simulations_directory = "{0}/dinucleotide_controls/{1}_dinucleotide_controls".format(output_directory, ese_file.split("/")[-1].split(".")[0])
     if match_density:
         motif_simulations_directory += "_matched_stops"
+    if match_subs:
+        motif_simulations_directory += "_matched_subs"
 
     if generate_motif_dinucleotide_controls:
-        print(motif_simulations_directory)
-        simopc.generate_motif_dinucleotide_controls(ese_file, simulations, motif_simulations_directory, match_density = match_density)
+        simopc.generate_motif_dinucleotide_controls(ese_file, simulations, motif_simulations_directory, match_density = match_density, match_subs = match_subs)
 
     gc_control_exon_output_directory = "{0}/clean_exon_gc_controls".format(output_directory)
     if generate_gc_controls_exons:
@@ -186,20 +189,20 @@ def main():
         mto.calc_ds_mutation(simulations, alignments_file, cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, ese_file, ds_output_directory, output_file3, motif_controls_directory = motif_simulations_directory, families_file = families_file)
 
 
-    ese_ds_test_output = "{0}/ese_ds_test.csv".format(ds_output_directory)
-    alignment_file = "{0}/genome_sequences/human.macaque.alignment.fasta".format(output_directory)
-    if ese_ds_test:
-        # if the alignments file doesn't exist, create it
-        if not os.path.isfile(alignment_file):
-            sequo.retrieve_alignments(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
-        # create the output directory
-        gen.create_output_directories(ds_output_directory)
-        # run the test
-        mto.ese_ds(alignment_file, multi_exon_cds_fasta, ese_file, ese_ds_test_output, families_file = families_file)
+    # ese_ds_test_output = "{0}/ese_ds_test1.csv".format(ds_output_directory)
+    # alignment_file = "{0}/genome_sequences/human.macaque.alignment.fasta".format(output_directory)
+    # if ese_ds_test:
+    #     # if the alignments file doesn't exist, create it
+    #     if not os.path.isfile(alignment_file):
+    #         sequo.retrieve_alignments(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignment_file)
+    #     # create the output directory
+    #     gen.create_output_directories(ds_output_directory)
+    #     # run the test
+    #     mto.ese_ds(alignment_file, multi_exon_cds_fasta, ese_file, ese_ds_test_output, families_file = families_file, simulations = simulations)
+    #
 
 
-
-    ese_ds_output_file = "{0}/ese_ds.csv".format(ds_output_directory)
+    ese_ds_output_file = "{0}/ese_ds1.csv".format(ds_output_directory)
     if ese_ds:
         # if the sequence alignments file doesnt exist, create it
         if not os.path.isfile(alignments_file):
@@ -209,22 +212,6 @@ def main():
         # run the test
         mto.calc_ese_ds(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_output_file, simulations = simulations, controls_directory = motif_simulations_directory, families_file = families_file)
 
-    ese_ds_randomise_overlap_output_file = "{0}/ese_ds_randomise_overlap.csv".format(ds_output_directory)
-    ese_overlap_randomise_dir = "{0}/controls/{1}_overlap_sites_randomisation".format(output_directory, ese_file.split("/")[-1].split(".")[0])
-    if ese_ds_randomise_overlap:
-        # if the sequence alignments file doesnt exist, create it
-        if not os.path.isfile(alignments_file):
-            sequo.extract_alignments_from_file(cds_fasta, ortholog_cds_fasta, ortholog_transcript_links, alignments_file)
-        if clean_run:
-            gen.remove_directory(ese_overlap_randomise_dir)
-        gen.create_output_directories(ese_overlap_randomise_dir)
-        if len(os.listdir(ese_overlap_randomise_dir)) < simulations:
-            required = simulations - len(os.listdir(ese_overlap_randomise_dir))
-            sequo.randomise_ese_overlaps_wrapper(alignments_file, multi_exon_cds_fasta, ese_file, ese_overlap_randomise_dir, required = required)
-        # create the output directory for the test
-        gen.create_output_directories(ds_output_directory)
-        # run the test
-        mto.calc_ese_ds_random_overlaps(alignments_file, cds_fasta, multi_exon_cds_fasta, ese_file, ese_ds_randomise_overlap_output_file, simulations = simulations, controls_directory = ese_overlap_randomise_dir, families_file = families_file)
 
     ese_ds_mutation_output_file = "{0}/ese_ds_mutation1.csv".format(ds_output_directory)
     if ese_ds_mutation:

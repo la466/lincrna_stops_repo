@@ -584,7 +584,7 @@ def get_sequence_non_overlap_stop_codons(sequences, overlaps):
                 non_stops_overlaps[1].append(sequences[1][i:i+3])
     return stops_overlaps, non_stops_overlaps
 
-def extract_motif_codons_from_sequence(sequences, query_list, get_stops = None, query_overlaps = None):
+def extract_motif_codons_from_sequence(sequences, query_list, get_stops = None, query_overlaps = None, only_both_hits = None):
     """
     Given a set of sequences, get the codons that the query motifs overlaps.
 
@@ -601,8 +601,37 @@ def extract_motif_codons_from_sequence(sequences, query_list, get_stops = None, 
     if query_overlaps:
         overlaps = query_list
     else:
-        # get a list of overlaps in any of the sequences
-        overlaps = sorted(list(set(gen.flatten([sequence_overlap_indicies(seq, query_list) for seq in sequences]))))
+        # # get a list of overlaps in any of the sequences
+        # overlaps = sorted(list(set(gen.flatten([sequence_overlap_indicies(seq, query_list) for seq in sequences]))))
+
+        sequence1 = sequences[0]
+        sequence2 = sequences[1]
+        hits = sequence_overlap_indicies(sequence1, query_list)
+        chunked_hits = chunk_overlaps(hits)
+
+        #all hits
+        overlaps = hits
+
+        # if only_both_hits:
+        #     seq1 = sequences[0]
+        #     seq2 = sequences[1]
+        #
+        #     #get the overlaps and chunk into motif overlaps for motifs that are an ese in both cases
+        #     retained_hits = []
+        #     for motif in query_list:
+        #         # predict hits to each motif
+        #         hits = sequence_motif_overlap(seq1, motif)
+        #         chunked_hits = chunk_overlaps(hits)
+        #         # get the motifs
+        #         hit_seq1_motifs = ["".join([seq1[i] for i in chunk]) for chunk in chunked_hits]
+        #         hit_seq2_motifs = ["".join([seq2[i] for i in chunk]) for chunk in chunked_hits]
+        #         # ask whether they are both in the motifs
+        #         for j, motif in enumerate(hit_seq1_motifs):
+        #             if motif in query_list and hit_seq2_motifs[j] in query_list:
+        #                 retained_hits.extend(chunked_hits[j])
+        #
+        #     # get a set of retained hits and chunk them
+        #     overlaps = list(set(retained_hits))
 
     # now get the codons from these overlaps
     # note this assumes that the sequences are of length 3
@@ -675,7 +704,7 @@ def extract_motif_codons_mutations_from_sequence(sequences, query_motifs, get_st
     return one_away, other_codons
 
 
-def extract_motif_codons_from_alignments(alignment_sequences, query_list, get_stops = None, query_overlaps = None):
+def extract_motif_codons_from_alignments(alignment_sequences, query_list, get_stops = None, query_overlaps = None, only_both_hits = None):
     """
     Wrapper to extract the codons that contain motif hits from alignments sequences.
     Given a list of sequences, extract the parts that overlap the given motifs
@@ -704,14 +733,14 @@ def extract_motif_codons_from_alignments(alignment_sequences, query_list, get_st
 
         if get_stops:
 
-            overlap, non_overlap, stop_overlap, non_stop_overlap = extract_motif_codons_from_sequence(alignment_sequences[id], id_query_list, get_stops = True, query_overlaps = query_overlaps)
+            overlap, non_overlap, stop_overlap, non_stop_overlap = extract_motif_codons_from_sequence(alignment_sequences[id], id_query_list, get_stops = True, query_overlaps = query_overlaps, only_both_hits = only_both_hits)
             overlap_codons.append(overlap)
             non_overlap_codons.append(non_overlap)
             stop_overlap_codons.append(stop_overlap)
             non_stop_overlap_codons.append(non_stop_overlap)
 
         else:
-            overlap, non_overlap = extract_motif_codons_from_sequence(alignment_sequences[id], id_query_list, get_stops = False, query_overlaps = query_overlaps)
+            overlap, non_overlap = extract_motif_codons_from_sequence(alignment_sequences[id], id_query_list, get_stops = False, query_overlaps = query_overlaps, only_both_hits = only_both_hits)
             overlap_codons.append(overlap)
             non_overlap_codons.append(non_overlap)
 
@@ -1019,7 +1048,7 @@ def ese_ds_wrapper(ids, motif_set_filepaths, alignments, output_directory, only_
                 # read in the motifs
                 motif_set = read_motifs(filepath)
                 # now get all the alignment parts that overlap the motif sets
-                overlap_codons, non_overlap_codons, overlap_stops, overlap_non_stops = extract_motif_codons_from_alignments(alignments, motif_set, get_stops = True)
+                overlap_codons, non_overlap_codons, overlap_stops, overlap_non_stops = extract_motif_codons_from_alignments(alignments, motif_set, get_stops = True, only_both_hits = True)
 
                 if only_fourfold:
 
@@ -3253,7 +3282,7 @@ def motif_excess_test(filelist, motifs):
     return outputs
 
 
-def get_sub_rate(seq1, seq2):
+def get_sub_rate(seq1, seq2, p = None):
     """
     Given two sequences, calculate the rate at which nucleotides differ between
     between the two sequences.
@@ -3265,9 +3294,14 @@ def get_sub_rate(seq1, seq2):
     Returns:
         sub_rate (list):
     """
+
+    # print(count)
     subs = len([i for i in range(len(seq1)) if seq1[i] in nucleotides and seq2[i] in nucleotides and seq1[i] != seq2[i]])
     total_nts = len([i for i in range(len(seq1)) if seq1[i] in nucleotides and seq2[i] in nucleotides])
     sub_rate = np.divide(subs, total_nts)
+
+    if p:
+        print(subs, total_nts, np.divide(subs, total_nts))
     return sub_rate
 
 
@@ -3480,3 +3514,22 @@ def calc_motif_overlap_density(runs, motifs, exon_list, families_file, sim = Non
             outputs.append([stop_non_overlaps, stop_overlaps])
 
     return outputs
+
+
+def calc_subs(motif1, motif2):
+    count = 0
+    for i, nt in enumerate(list(motif1)):
+        if motif2[i] != nt:
+            count += 1
+    return count
+
+def get_subs(motifs):
+    checked_pairs = []
+    subs = []
+    for motif1 in motifs:
+        for motif2 in motifs:
+            if motif1 != motif2:
+                if [motif1, motif2] not in checked_pairs and [motif2, motif1] not in checked_pairs:
+                    subs.append(calc_subs(motif1, motif2))
+                    checked_pairs.append([motif1, motif2])
+    return subs

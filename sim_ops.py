@@ -387,7 +387,7 @@ def sim_motif_codon_densities(simulations, seqs, dinucleotide_content, nucleotid
 
     return sim_densities
 
-def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, nucleotide_content, output_directory, seeds=None, seq_seeds=None, match_density = None):
+def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, nucleotide_content, output_directory, seeds=None, seq_seeds=None, match_density = None, match_subs = None):
 
     dinucleotide_choices = [dn for dn in sorted(dinucleotide_content)]
     dinucleotide_probabilities = [dinucleotide_content[dn] for dn in sorted(dinucleotide_content)]
@@ -430,7 +430,13 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
                                 generated_seq = True
                                 simulated_seqs.append(sim_seq)
                 if sorted(seqs) != sorted(simulated_seqs):
-                    generated_set = True
+                    if match_subs:
+                        real_subs = sum(sequo.get_subs(seqs))
+                        sim_subs = sum(sequo.get_subs(simulated_seqs))
+                        if sim_subs >= real_subs*0.99 and sim_subs <= real_subs*1.01:
+                            generated_set = True
+                    else:
+                        generated_set = True
 
             output_file = "{0}/{1}.txt".format(output_directory, random.random())
             output_files.append(output_file)
