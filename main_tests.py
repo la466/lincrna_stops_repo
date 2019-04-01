@@ -272,13 +272,13 @@ def main():
     if seq_hits:
         local_output_dir = "{0}/tests/ese_hits/{1}".format(output_directory, ese_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(local_output_dir)
-        runs = 1
-        # for run in range(runs):
-        #     output_file = "{0}/{1}_hits_{2}.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], run+1)
-        #     mto.calc_seq_hits(input_fasta, input_fasta2, output_file, ese_file, motif_simulations_directory, required_simulations = simulations, families_file = families_file)
-        #
-        # output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
-        # mto.process_seq_hits(local_output_dir, output_file1)
+        runs = 10
+        for run in range(runs):
+            output_file = "{0}/{1}_hits_{2}.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], run+1)
+            mto.calc_seq_hits(input_fasta, input_fasta2, output_file, ese_file, motif_simulations_directory, required_simulations = simulations, families_file = families_file)
+
+        output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
+        mto.process_seq_hits(local_output_dir, output_file1)
         output_file2 = "{0}/tests/ese_hits/{1}_chisq.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
         mto.chisq_seq_hits(local_output_dir, output_file2)
 
