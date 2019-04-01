@@ -3555,7 +3555,8 @@ def calc_hits(file_ids, filelist, exon_list, exon_start_indices):
     outputs = {}
 
     if len(file_ids):
-        for id in file_ids:
+        for file_no, id in enumerate(file_ids):
+            gen.print_parallel_status(file_no, file_ids)
             motifs = read_motifs(filelist[id])
             stop_motifs = [i for i in motifs if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
             non_stop_motifs = [i for i in motifs if i not in stop_motifs]
