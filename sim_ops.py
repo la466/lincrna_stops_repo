@@ -418,11 +418,18 @@ def generate_dinucleotide_matched_seqs(simulations, seqs, dinucleotide_content, 
                         sim_seq = seqo.generate_nt_matched_seq(seq, dinucleotide_choices, dinucleotide_probabilities, nucleotide_choices, nucleotide_probabilities, seed=seq_seed)
                         if sim_seq not in simulated_seqs:
                             if match_density:
-                                stops_in_true = len(re.findall("(TAA|TAG|TGA)", seq))
-                                stops_in_sim = len(re.findall("(TAA|TAG|TGA)", sim_seq))
-                                if stops_in_true == stops_in_sim:
-                                    passed = True
-                                    passed_counter += 1
+                                stops_in_true = re.findall("(TAA|TAG|TGA)", seq)
+                                stops_in_sim = re.findall("(TAA|TAG|TGA)", sim_seq)
+                                if len(stops_in_true) > 0:
+                                    if len(stops_in_true) == len(stops_in_sim):
+                                        for i, stop in enumerate(stops_in_true):
+                                            if stops_in_sim[i] == stop:
+                                                passed = True
+                                                passed_counter += 1
+                                else:
+                                    if len(stops_in_true) == len(stops_in_sim):
+                                        passed = True
+                                        passed_counter += 1
                             else:
                                 passed = True
 

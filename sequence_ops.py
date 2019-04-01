@@ -3533,3 +3533,47 @@ def get_subs(motifs):
                     subs.append(calc_subs(motif1, motif2))
                     checked_pairs.append([motif1, motif2])
     return subs
+
+
+def get_function_frames(motifs):
+
+    non_function_frames = {0: [], 1: [], 2: []}
+
+    for motif in motifs:
+        if motif[0:3] in stops or motif[3:6] in stops:
+            non_function_frames[0].append(motif)
+        elif motif[1:4] in stops:
+            non_function_frames[2].append(motif)
+        elif motif[2:5] in stops:
+            non_function_frames[1].append(motif)
+
+    function_frames = {i: len(motifs) - len(non_function_frames[i]) for i in non_function_frames}
+    return function_frames
+
+def calc_hits(file_ids, filelist, exon_list, exon_start_indices):
+
+    outputs = {}
+
+    if len(file_ids):
+        for id in file_ids:
+            motifs = read_motifs(filelist[id])
+            stop_motifs = [i for i in motifs if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
+            non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
+            function_frames = get_function_frames(stop_motifs)
+
+            stop_hits = collections.defaultdict(lambda: [])
+            non_stop_hits = collections.defaultdict(lambda: [])
+
+            for i, exon in enumerate(exon_list):
+                for frame in [0,1,2]:
+                    hits = seqo.calc_motif_count_frame([exon], motifs, frame = frame)
+                    true_frame = (exon_start_indices[i] + frame) % 3
+                    stop_hits[true_frame].extend([i for i in hits if i in stop_motifs])
+                    non_stop_hits[true_frame].extend([i for i in hits if i in non_stop_motifs])
+
+            stop_hits = {i: len(stop_hits[i]) for i in stop_hits}
+            non_stop_hits = {i: len(non_stop_hits[i]) for i in non_stop_hits}
+            outputs[id] = [stop_hits, non_stop_hits, function_frames, len(stop_motifs), len(non_stop_motifs)]
+
+    return outputs
