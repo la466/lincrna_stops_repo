@@ -32,23 +32,23 @@ families_file = "clean_run/genome_sequences/human/human.cds.families.bed"
 
 motif_file = "source_data/motif_sets/int3.txt"
 simdir = "clean_run/dinucleotide_controls/int3_dinucleotide_controls_matched_stops"
-sims = gen.get_filepaths(simdir)[:10]
+sims = gen.get_filepaths(simdir)[:30]
 
 
 
-# names, seqs = gen.read_fasta(file)
-# seq_list = collections.defaultdict(lambda: [])
-# [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
-# seq_list = sequo.pick_random_family_member(families_file, seq_list)
-# exons = []
-# [exons.extend(seq_list[i]) for i in seq_list]
+names, seqs = gen.read_fasta(file)
+seq_list = collections.defaultdict(lambda: [])
+[seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
+seq_list = sequo.pick_random_family_member(families_file, seq_list)
+exons = []
+[exons.extend(seq_list[i]) for i in seq_list]
 
 
 cds_names, cds_seqs = gen.read_fasta(cds_file)
 cds_list = {name.split(".")[0]: cds_seqs[i] for i, name in enumerate(cds_names)}
-cds_list = sequo.pick_random_family_member(families_file, cds_list)
-
-cds = [cds_list[i] for i in cds_list]
+# cds_list = sequo.pick_random_family_member(families_file, cds_list)
+#
+# cds = [cds_list[i] for i in cds_list]
 
 
 def calc_density(motifs, exons):
@@ -106,21 +106,58 @@ def calc_all_density(motif_file):
 # real = calc_all_density(motif_file)
 
 motifs = sequo.read_motifs(motif_file)
+stop_motifs = [i for i in motifs if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
+non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
+print(stop_motifs)
+#
+#
+
+def calc_hits(motif_files):
+    outputs = []
+
+    if len(motif_files):
+        for file in motif_files:
+            motifs = sequo.read_motifs(file)
+            stop_motifs = [i for i in motifs if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
+            non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
+            s = []
+            ns = []
+
+            for frame in [0, 1, 2]:
+                frame_hits = seqo.calc_motif_count_frame(exons, motifs, frame = frame)
+                stop_hits = [i for i in frame_hits if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
+                non_stop_hits = [i for i in frame_hits if len(re.findall("(?=TAA|TAG|TGA)", i)) == 0]
+                s.append(len(stop_hits))
+                ns.append(len(non_stop_hits))
+
+            s_adj = copy.deepcopy(s)
+            s_adj[0] = np.divide(s_adj[0], len(stop_motifs))*np.divide(len(stop_motifs), 5)
+            s_adj[1] = np.divide(s_adj[1], len(stop_motifs))*np.divide(len(stop_motifs), 6)
+            s_adj[2] = np.divide(s_adj[2], len(stop_motifs))*np.divide(len(stop_motifs), 7)
+            n_adj = [np.divide(i, len(non_stop_motifs)) for i in ns]
+
+            total_s = sum(s_adj)
+            total_n = sum(n_adj)
+
+            outputs.append([total_s, total_n])
+    return outputs
+    # print(total_n)
+
+    # print(s, sum(s))
+    # print(ns, sum(ns))
+    # print(s_adj)
+    # print(n_adj)
 
 
-s = []
-ns = []
+real = calc_hits([motif_file])[0]
+print(real)
+outputs = soc.run_simulation_function(sims, [], calc_hits, sim_run = False)
 
-for frame in [0, 1, 2]:
-    frame_hits = seqo.calc_motif_count_frame(cds, motifs, frame = frame)
-    stop_hits = [i for i in frame_hits if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
-    non_stop_hits = [i for i in frame_hits if len(re.findall("(?=TAA|TAG|TGA)", i)) == 0]
-    s.append(len(stop_hits))
-    ns.append(len(non_stop_hits))
 
-s_adj = copy.deepcopy(s)
-s_adj[0] = s_adj[0]*1.5
+nd_s = np.divide(real[0] - np.mean([i[0] for i in outputs]), np.mean([i[0] for i in outputs]))
+nd_n = np.divide(real[1] - np.mean([i[1] for i in outputs]), np.mean([i[1] for i in outputs]))
 
-print(s, sum(s))
-print(ns, sum(ns), sum(ns)*np.divide(9, 75))
-print(s_adj, sum(s_adj))
+print(nd_s)
+print(nd_n)
