@@ -1380,7 +1380,7 @@ def process_seq_hits(input_dir, output_file):
             for i, col in enumerate(non_stop_entries):
                 new_data[norm_non_stop_entries[i]] = np.divide(data[col], data["total_non_stop_motifs"])
             new_data["total_norm_non_stop"] = new_data["norm_non_stop_0"] + new_data["norm_non_stop_1"] + new_data["norm_non_stop_2"]
-            new_data["diff"] = new_data["total_norm_stop"] - new_data["total_norm_non_stop"]
+            new_data["diff"] = np.divide(new_data["total_norm_stop"], new_data["total_norm_non_stop"])
 
             real = new_data.loc[new_data['id'] == 'real']
             sims = new_data.loc[new_data['id'] != 'real']
@@ -1388,7 +1388,6 @@ def process_seq_hits(input_dir, output_file):
             norm_stops_greater = len(sims[sims["total_norm_stop"] >= real["total_norm_stop"].values[0]])
             norm_non_stops_greater = len(sims[sims["total_norm_non_stop"] >= real["total_norm_non_stop"].values[0]])
             diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
-
 
             output = [file_no+1]
             output.append(real["total_norm_stop"].values[0])
