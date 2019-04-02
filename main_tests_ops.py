@@ -1385,54 +1385,54 @@ def process_seq_hits(input_dir, output_file):
             real = new_data.loc[new_data['id'] == 'real']
             sims = new_data.loc[new_data['id'] != 'real']
 
-            norm_stops_greater = len(sims[sims["total_norm_stop"] >= real["total_norm_stop"][0]])
-            norm_non_stops_greater = len(sims[sims["total_norm_non_stop"] >= real["total_norm_non_stop"][0]])
-            diff_greater = len(sims[sims["diff"] >= real["diff"][0]])
+            norm_stops_greater = len(sims[sims["total_norm_stop"] >= real["total_norm_stop"].values[0]])
+            norm_non_stops_greater = len(sims[sims["total_norm_non_stop"] >= real["total_norm_non_stop"].values[0]])
+            diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
 
 
             output = [file_no+1]
-            output.append(real["total_norm_stop"][0])
+            output.append(real["total_norm_stop"].values[0])
             output.append(sims["total_norm_stop"].median())
-            output.append(np.divide(real["total_norm_stop"][0] - sims["total_norm_stop"].mean(), sims["total_norm_stop"].mean()))
+            output.append(np.divide(real["total_norm_stop"].values[0] - sims["total_norm_stop"].mean(), sims["total_norm_stop"].mean()))
             output.append(np.divide(norm_stops_greater + 1, len(sims) + 1))
-            output.append(real["total_norm_non_stop"][0])
+            output.append(real["total_norm_non_stop"].values[0])
             output.append(sims["total_norm_non_stop"].median())
-            output.append(np.divide(real["total_norm_non_stop"][0] - sims["total_norm_non_stop"].mean(), sims["total_norm_non_stop"].mean()))
+            output.append(np.divide(real["total_norm_non_stop"].values[0] - sims["total_norm_non_stop"].mean(), sims["total_norm_non_stop"].mean()))
             output.append(np.divide(norm_non_stops_greater + 1, len(sims) + 1))
-            output.append(real["diff"][0])
+            output.append(real["diff"].values[0])
             output.append(sims["diff"].median())
-            output.append(np.divide(real["diff"][0] - sims["diff"].mean(), sims["diff"].mean()))
+            output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
             output.append(np.divide(diff_greater + 1, len(sims) + 1))
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
-def chisq_seq_hits(input_dir, output_file):
-
-    with open(output_file, "w") as outfile:
-        file = gen.get_filepaths(input_dir)[0]
-        data = pd.read_csv(file)
-        data = data.head(1)
-        new_data = pd.DataFrame()
-        new_data["id"] = data["id"]
-        stop_entries = ["stop_0", "stop_1", "stop_2"]
-        norm_stop_entries = ["norm_stop_0", "norm_stop_1", "norm_stop_2"]
-        non_stop_entries = ["non_stop_0", "non_stop_1", "non_stop_2"]
-        stop_functions = ["stops_function_0", "stops_function_1", "stops_function_2"]
-        for i, col in enumerate(stop_entries):
-            new_data[norm_stop_entries[i]] = data[col]*np.divide(data["total_stop_motifs"], data[stop_functions[i]])
-
-
-        observed_stops = new_data[norm_stop_entries].values.tolist()[0]
-        total_observed_stops = sum(observed_stops)
-        non_stop_props = [np.divide(i, data["non_stop_total"].values[0]) for i in data[non_stop_entries].values.tolist()[0]]
-        expected_stops = [i*total_observed_stops for i in non_stop_props]
-        chisq = scipy.stats.chisquare(observed_stops, f_exp = expected_stops)
-
-        outfile.write(",non_stop_count,non_stop_prop,observed_stop_count,expected_stop_count\n")
-        for i in range(3):
-            outfile.write("frame_{0},{1},{2},{3},{4}\n".format(i, data[non_stop_entries].values.tolist()[0][i], non_stop_props[i], observed_stops[i], expected_stops[i]))
-        outfile.write("total,{0},{1},{2},{3}".format(sum(data[non_stop_entries].values.tolist()[0]), sum(non_stop_props), sum(observed_stops), sum(expected_stops)))
-
-        outfile.write("\n")
-        outfile.write("\n")
-        outfile.write("chisq_statistic:,{0}\n".format(chisq.statistic))
-        outfile.write("p_value:,{0}".format(chisq.pvalue))
+# def chisq_seq_hits(input_dir, output_file):
+#
+#     with open(output_file, "w") as outfile:
+#         file = gen.get_filepaths(input_dir)[0]
+#         data = pd.read_csv(file)
+#         data = data.loc[data['id'] == 'real']
+#         new_data = pd.DataFrame()
+#         new_data["id"] = data["id"]
+#         stop_entries = ["stop_0", "stop_1", "stop_2"]
+#         norm_stop_entries = ["norm_stop_0", "norm_stop_1", "norm_stop_2"]
+#         non_stop_entries = ["non_stop_0", "non_stop_1", "non_stop_2"]
+#         stop_functions = ["stops_function_0", "stops_function_1", "stops_function_2"]
+#         for i, col in enumerate(stop_entries):
+#             new_data[norm_stop_entries[i]] = data[col]*np.divide(data["total_stop_motifs"], data[stop_functions[i]])
+#
+#
+#         observed_stops = new_data[norm_stop_entries].values.tolist()[0]
+#         total_observed_stops = sum(observed_stops)
+#         non_stop_props = [np.divide(i, data["non_stop_total"].values[0]) for i in data[non_stop_entries].values.tolist()[0]]
+#         expected_stops = [i*total_observed_stops for i in non_stop_props]
+#         chisq = scipy.stats.chisquare(observed_stops, f_exp = expected_stops)
+#
+#         outfile.write(",non_stop_count,non_stop_prop,observed_stop_count,expected_stop_count\n")
+#         for i in range(3):
+#             outfile.write("frame_{0},{1},{2},{3},{4}\n".format(i, data[non_stop_entries].values.tolist()[0][i], non_stop_props[i], observed_stops[i], expected_stops[i]))
+#         outfile.write("total,{0},{1},{2},{3}".format(sum(data[non_stop_entries].values.tolist()[0]), sum(non_stop_props), sum(observed_stops), sum(expected_stops)))
+#
+#         outfile.write("\n")
+#         outfile.write("\n")
+#         outfile.write("chisq_statistic:,{0}\n".format(chisq.statistic))
+#         outfile.write("p_value:,{0}".format(chisq.pvalue))

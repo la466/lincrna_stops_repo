@@ -279,8 +279,8 @@ def main():
 
         output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
         mto.process_seq_hits(local_output_dir, output_file1)
-        output_file2 = "{0}/tests/ese_hits/{1}_chisq.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
-        mto.chisq_seq_hits(local_output_dir, output_file2)
+        # output_file2 = "{0}/tests/ese_hits/{1}_chisq.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
+        # mto.chisq_seq_hits(local_output_dir, output_file2)
 
 
 if __name__ == "__main__":
