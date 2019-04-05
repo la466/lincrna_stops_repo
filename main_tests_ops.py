@@ -1235,7 +1235,7 @@ def ese_ds(alignments_fasta, cds_fasta, motif_file, output_file, families_file =
     gen.remove_directory(temp_dir)
 
 
-def intron_length_test(exons_fasta, introns_fasta, motif_file, output_file, flanks = None, families_file = None):
+def intron_length_test(exons_fasta, introns_fasta, motif_file, output_file, flanks = None, families_file = None, restrict_size = None):
 
     # get the exon fasta
     exon_names, exon_seqs = gen.read_fasta(exons_fasta)
@@ -1275,13 +1275,27 @@ def intron_length_test(exons_fasta, introns_fasta, motif_file, output_file, flan
 
     else:
         # if not flanks or is non coding exons
-        exon_list = collections.defaultdict(lambda: [])
-        [exon_list[name.split(".")[0]].append(exon_seqs[i]) for i, name in enumerate(exon_names)]
-        exon_list = {i: exon_list[i] for i in exon_list if "N" not in exon_list[i]}
+        exon_list = collections.defaultdict(lambda: collections.defaultdict())
+        for i, name in enumerate(exon_names):
+            if "N" not in exon_seqs[i]:
+                if restrict_size and len(exon_seqs[i]) > 211:
+                    exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
+            else:
+                exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
+        exon_list = {i: exon_list[i] for i in exon_list}
 
         intron_list = collections.defaultdict(lambda: [])
         [intron_list[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if name.split(".")[0] in exon_list]
         intron_list = {i: intron_list[i] for i in intron_list}
+
+        temp_exon_list = collections.defaultdict(lambda: [])
+        for id in exon_list:
+            exons = []
+            for exon_id in exon_list[id]:
+                exons.append(exon_list[id][exon_id])
+            temp_exon_list[id] = exons
+        exon_list = temp_exon_list
+        exon_list = {i: exon_list[i] for i in exon_list}
 
     run_intron_length_density_test(motif_file, exon_list, intron_list, output_file, families_file = families_file)
 

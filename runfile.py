@@ -1,10 +1,19 @@
 import generic as gen
+import copy
 
-arg_list = {
-    "lincrna_dints": ["python3", "lincRNA.py", "None", "source_data/cabili_clean_alignments.fasta", "clean_run/tests/lincrna/substitution_rates", "--substitution_rate", "-motif_file", "source_data/motif_sets/int3.txt", "-families_file", "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt", "-required_simulations", 1000, "-output_prefix", "lincrna"],
-    "pc_dints": ["python3", "lincRNA.py", "None", "clean_run/genome_sequences/human.macaque.alignments.fasta", "clean_run/tests/lincrna/substitution_rates", "--substitution_rate", "-motif_file", "source_data/motif_sets/int3.txt", "-families_file", "clean_run/genome_sequences/human/human.cds.families.bed", "-required_simulations", 1000, "-output_prefix", "pc"],
-}
+args = ["python3", "main_tests.py", "clean_run", "clean_run/tests/ese_densities", "-input_fasta", "clean_run/genome_sequences/human/human.cds.clean_coding_exons.fasta", "-input_fasta2", "clean_run/genome_sequences/human/human.clean_introns.fasta", "-families_file", "clean_run/genome_sequences/human/human.cds.families.bed", "-output_prefix", "test_pc", "--intron_length_test", "-ese_file"]
+ese_files = [
+    # "source_data/motif_sets/int3.txt",
+    # "source_data/motif_sets/RESCUE.txt",
+    # "source_data/motif_sets/PESE.txt",
+    # "source_data/motif_sets/ESR.txt",
+    # "source_data/motif_sets/combined_eses.txt",
+    "source_data/motif_sets/PESE_removed.txt",
+]
 
-for arg in arg_list:
-    print("Running {0}".format(arg))
-    gen.run_process(arg_list[arg])
+
+for file in ese_files:
+    print("Running {0}".format(file))
+    file_args = copy.deepcopy(args)
+    file_args.append(file)
+    gen.run_process(file_args)
