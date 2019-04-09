@@ -2605,37 +2605,38 @@ def pick_random_family_member(families_file, seqs_dict, output_file = None):
         seqs_dict (dict): dictionary but only containing one entry per family
     """
 
-    np.random.seed()
-    families = gen.read_many_fields(families_file, "\t")
-    new_families = []
-    for fam in families:
-        fam = [i for i in fam if i in seqs_dict]
-        if len(fam):
-            new_families.append(fam)
-    families = new_families
-    # get a random member from each family
-    query_ids = [i for i in seqs_dict]
-    queried_ids = []
-    ids_to_keep = []
-    chosen_family_members = []
-    for i, id in enumerate(query_ids):
-        if id not in queried_ids:
-            group = [i for i in families if id in i]
-            if len(group):
-                group = group[0]
-                queried_ids.extend(group)
-                choice = np.random.choice(group)
-                ids_to_keep.append(choice)
-                chosen_family_members.append(choice)
-            else:
-                queried_ids.append(id)
-                ids_to_keep.append(id)
+    if families_file:
+        np.random.seed()
+        families = gen.read_many_fields(families_file, "\t")
+        new_families = []
+        for fam in families:
+            fam = [i for i in fam if i in seqs_dict]
+            if len(fam):
+                new_families.append(fam)
+        families = new_families
+        # get a random member from each family
+        query_ids = [i for i in seqs_dict]
+        queried_ids = []
+        ids_to_keep = []
+        chosen_family_members = []
+        for i, id in enumerate(query_ids):
+            if id not in queried_ids:
+                group = [i for i in families if id in i]
+                if len(group):
+                    group = group[0]
+                    queried_ids.extend(group)
+                    choice = np.random.choice(group)
+                    ids_to_keep.append(choice)
+                    chosen_family_members.append(choice)
+                else:
+                    queried_ids.append(id)
+                    ids_to_keep.append(id)
 
-    seqs_dict = {i: seqs_dict[i] for i in ids_to_keep}
+        seqs_dict = {i: seqs_dict[i] for i in ids_to_keep}
 
-    if output_file:
-        with open(output_file, "w") as outfile:
-            [outfile.write("{0}\n".format(i)) for i in sorted(chosen_family_members)]
+        if output_file:
+            with open(output_file, "w") as outfile:
+                [outfile.write("{0}\n".format(i)) for i in sorted(chosen_family_members)]
 
     return seqs_dict
 
@@ -3578,3 +3579,98 @@ def calc_hits(file_ids, filelist, exon_list, exon_start_indices):
             outputs[id] = [stop_hits, non_stop_hits, function_frames, len(stop_motifs), len(non_stop_motifs)]
 
     return outputs
+
+
+
+def analyse_overlaps(file_ids, filelist, exons):
+
+    outputs = {}
+    if len(file_ids):
+        for i, id in enumerate(file_ids):
+            gen.print_parallel_status(i, file_ids)
+            motifs, stop_motifs, non_stop_motifs = get_stop_non_stop_motifs(filelist[id])
+            overlaps = calc_overlap_potential(motifs)
+            sim_stop, sim_non_stop, sim_diff = calc_overlap_means(overlaps, stop_motifs, non_stop_motifs)
+            outputs[id] = [sim_stop, sim_non_stop, sim_diff]
+    return outputs
+
+def calc_sequence_overlap_diffs(file_ids, filelist, exons):
+
+    exons = [i for i in exons if len(i) > 211]
+    flanks = []
+    [flanks.extend([i[2:69], i[-69:-2]]) for i in exons]
+    # exons = flanks
+
+    outputs = {}
+    if len(file_ids):
+        for i, id in enumerate(file_ids):
+            gen.print_parallel_status(i, file_ids)
+            motifs = read_motifs(filelist[id])
+
+            # motif_hits = gen.flatten([return_overlap_motifs(exon, motifs) for exon in exons])
+            #
+            # # if sim:
+            # #     #if a simulation, pick a random set of hits to be the overlaps
+            # #     overlap_hit_length = len([i for i in motif_hits if len(i) > 6])
+            # #     overlap_hits = np.random.choice(motif_hits, overlap_hit_length, replace = False)
+            # #     non_overlap_hits = motif_hits
+            # # else:
+            #     # otherwise, use real overlaps
+            # overlap_hits = [i for i in motif_hits if len(i) > 6]
+            # non_overlap_hits = [i for i in motif_hits if len(i) == 6]
+            #
+            # # calculate the stop codon density in those hits
+            # stop_overlaps = seqo.calc_motif_density(overlap_hits, stops)
+            # stop_non_overlaps = seqo.calc_motif_density(non_overlap_hits, stops)
+            # print(stop_overlaps, stop_non_overlaps)
+            #
+            # overlap_stops = [i for i in overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
+            # non_overlap_stops = [i for i in non_overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
+            #
+            # print(len(overlap_stops), len(overlap_hits), np.divide(len(overlap_stops), len(overlap_hits)))
+            # print(len(non_overlap_stops), len(non_overlap_hits), np.divide(len(non_overlap_stops), len(non_overlap_hits)))
+
+
+    return outputs
+
+
+def calc_overlap_potential(motifs):
+    overlaps = collections.defaultdict(lambda: [])
+    for motif in sorted(motifs):
+        for overlap_motif in motifs:
+
+            if overlap_motif[-2:] == motif[:2]:
+                overlaps[motif].append(overlap_motif)
+            if overlap_motif[-3:] == motif[:3]:
+                overlaps[motif].append(overlap_motif)
+            if overlap_motif[-4:] == motif[:4]:
+                overlaps[motif].append(overlap_motif)
+            if overlap_motif[-5:] == motif[:5]:
+                overlaps[motif].append(overlap_motif)
+            if motif[1:] == overlap_motif[:5]:
+                overlaps[motif].append(overlap_motif)
+            if motif[2:] == overlap_motif[:4]:
+                overlaps[motif].append(overlap_motif)
+            if motif[3:] == overlap_motif[:3]:
+                overlaps[motif].append(overlap_motif)
+            if motif[4:] == overlap_motif[:2]:
+                overlaps[motif].append(overlap_motif)
+
+    overlaps = {i: len(list(set(overlaps[i]))) for i in overlaps}
+    return overlaps
+
+
+def calc_overlap_means(overlaps, stop_motifs, non_stop_motifs):
+    stop_overlaps = {i: overlaps[i] for i in overlaps if i in stop_motifs}
+    non_stop_overlaps = {i: overlaps[i] for i in overlaps if i in non_stop_motifs}
+    stop_mean = np.mean([stop_overlaps[i] for i in stop_overlaps])
+    non_stop_mean = np.mean([non_stop_overlaps[i] for i in non_stop_overlaps])
+    diff = non_stop_mean - stop_mean
+
+    return stop_mean, non_stop_mean, diff
+
+def get_stop_non_stop_motifs(motif_file):
+    motifs = read_motifs(motif_file)
+    stop_motifs = [i for i in motifs if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
+    non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+    return motifs, stop_motifs, non_stop_motifs

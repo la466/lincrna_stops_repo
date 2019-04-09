@@ -30,10 +30,19 @@ families_file = "clean_run/genome_sequences/human/human.cds.families.bed"
 # families_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt"
 
 
-motif_set = "int3"
+motif_set = "RESCUE"
 motif_file = "source_data/motif_sets/{0}.txt".format(motif_set)
 sim_path = "clean_run/dinucleotide_controls/{0}_dinucleotide_controls_matched_stops".format(motif_set)
-sims = gen.get_filepaths(sim_path)[:1000]
+sims = gen.get_filepaths(sim_path)[:10]
+
+
+names, exons = gen.read_fasta(file)
+exon_list = collections.defaultdict(lambda: [])
+[exon_list[name.split(".")[0]].append(exons[i]) for i, name in enumerate(names)]
+
+exon_list = sequo.pick_random_family_member(families_file, exon_list)
+exons = []
+[exons.extend(exon_list[i]) for i in exon_list]
 
 
 def calc_overlaps(motifs):
@@ -61,12 +70,6 @@ def calc_overlaps(motifs):
     overlaps = {i: len(list(set(overlaps[i]))) for i in overlaps}
     return overlaps
 
-def randomise_overlaps(overlaps):
-    ids = list(overlaps)
-    counts = [overlaps[i] for i in overlaps]
-    np.random.shuffle(counts)
-    overlaps = dict(zip(ids, counts))
-    return overlaps
 
 def calc_stop_overlaps(overlaps, stop_motifs, non_stop_motifs):
     stop_overlaps = {i: overlaps[i] for i in overlaps if i in stop_motifs}
@@ -103,32 +106,38 @@ def get_overlap_stats(filepaths):
     return outputs
 
 
+def calc_diff(motif_file):
 
-def calc_ps(real, sim_outputs):
-    real_stop = real[0]
-    real_non_stop = real[1]
-    real_diff = real[2]
-    real_all = real[3]
-    sim_stop_outputs = [output[0] for output in sim_outputs]
-    sim_non_stop_outputs = [output[1] for output in sim_outputs]
-    sim_diff_outputs = [output[2] for output in sim_outputs]
-    sim_all_outputs = [output[3] for output in sim_outputs]
+    motifs, stop_motifs, non_stop_motifs = get_motifs(motif_file)
+    overlaps = calc_overlaps(motifs)
+    stop, non_stop, diff = calc_stop_overlaps(overlaps, stop_motifs, non_stop_motifs)
 
-    stop_p = np.divide(len([i for i in sim_stop_outputs if i <= real_stop]) + 1, len(sim_stop_outputs) + 1)
-    non_stop_p = np.divide(len([i for i in sim_non_stop_outputs if i >= real_non_stop]) + 1, len(sim_non_stop_outputs) + 1)
-    diff_p = np.divide(len([i for i in sim_diff_outputs if i >= real_diff]) + 1, len(sim_diff_outputs) + 1)
-    all_p = np.divide(len([i for i in sim_all_outputs if i >= real_all]) + 1, len(sim_all_outputs) + 1)
-
-    nd = np.divide(real_stop - np.mean(sim_stop_outputs), np.mean(sim_stop_outputs))
-    non_nd = np.divide(real_non_stop - np.mean(sim_non_stop_outputs), np.mean(sim_non_stop_outputs))
+    # print(stop, non_stop)
+    percentage_diff = np.divide(stop - non_stop, non_stop)
 
 
-    print(np.mean(sim_diff_outputs))
-    print(stop_p, non_stop_p, diff_p, all_p)
-    print(nd, non_nd)
+    # return diff
 
 
-dint_outputs = soc.run_simulation_function(sims, [], get_overlap_stats, sim_run = False)
+    all_motifs = []
+    for exon in exons:
+        sequence_motifs = sequo.return_overlap_motifs(exon, motifs)
+        all_motifs.extend(sequence_motifs)
 
-print(real_stop, real_non_stop, real_diff)
-calc_ps([real_stop, real_non_stop, real_diff, real_all], dint_outputs)
+    overlap_motifs = [i for i in all_motifs if len(i) > 6]
+    non_overlap_motifs = [i for i in all_motifs if len(i) == 6]
+
+    stop_overlaps = seqo.calc_motif_density(overlap_motifs, stops)
+    stop_non_overlaps = seqo.calc_motif_density(non_overlap_motifs, stops)
+
+
+    overlap_diff = np.divide(stop_non_overlaps - stop_overlaps, stop_overlaps)
+    pd = percentage_diff*100
+    od = overlap_diff*100
+    print(stop_overlaps, stop_non_overlaps, pd, od, od - pd)
+
+
+real = calc_diff(motif_file)
+diffs = [calc_diff(i) for i in sims]
+
+print(len([i for i in diffs if i >= real]))

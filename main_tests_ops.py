@@ -1427,3 +1427,51 @@ def process_seq_hits(input_dir, output_file):
             output.append(diff_p)
             output.append(diff_adj_p if diff_adj_p < 1 else 1)
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
+
+
+def calc_overlap_potential(input_fasta, motif_file, output_file, required_simulations = None, controls_directory = None, families_file = None):
+
+    # get the exons
+    names, exons = gen.read_fasta(input_fasta)
+    exon_list = collections.defaultdict(lambda: [])
+    [exon_list[name.split(".")[0]].append(exons[i]) for i, name in enumerate(names)]
+    exon_list = sequo.pick_random_family_member(families_file, exon_list)
+    exons = []
+    [exons.extend(exon_list[i]) for i in exon_list]
+
+    filelist = {"real": motif_file}
+    if controls_directory and required_simulations:
+        sim_files = gen.get_filepaths(controls_directory)
+        for i, file in enumerate(sim_files[:required_simulations]):
+            filelist["sim{0}".format(i+1)] = file
+
+    args = [filelist, exons]
+    outputs = simoc.run_simulation_function(list(filelist), args, sequo.analyse_overlaps, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,stop_overlaps,non_stop_overlaps,diff\n")
+        [outfile.write("{0},{1}\n".format(id, ",".join(gen.stringify(outputs[id])))) for id in outputs]
+
+def calc_overlap_diffs(input_fasta, motif_file, output_file, required_simulations = None, controls_directory = None, families_file = None):
+
+    # get the exons
+    names, exons = gen.read_fasta(input_fasta)
+    exon_list = collections.defaultdict(lambda: [])
+    [exon_list[name.split(".")[0]].append(exons[i]) for i, name in enumerate(names)]
+    exon_list = sequo.pick_random_family_member(families_file, exon_list)
+    exons = []
+    [exons.extend(exon_list[i]) for i in exon_list]
+
+    filelist = {"real": motif_file}
+    if controls_directory and required_simulations:
+        sim_files = gen.get_filepaths(controls_directory)
+        for i, file in enumerate(sim_files[:required_simulations]):
+            filelist["sim{0}".format(i+1)] = file
+
+    args = [filelist, exons]
+    outputs = simoc.run_simulation_function(list(filelist), args, sequo.calc_sequence_overlap_diffs, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,single_stop_density,overlap_stop_density,motif_diff,sequence_diff,diff_diff\n")
+        [outfile.write("{0},{1}\n".format(id, ",".join(gen.stringify(outputs[id])))) for id in outputs]

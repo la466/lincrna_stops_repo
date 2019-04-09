@@ -124,7 +124,7 @@ for (type in types) {
 
 
 
-ese_sets = c("int3", "RESCUE", "PESE", "PESE_hexamers", "ESR", "combined_eses", "PESE_removed")
+ese_sets = c("int3", "RESCUE", "PESE", "PESE_hexamers", "ESR", "combined_eses", "PESE_removed_test")
 # set_types = c("pc", "lincrna")
 set_types = c("pc")
 types = c("", "_flanks")
