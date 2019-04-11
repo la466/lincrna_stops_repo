@@ -3582,6 +3582,40 @@ def calc_hits(file_ids, filelist, exon_list, exon_start_indices):
 
 
 
+def calc_hits_lincrna(file_ids, filelist, exon_list):
+
+    outputs = {}
+
+    if len(file_ids):
+        for file_no, id in enumerate(file_ids):
+            gen.print_parallel_status(file_no, file_ids)
+            motifs = read_motifs(filelist[id])
+            motif_search = re.compile("(?=({0}))".format("|".join(motifs)))
+
+
+            stop_motifs = [i for i in motifs if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
+            non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
+            all_hits = []
+            for transcript_id in exon_list:
+                exons = exon_list[transcript_id]
+                for exon in exons:
+                    matches = re.finditer(motif_search, exon)
+                    hit_motifs = [match.group(1) for match in matches]
+                    all_hits.extend(hit_motifs)
+
+            stop_hits = [i for i in all_hits if i in stop_motifs]
+            non_stop_hits = [i for i in all_hits if i in non_stop_motifs]
+            # print(id, len(stop_hits), np.divide(len(stop_hits), len(stop_motifs)), len(non_stop_hits), np.divide(len(non_stop_hits), len(non_stop_motifs)))
+
+            stop_normalised = np.divide(len(stop_hits), len(stop_motifs))
+            non_stop_normalised = np.divide(len(non_stop_hits), len(non_stop_motifs))
+            outputs[id] = [id, len(stop_hits), len(non_stop_hits), stop_normalised, non_stop_normalised, len(stop_motifs), len(non_stop_motifs)]
+
+    return outputs
+
+
+
 def analyse_overlaps(file_ids, filelist, exons):
 
     outputs = {}

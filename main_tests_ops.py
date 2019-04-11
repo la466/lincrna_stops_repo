@@ -1350,8 +1350,6 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
         cds = cds_list[id]
         exon_start_indices.extend([cds.index(exon) for exon in seq_list[id]])
 
-    print(len(seq_list))
-
     filelist = {"real": motif_file}
     if required_simulations and required_simulations > 0:
         sim_files = sims = gen.get_filepaths(motif_simulations_directory)[:required_simulations]
@@ -1372,6 +1370,78 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
             outline.append(output[3])
             outline.append(output[4])
             outfile.write("{0}\n".format(",".join(gen.stringify(outline))))
+
+def calc_seq_hits_linc(exons_fasta, output_file, motif_file, motif_simulations_directory, required_simulations = None, families_file = None):
+
+    # get exons
+    names, seqs = gen.read_fasta(exons_fasta)
+    seq_list = collections.defaultdict(lambda: [])
+    [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
+    seq_list = sequo.pick_random_family_member(families_file, seq_list)
+    # seq_list = {i: seq_list[i] for i in seq_list}
+
+    filelist = {"real": motif_file}
+    if required_simulations and required_simulations > 0:
+        sim_files = sims = gen.get_filepaths(motif_simulations_directory)[:required_simulations]
+        for i, file in enumerate(sim_files):
+            filelist["sim_{0}".format(i+1)] = file
+
+    args = [filelist, seq_list]
+    outputs = simoc.run_simulation_function(list(filelist), args, sequo.calc_hits_lincrna, sim_run = False)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,stop_hits,non_stop_hits,norm_stop,norm_non_stop,stop_motifs,non_stop_motifs\n")
+        for id in outputs:
+            output = outputs[id]
+            outfile.write("{0}\n".format(",".join(gen.stringify(outputs[id]))))
+
+def process_seq_hits_linc(input_dir, output_file):
+    files = gen.get_filepaths(input_dir)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p\n")
+
+        for file_no, file in enumerate(files):
+
+            data = pd.read_csv(file)
+            data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
+            real = data.loc[data['id'] == 'real']
+            sims = data.loc[data['id'] != 'real']
+
+
+            norm_stops_greater = len(sims[sims["norm_stop"] >= real["norm_stop"].values[0]])
+            norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
+            norm_stops_adj_p = norm_stops_p*len(files)
+            norm_non_stops_greater = len(sims[sims["norm_non_stop"] >= real["norm_non_stop"].values[0]])
+            norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
+            norm_non_stops_adj_p = norm_non_stops_p*len(files)
+            diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
+            diff_p = np.divide(diff_greater + 1, len(sims) + 1)
+            diff_adj_p = diff_p*len(files)
+
+            print(data)
+            print(norm_stops_greater)
+            print(norm_non_stops_greater)
+
+
+            output = [file_no+1]
+            output.append(real["norm_stop"].values[0])
+            output.append(sims["norm_stop"].median())
+            output.append(np.divide(real["norm_stop"].values[0] - sims["norm_stop"].mean(), sims["norm_stop"].mean()))
+            output.append(norm_stops_p)
+            output.append(norm_stops_adj_p if norm_stops_adj_p < 1 else 1)
+            output.append(real["norm_non_stop"].values[0])
+            output.append(sims["norm_non_stop"].median())
+            output.append(np.divide(real["norm_non_stop"].values[0] - sims["norm_non_stop"].mean(), sims["norm_non_stop"].mean()))
+            output.append(norm_non_stops_p)
+            output.append(norm_non_stops_adj_p if norm_non_stops_adj_p < 1 else 1)
+            output.append(real["diff"].values[0])
+            output.append(sims["diff"].median())
+            output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
+            output.append(diff_p)
+            output.append(diff_adj_p if diff_adj_p < 1 else 1)
+            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
 
 def process_seq_hits(input_dir, output_file):
 
