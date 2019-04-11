@@ -3594,42 +3594,75 @@ def analyse_overlaps(file_ids, filelist, exons):
             outputs[id] = [sim_stop, sim_non_stop, sim_diff]
     return outputs
 
+
+
+def check_for_overlap(seq, i, motifs):
+    test_motifs = [
+        seq[i-6:i],
+        seq[i-5:i+1],
+        seq[i-4:i+2],
+        seq[i-3:i+3],
+        seq[i-2:i+4],
+        seq[i-1:i+5],
+        seq[i+1:i+7],
+        seq[i+2:i+8],
+        seq[i+3:i+9],
+        seq[i+4:i+10],
+        seq[i+5:i+11],
+        seq[i+6:i+12]
+    ]
+
+    overlaps = [motif for motif in test_motifs if motif in motifs]
+    if len(overlaps):
+        return True
+    else:
+        return False
+
+
 def calc_sequence_overlap_diffs(file_ids, filelist, exons):
 
     exons = [i for i in exons if len(i) > 211]
-    flanks = []
-    [flanks.extend([i[2:69], i[-69:-2]]) for i in exons]
-    # exons = flanks
-
     outputs = {}
     if len(file_ids):
         for i, id in enumerate(file_ids):
             gen.print_parallel_status(i, file_ids)
             motifs = read_motifs(filelist[id])
 
-            # motif_hits = gen.flatten([return_overlap_motifs(exon, motifs) for exon in exons])
-            #
-            # # if sim:
-            # #     #if a simulation, pick a random set of hits to be the overlaps
-            # #     overlap_hit_length = len([i for i in motif_hits if len(i) > 6])
-            # #     overlap_hits = np.random.choice(motif_hits, overlap_hit_length, replace = False)
-            # #     non_overlap_hits = motif_hits
-            # # else:
-            #     # otherwise, use real overlaps
-            # overlap_hits = [i for i in motif_hits if len(i) > 6]
-            # non_overlap_hits = [i for i in motif_hits if len(i) == 6]
-            #
-            # # calculate the stop codon density in those hits
-            # stop_overlaps = seqo.calc_motif_density(overlap_hits, stops)
-            # stop_non_overlaps = seqo.calc_motif_density(non_overlap_hits, stops)
-            # print(stop_overlaps, stop_non_overlaps)
-            #
-            # overlap_stops = [i for i in overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
-            # non_overlap_stops = [i for i in non_overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
-            #
-            # print(len(overlap_stops), len(overlap_hits), np.divide(len(overlap_stops), len(overlap_hits)))
-            # print(len(non_overlap_stops), len(non_overlap_hits), np.divide(len(non_overlap_stops), len(non_overlap_hits)))
+            overlap_hits = []
+            non_overlap_hits = []
+            for exon in exons:
+                for pos in range(0, len(exon)-6):
+                    focal_motif = exon[pos:pos+6]
+                    if focal_motif in motifs:
+                        overlap = check_for_overlap(exon, pos, motifs)
+                        if overlap:
+                            overlap_hits.append(focal_motif)
+                        else:
+                            non_overlap_hits.append(focal_motif)
 
+
+
+            # calculate the stop codon density in those hits
+            stop_overlaps = seqo.calc_motif_density(overlap_hits, stops)
+            stop_non_overlaps = seqo.calc_motif_density(non_overlap_hits, stops)
+
+            overlap_stops = len([i for i in overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0])
+            non_overlap_stops = len([i for i in non_overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0])
+            # overlap_non_stops = len([i for i in overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) == 0])
+            # non_overlap_non_stops = len([i for i in non_overlap_hits if len(re.findall("(?=(TAA|TAG|TGA))", i)) == 0])
+
+            # print(np.divide(overlap_non_stops, len(overlap_hits)))
+            # print(np.divide(non_overlap_non_stops, len(non_overlap_hits)))
+
+            expected_overlap = np.divide(non_overlap_stops, len(non_overlap_hits))*len(overlap_hits)
+            chi = scipy.stats.chisquare([overlap_stops, len(overlap_hits) - overlap_stops], f_exp = [expected_overlap, len(overlap_hits) - expected_overlap])
+
+            print(overlap_stops, len(overlap_hits))
+            print(non_overlap_stops, len(non_overlap_hits))
+            print(np.divide(overlap_stops, len(overlap_hits)))
+            print(np.divide(non_overlap_stops, len(non_overlap_hits)))
+            print(chi)
+            # print(id, stop_overlaps, stop_non_overlaps, chi)
 
     return outputs
 
