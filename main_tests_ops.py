@@ -1371,6 +1371,7 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
             outline.append(output[4])
             outfile.write("{0}\n".format(",".join(gen.stringify(outline))))
 
+
 def calc_seq_hits_linc(exons_fasta, output_file, motif_file, motif_simulations_directory, required_simulations = None, families_file = None):
 
     # get exons
@@ -1389,23 +1390,25 @@ def calc_seq_hits_linc(exons_fasta, output_file, motif_file, motif_simulations_d
     outputs = simoc.run_simulation_function(list(filelist), args, sequo.calc_hits_lincrna, sim_run = False)
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,stop_hits,non_stop_hits,norm_stop,norm_non_stop,stop_motifs,non_stop_motifs\n")
+        outfile.write("id,stop_hits,non_stop_hits,norm_stop,norm_non_stop,stop_motifs,non_stop_motifs,all_hits,all_hits_normalised\n")
         for id in outputs:
             output = outputs[id]
             outfile.write("{0}\n".format(",".join(gen.stringify(outputs[id]))))
+
 
 def process_seq_hits_linc(input_dir, output_file):
     files = gen.get_filepaths(input_dir)
 
     with open(output_file, "w") as outfile:
-        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p\n")
+        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p,all_hits,median_sim_all_hits,all_hits_normalised,all_hits_p,all_hits_adj_p\n")
 
         for file_no, file in enumerate(files):
 
             data = pd.read_csv(file)
-            data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
+            data["diff"] = data["norm_stop"] - data["norm_non_stop"]
             real = data.loc[data['id'] == 'real']
             sims = data.loc[data['id'] != 'real']
+
 
             norm_stops_greater = len(sims[sims["norm_stop"] >= real["norm_stop"].values[0]])
             norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
@@ -1413,9 +1416,12 @@ def process_seq_hits_linc(input_dir, output_file):
             norm_non_stops_greater = len(sims[sims["norm_non_stop"] >= real["norm_non_stop"].values[0]])
             norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
             norm_non_stops_adj_p = norm_non_stops_p*len(files)
-            diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
-            diff_p = np.divide(diff_greater + 1, len(sims) + 1)
+            diff_less = len(sims[sims["diff"] <= real["diff"].values[0]])
+            diff_p = np.divide(diff_less + 1, len(sims) + 1)
             diff_adj_p = diff_p*len(files)
+            all_hits_greater = len(sims[sims["all_hits_normalised"] >= real["all_hits_normalised"].values[0]])
+            all_hits_p = np.divide(all_hits_greater + 1, len(sims) + 1)
+            all_hits_adj_p = all_hits_p*len(files)
 
             output = [file_no+1]
             output.append(real["norm_stop"].values[0])
@@ -1433,6 +1439,11 @@ def process_seq_hits_linc(input_dir, output_file):
             output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
             output.append(diff_p)
             output.append(diff_adj_p if diff_adj_p < 1 else 1)
+            output.append(real["all_hits_normalised"].values[0])
+            output.append(sims["all_hits_normalised"].median())
+            output.append(np.divide(real["all_hits_normalised"].values[0] - sims["all_hits_normalised"].mean(), sims["all_hits_normalised"].mean()))
+            output.append(all_hits_p)
+            output.append(all_hits_adj_p if all_hits_adj_p < 1 else 1)
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
 

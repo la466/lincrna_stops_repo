@@ -3586,12 +3586,14 @@ def calc_hits_lincrna(file_ids, filelist, exon_list):
 
     outputs = {}
 
+    exons = []
+    [exons.extend(exon_list[i]) for i in exon_list]
+
     if len(file_ids):
         for file_no, id in enumerate(file_ids):
             gen.print_parallel_status(file_no, file_ids)
             motifs = read_motifs(filelist[id])
             motif_search = re.compile("(?=({0}))".format("|".join(motifs)))
-
 
             stop_motifs = [i for i in motifs if len(re.findall("(?=TAA|TAG|TGA)", i)) > 0]
             non_stop_motifs = [i for i in motifs if i not in stop_motifs]
@@ -3609,7 +3611,8 @@ def calc_hits_lincrna(file_ids, filelist, exon_list):
 
             stop_normalised = np.divide(len(stop_hits), len(stop_motifs))
             non_stop_normalised = np.divide(len(non_stop_hits), len(non_stop_motifs))
-            outputs[id] = [id, len(stop_hits), len(non_stop_hits), stop_normalised, non_stop_normalised, len(stop_motifs), len(non_stop_motifs)]
+            all_hits_normalised = np.divide(len(all_hits), len(motifs))
+            outputs[id] = [id, len(stop_hits), len(non_stop_hits), stop_normalised, non_stop_normalised, len(stop_motifs), len(non_stop_motifs), len(all_hits), all_hits_normalised]
 
     return outputs
 
