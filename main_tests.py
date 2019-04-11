@@ -306,7 +306,7 @@ def main():
             output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(local_output_dir)
 
-        runs = 1
+        runs = 10
         for run in range(runs):
             if output_prefix:
                 output_file = "{0}/{1}_{2}_hits_{3}.csv".format(local_output_dir, output_prefix, ese_file.split("/")[-1].split(".")[0], run+1)
