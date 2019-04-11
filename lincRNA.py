@@ -143,12 +143,6 @@ def main():
         else:
             sim_orf_length_z_file = "{0}/{1}sim_orf_lengths_zs.csv".format(output_directory, "{0}_".format(output_prefix) if output_prefix else None)
 
-        names, seqs = gen.read_fasta(input_fasta)
-        families = gen.read_many_fields(families_file, "\t")
-        li = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
-        print(len(li))
-        li_g = sequo.group_family_results(li, families)
-        print(len(li_g))
         # only run the simulation if not there or wanted
         if not os.path.isfile(sim_orf_length_output_file) or clean_run:
             simopc.sim_orf_length(input_fasta, required_simulations, sim_orf_length_output_file)
