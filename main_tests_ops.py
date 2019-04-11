@@ -1378,7 +1378,6 @@ def calc_seq_hits_linc(exons_fasta, output_file, motif_file, motif_simulations_d
     seq_list = collections.defaultdict(lambda: [])
     [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
     seq_list = sequo.pick_random_family_member(families_file, seq_list)
-    # seq_list = {i: seq_list[i] for i in seq_list}
 
     filelist = {"real": motif_file}
     if required_simulations and required_simulations > 0:

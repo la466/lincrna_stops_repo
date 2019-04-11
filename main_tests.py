@@ -117,7 +117,8 @@ def main():
     multi_exon_cds_fasta = "{0}/genome_sequences/human/human.cds.multi_exons.fasta".format(input_directory)
     introns_fasta = "{0}/genome_sequences/human/human.clean_introns.fasta".format(input_directory)
     non_transcribed_fasta = "{0}/genome_sequences/human/human.non_transcribed.fasta".format(input_directory)
-    families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
+    if not families_file:
+        families_file = "{0}/genome_sequences/human/human.cds.families.bed".format(input_directory)
     coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_coding_exons.fasta".format(input_directory)
     non_coding_exons_fasta = "{0}/genome_sequences/human/human.cds.clean_non_coding_exons.fasta".format(input_directory)
 
