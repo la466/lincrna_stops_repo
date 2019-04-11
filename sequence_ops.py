@@ -3606,7 +3606,6 @@ def calc_hits_lincrna(file_ids, filelist, exon_list):
 
             stop_hits = [i for i in all_hits if i in stop_motifs]
             non_stop_hits = [i for i in all_hits if i in non_stop_motifs]
-            # print(id, len(stop_hits), np.divide(len(stop_hits), len(stop_motifs)), len(non_stop_hits), np.divide(len(non_stop_hits), len(non_stop_motifs)))
 
             stop_normalised = np.divide(len(stop_hits), len(stop_motifs))
             non_stop_normalised = np.divide(len(non_stop_hits), len(non_stop_motifs))

@@ -1408,7 +1408,6 @@ def process_seq_hits_linc(input_dir, output_file):
             real = data.loc[data['id'] == 'real']
             sims = data.loc[data['id'] != 'real']
 
-
             norm_stops_greater = len(sims[sims["norm_stop"] >= real["norm_stop"].values[0]])
             norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
             norm_stops_adj_p = norm_stops_p*len(files)
@@ -1418,11 +1417,6 @@ def process_seq_hits_linc(input_dir, output_file):
             diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
             diff_p = np.divide(diff_greater + 1, len(sims) + 1)
             diff_adj_p = diff_p*len(files)
-
-            print(data)
-            print(norm_stops_greater)
-            print(norm_non_stops_greater)
-
 
             output = [file_no+1]
             output.append(real["norm_stop"].values[0])
