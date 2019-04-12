@@ -1405,7 +1405,7 @@ def process_seq_hits_linc(input_dir, output_file):
         for file_no, file in enumerate(files):
 
             data = pd.read_csv(file)
-            data["diff"] = data["norm_stop"] - data["norm_non_stop"]
+            data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
             real = data.loc[data['id'] == 'real']
             sims = data.loc[data['id'] != 'real']
 
@@ -1453,9 +1453,9 @@ def process_seq_hits(input_dir, output_file):
     with open(output_file, "w") as outfile:
         outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p\n")
 
-        for file_no, file in enumerate(files):
-
+        for file_no, file in enumerate(sorted(files)):
             data = pd.read_csv(file)
+
             new_data = pd.DataFrame()
             new_data["id"] = data["id"]
             stop_entries = ["stop_0", "stop_1", "stop_2"]
