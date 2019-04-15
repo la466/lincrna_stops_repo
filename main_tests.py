@@ -287,13 +287,13 @@ def main():
             output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(local_output_dir)
 
-        # runs = 10
-        # for run in range(runs):
-        #     if output_prefix:
-        #         output_file = "{0}/{1}_{2}_hits_{3}.csv".format(local_output_dir, output_prefix, ese_file.split("/")[-1].split(".")[0], run+1)
-        #     else:
-        #         output_file = "{0}/{1}_hits_{2}.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], run+1)
-        #     mto.calc_seq_hits(input_fasta, input_fasta2, output_file, ese_file, motif_simulations_directory, required_simulations = simulations, families_file = families_file)
+        runs = 10
+        for run in range(runs):
+            if output_prefix:
+                output_file = "{0}/{1}_{2}_hits_{3}.csv".format(local_output_dir, output_prefix, ese_file.split("/")[-1].split(".")[0], run+1)
+            else:
+                output_file = "{0}/{1}_hits_{2}.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], run+1)
+            mto.calc_seq_hits(input_fasta, input_fasta2, output_file, ese_file, motif_simulations_directory, required_simulations = simulations, families_file = families_file)
 
         mto.process_seq_hits(local_output_dir, output_file1)
 
@@ -302,8 +302,8 @@ def main():
             local_output_dir = "{0}/tests/ese_hits/{1}_{2}".format(output_directory, output_prefix, ese_file.split("/")[-1].split(".")[0])
             output_file1 = "{0}/tests/ese_hits/{1}_{2}_processed.csv".format(output_directory, output_prefix, ese_file.split("/")[-1].split(".")[0])
         else:
-            local_output_dir = "{0}/tests/ese_hits/{1}".format(output_directory, ese_file.split("/")[-1].split(".")[0])
-            output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
+            local_output_dir = "{0}/tests/ese_hits/{1}_{2}".format(output_directory, output_prefix, ese_file.split("/")[-1].split(".")[0])
+            output_file1 = "{0}/tests/ese_hits/{1}_{2}_processed.csv".format(output_directory, output_prefix, ese_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(local_output_dir)
 
         runs = 10

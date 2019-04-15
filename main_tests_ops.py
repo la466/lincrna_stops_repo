@@ -1400,9 +1400,10 @@ def process_seq_hits_linc(input_dir, output_file):
     files = gen.get_filepaths(input_dir)
 
     with open(output_file, "w") as outfile:
-        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p,all_hits,median_sim_all_hits,all_hits_normalised,all_hits_p,all_hits_adj_p\n")
+        # outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p,all_hits,median_sim_all_hits,all_hits_normalised,all_hits_p,all_hits_adj_p\n")
+        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,all_hits,median_sim_all_hits,all_hits_normalised,all_hits_p\n")
 
-        for file_no, file in enumerate(files):
+        for file_no, file in enumerate(sorted(files)):
 
             data = pd.read_csv(file)
             data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
@@ -1412,38 +1413,38 @@ def process_seq_hits_linc(input_dir, output_file):
 
             norm_stops_greater = len(sims[sims["norm_stop"] >= real["norm_stop"].values[0]])
             norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
-            norm_stops_adj_p = norm_stops_p*len(files)
+            # norm_stops_adj_p = norm_stops_p*len(files)
             norm_non_stops_greater = len(sims[sims["norm_non_stop"] >= real["norm_non_stop"].values[0]])
             norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
-            norm_non_stops_adj_p = norm_non_stops_p*len(files)
+            # norm_non_stops_adj_p = norm_non_stops_p*len(files)
             diff_less = len(sims[sims["diff"] <= real["diff"].values[0]])
             diff_p = np.divide(diff_less + 1, len(sims) + 1)
-            diff_adj_p = diff_p*len(files)
+            # diff_adj_p = diff_p*len(files)/
             all_hits_greater = len(sims[sims["all_hits_normalised"] >= real["all_hits_normalised"].values[0]])
             all_hits_p = np.divide(all_hits_greater + 1, len(sims) + 1)
-            all_hits_adj_p = all_hits_p*len(files)
+            # all_hits_adj_p = all_hits_p*len(files)
 
             output = [file_no+1]
             output.append(real["norm_stop"].values[0])
             output.append(sims["norm_stop"].median())
             output.append(np.divide(real["norm_stop"].values[0] - sims["norm_stop"].mean(), sims["norm_stop"].mean()))
             output.append(norm_stops_p)
-            output.append(norm_stops_adj_p if norm_stops_adj_p < 1 else 1)
+            # output.append(norm_stops_adj_p if norm_stops_adj_p < 1 else 1)
             output.append(real["norm_non_stop"].values[0])
             output.append(sims["norm_non_stop"].median())
             output.append(np.divide(real["norm_non_stop"].values[0] - sims["norm_non_stop"].mean(), sims["norm_non_stop"].mean()))
             output.append(norm_non_stops_p)
-            output.append(norm_non_stops_adj_p if norm_non_stops_adj_p < 1 else 1)
+            # output.append(norm_non_stops_adj_p if norm_non_stops_adj_p < 1 else 1)
             output.append(real["diff"].values[0])
             output.append(sims["diff"].median())
             output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
             output.append(diff_p)
-            output.append(diff_adj_p if diff_adj_p < 1 else 1)
+            # output.append(diff_adj_p if diff_adj_p < 1 else 1)
             output.append(real["all_hits_normalised"].values[0])
             output.append(sims["all_hits_normalised"].median())
             output.append(np.divide(real["all_hits_normalised"].values[0] - sims["all_hits_normalised"].mean(), sims["all_hits_normalised"].mean()))
             output.append(all_hits_p)
-            output.append(all_hits_adj_p if all_hits_adj_p < 1 else 1)
+            # output.append(all_hits_adj_p if all_hits_adj_p < 1 else 1)
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
 
@@ -1451,7 +1452,7 @@ def process_seq_hits(input_dir, output_file):
 
     files = gen.get_filepaths(input_dir)
     with open(output_file, "w") as outfile:
-        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p\n")
+        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p\n")
 
         for file_no, file in enumerate(sorted(files)):
             data = pd.read_csv(file)
@@ -1476,30 +1477,24 @@ def process_seq_hits(input_dir, output_file):
 
             norm_stops_greater = len(sims[sims["total_norm_stop"] >= real["total_norm_stop"].values[0]])
             norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
-            norm_stops_adj_p = norm_stops_p*len(files)
             norm_non_stops_greater = len(sims[sims["total_norm_non_stop"] >= real["total_norm_non_stop"].values[0]])
             norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
-            norm_non_stops_adj_p = norm_non_stops_p*len(files)
             diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
             diff_p = np.divide(diff_greater + 1, len(sims) + 1)
-            diff_adj_p = diff_p*len(files)
 
             output = [file_no+1]
             output.append(real["total_norm_stop"].values[0])
             output.append(sims["total_norm_stop"].median())
             output.append(np.divide(real["total_norm_stop"].values[0] - sims["total_norm_stop"].mean(), sims["total_norm_stop"].mean()))
             output.append(norm_stops_p)
-            output.append(norm_stops_adj_p if norm_stops_adj_p < 1 else 1)
             output.append(real["total_norm_non_stop"].values[0])
             output.append(sims["total_norm_non_stop"].median())
             output.append(np.divide(real["total_norm_non_stop"].values[0] - sims["total_norm_non_stop"].mean(), sims["total_norm_non_stop"].mean()))
             output.append(norm_non_stops_p)
-            output.append(norm_non_stops_adj_p if norm_non_stops_adj_p < 1 else 1)
             output.append(real["diff"].values[0])
             output.append(sims["diff"].median())
             output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
             output.append(diff_p)
-            output.append(diff_adj_p if diff_adj_p < 1 else 1)
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
 
