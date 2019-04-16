@@ -63,7 +63,7 @@ density = ggplot() +
   geom_vline(xintercept = stops$density, lty = 1, cex = 2, col = "red") + 
   labs(x = "Codon set density", y = "Frequency")
 normalised_density = ggplot() +
-  geom_histogram(aes(gc_matched$nd), bins = 30, col = "black", fill = "RoyalBlue") + 
+  geom_density(aes(gc_matched$nd), bins = 30, col = "black", fill = "RoyalBlue") + 
   geom_vline(xintercept = stops$nd, lty = 1, cex = 2, col = "red") + 
   labs(x = "Codon set normalised density (ND)", y = "Frequency")
 
@@ -74,6 +74,9 @@ plot = ggarrange(
   normalised_density,
   labels = c("A", "B")
 )
+
+plot
+
 ggsave("clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
 
 binom.test(nrow(gc_matched[gc_matched$density <= stops$density,]), nrow(gc_matched), alternative = "l")
