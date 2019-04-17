@@ -22,9 +22,35 @@ import random
 import copy
 
 
-file = "source_data/motif_sets/iss.txt"
-motifs = sequo.read_motifs(file)
+seq_file = "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta"
+t_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences1.fasta"
+families_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt"
 
-stop_motifs = [i for i in motifs if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
+all = collections.defaultdict(lambda: [])
+names, seqs = gen.read_fasta(seq_file)
+[all[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
 
-print(np.divide(len(stop_motifs), len(motifs)))
+exons = collections.defaultdict(lambda: collections.defaultdict())
+for i, name in enumerate(names):
+    exons[name.split(".")[0]][int(name.split(".")[1].split("(")[0])] = seqs[i]
+
+tall = collections.defaultdict(lambda: [])
+tnames, tseqs = gen.read_fasta(t_file)
+[tall[name.split(".")[0]].append(tseqs[i]) for i, name in enumerate(tnames)]
+
+
+tall = sequo.pick_random_family_member(families_file, tall)
+print(len(tall))
+
+# retained = []
+# for name in all:
+#     test = [i for i in all[name] if "N" in i]
+#     if len(test) == 0:
+#         retained.append(name)
+
+# output_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences1.fasta"
+# with open(output_file, "w") as outfile:
+#     for name in tall:
+#         if name in retained:
+#             # for exon in sorted(tall[name]):
+#             outfile.write(">{0}\n{1}\n".format(name, tall[name]))

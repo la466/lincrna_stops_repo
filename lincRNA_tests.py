@@ -410,7 +410,7 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None, r
 
     with open(output_file, "w") as outfile:
         outfile.write("run_number,seq_count,gc,density,median_simulated_density,normalised_density,p_value,adj_p_value\n")
-        for i, file in enumerate(os.scandir(output_dir)):
+        for i, file in sorted(enumerate(os.scandir(output_dir))):
             data = pd.read_csv(file.path)
             real = data[data['id'] == "real"]
             sims = data[data['id'] != "real"]
@@ -475,7 +475,7 @@ def process_sim_stop_density_within_gene_outputs(output_dir, output_file):
 
     with open(output_file, "w") as outfile:
         outfile.write("run_number,data_points,depletions,depletions_binomial_p,adj_depletions_binomial_p,significant_depletions,significant_depletions_binomial_p,adj_significant_depletions_binomial_p\n")
-        for i, file in enumerate(os.scandir(output_dir)):
+        for i, file in sorted(enumerate(os.scandir(output_dir))):
             data = pd.read_csv(file.path)
             depletions = data["normalised_density"] < 0
             significant = data["p_value"] < 0.05

@@ -130,8 +130,8 @@ def main():
     if compare_stop_density:
         mto.compare_stop_density(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, exon_intron_density_file, families_file = lincRNA_multi_exon_families)
 
-    if density_sim:
-        ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
+    # if density_sim:
+    #     ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
 
 
 
@@ -153,12 +153,12 @@ def main():
 
     if sim_stop_density:
         if families_file:
-            sim_stop_density_output_dir = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes_grouped_families".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            sim_stop_density_output_file = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes_grouped_families.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_simulation_all_genes_grouped_families".format(output_directory, output_prefix)
+            sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_simulation_all_genes_grouped_families.csv".format(output_directory, output_prefix)
             runs = 10
         else:
-            sim_stop_density_output_dir = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            sim_stop_density_output_file = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_simulation_all_genes".format(output_directory, output_prefix)
+            sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_simulation_all_genes.csv".format(output_directory, output_prefix)
             runs = 1
         # remove any previous runs
         if clean_run:
@@ -166,34 +166,34 @@ def main():
         gen.create_output_directories(sim_stop_density_output_dir)
 
         # if we need to run the simulations
-        if len(os.listdir(sim_stop_density_output_dir)) < runs:
-            required_runs = list(range(runs - len(os.listdir(sim_stop_density_output_dir))))
-            for run in required_runs:
-                output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
-                ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
+        # if len(os.listdir(sim_stop_density_output_dir)) < runs:
+        # required_runs = list(range(runs - len(os.listdir(sim_stop_density_output_dir))))
+        for run in list(range(runs)):
+            output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
+            ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
         # process the outputs
         ltests.process_sim_stop_density_outputs(sim_stop_density_output_dir, sim_stop_density_output_file)
 
 
     if sim_stop_density_within_genes:
         if families_file:
-            sim_stop_density_within_gene_output_dir = "{0}/stop_density/{1}_{2}_stop_density_simulation_within_genes_grouped_families".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            sim_stop_density_within_gene_output_file = "{0}/stop_density/{1}_{2}_stop_density_simulation_within_genes_grouped_families.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            sim_stop_density_within_gene_output_dir = "{0}/stop_density/{1}_stop_density_simulation_within_genes_grouped_families".format(output_directory, output_prefix)
+            sim_stop_density_within_gene_output_file = "{0}/stop_density/{1}_stop_density_simulation_within_genes_grouped_families.csv".format(output_directory, output_prefix)
             runs = 10
         else:
-            sim_stop_density_within_gene_output_dir = "{0}/stop_density/{1}_{2}_stop_density_simulation_within_genes".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            sim_stop_density_within_gene_output_file = "{0}/stop_density/{1}_{2}_stop_density_simulation_within_genes.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            sim_stop_density_within_gene_output_dir = "{0}/stop_density/{1}_stop_density_simulation_within_genes".format(output_directory, output_prefix)
+            sim_stop_density_within_gene_output_file = "{0}/stop_density/{1}_stop_density_simulation_within_genes.csv".format(output_directory, output_prefix)
             runs = 1
 
         if clean_run:
             gen.remove_directory(sim_stop_density_within_gene_output_dir)
         gen.create_output_directories(sim_stop_density_within_gene_output_dir)
         # if we need to run the simulations
-        if len(os.listdir(sim_stop_density_within_gene_output_dir)) < runs:
-            required_runs = list(range(runs - len(os.listdir(sim_stop_density_within_gene_output_dir))))
-            for run in required_runs:
-                output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_within_gene_output_dir, run + 1)
-                ltests.sim_stop_density_within_genes(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
+        # if len(os.listdir(sim_stop_density_within_gene_output_dir)) < runs:
+        #     required_runs = list(range(runs - len(os.listdir(sim_stop_density_within_gene_output_dir))))
+        for run in list(range(runs)):
+            output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_within_gene_output_dir, run + 1)
+            ltests.sim_stop_density_within_genes(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
         # process the outputs
         ltests.process_sim_stop_density_within_gene_outputs(sim_stop_density_within_gene_output_dir, sim_stop_density_within_gene_output_file)
 
@@ -202,7 +202,7 @@ def main():
         if families_file:
             sim_output_dir = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes_grouped_families_removed_motifs".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
             sim_output_file = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes_grouped_families_removed_motifs.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            runs = 10
+            runs = 1
         else:
             sim_output_dir = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
             sim_output_file = "{0}/stop_density/{1}_{2}_stop_density_simulation_all_genes.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
@@ -211,12 +211,12 @@ def main():
         gen.remove_directory(sim_output_dir)
         gen.create_output_directories(sim_output_dir)
 
-        # if we need to run the simulations
-        if len(os.listdir(sim_output_dir)) < runs:
-            required_runs = list(range(runs - len(os.listdir(sim_output_dir))))
-            for run in required_runs:
-                run_output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_output_dir, run + 1)
-                ltests.sim_stop_density_removed_motifs(input_fasta, run_output_file, motif_file, simulations = int(required_simulations), families_file = families_file)
+        # # if we need to run the simulations
+        # if len(os.listdir(sim_output_dir)) < runs:
+        # required_runs = list(range(runs - len(os.listdir(sim_output_dir))))
+        for run in list(range(runs)):
+            run_output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_output_dir, run + 1)
+            ltests.sim_stop_density_removed_motifs(input_fasta, run_output_file, motif_file, simulations = int(required_simulations), families_file = families_file)
         # process the outputs
         ltests.process_sim_stop_density_outputs(sim_output_dir, sim_output_file, reverse = True)
 
@@ -234,45 +234,46 @@ def main():
         gen.create_output_directories(sim_output_dir)
 
         # if we need to run the simulations
-        if len(os.listdir(sim_output_dir)) < runs:
-            required_runs = list(range(runs - len(os.listdir(sim_output_dir))))
-            for run in required_runs:
-                run_output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_output_dir, run + 1)
-                ltests.sim_stop_density_removed_motifs_seq_sim(input_fasta, run_output_file, motif_file, sim_dir, simulations = int(required_simulations), families_file = families_file)
+        # if len(os.listdir(sim_output_dir)) < runs:
+        #     required_runs = list(range(runs - len(os.listdir(sim_output_dir))))
+        #     for run in required_runs:
+        for run in list(range(runs)):
+            run_output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_output_dir, run + 1)
+            ltests.sim_stop_density_removed_motifs_seq_sim(input_fasta, run_output_file, motif_file, sim_dir, simulations = int(required_simulations), families_file = families_file)
         # process the outputs
         ltests.process_sim_stop_density_outputs(sim_output_dir, sim_output_file, reverse = True)
 
 
-    if substitution_rate:
-        if not families_file or not motif_file:
-            print("\nPlease provide families file and motif file.\n")
-            raise Exception
-        gen.check_files_exists([families_file, motif_file])
-        if output_prefix:
-            output_file = "{0}/{1}_{2}_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-        else:
-            output_file = "{0}/{1}_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
-        ltests.calc_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
-
-    if substitution_rate_motif:
-        gen.check_files_exists([families_file, motif_file])
-        if output_prefix:
-            output_file = "{0}/{1}_{2}_substitution_rates_motif.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-        else:
-            output_file = "{0}/{1}_substitution_rates_motif.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
-        ltests.calc_substitution_rates_motif(input_fasta, motif_file, required_simulations, sim_dir, output_file, families_file = families_file)
-
-
-    if dinucleotide_substitution_rate:
-        if not families_file or not motif_file:
-            print("\nPlease provide families file and motif file.\n")
-            raise Exception
-        gen.check_files_exists([families_file, motif_file])
-        if output_prefix:
-            output_file = "{0}/{1}_{2}_dinucleotide_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-        else:
-            output_file = "{0}/{1}_dinucleotide_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
-        ltests.calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
+    # if substitution_rate:
+    #     if not families_file or not motif_file:
+    #         print("\nPlease provide families file and motif file.\n")
+    #         raise Exception
+    #     gen.check_files_exists([families_file, motif_file])
+    #     if output_prefix:
+    #         output_file = "{0}/{1}_{2}_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+    #     else:
+    #         output_file = "{0}/{1}_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+    #     ltests.calc_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
+    #
+    # if substitution_rate_motif:
+    #     gen.check_files_exists([families_file, motif_file])
+    #     if output_prefix:
+    #         output_file = "{0}/{1}_{2}_substitution_rates_motif.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+    #     else:
+    #         output_file = "{0}/{1}_substitution_rates_motif.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+    #     ltests.calc_substitution_rates_motif(input_fasta, motif_file, required_simulations, sim_dir, output_file, families_file = families_file)
+    #
+    #
+    # if dinucleotide_substitution_rate:
+    #     if not families_file or not motif_file:
+    #         print("\nPlease provide families file and motif file.\n")
+    #         raise Exception
+    #     gen.check_files_exists([families_file, motif_file])
+    #     if output_prefix:
+    #         output_file = "{0}/{1}_{2}_dinucleotide_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+    #     else:
+    #         output_file = "{0}/{1}_dinucleotide_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+    #     ltests.calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
 
 
     motif_nd_output_file = "{0}/motif_nd.csv".format(lincrna_output_directory)
