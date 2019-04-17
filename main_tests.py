@@ -245,9 +245,11 @@ def main():
 
 
     if intron_length_test:
-        output_file = "{0}/tests/ese_densities/{1}_{2}_ese_densities_all_seqs.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0], output_prefix)
-        output_file_matched_size = "{0}/tests/ese_densities/{1}_{2}_ese_densities.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0], output_prefix)
-        output_file_flanks = "{0}/tests/ese_densities/{1}_{2}_ese_densities_flanks.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0], output_prefix)
+        local_output_dir = "{0}/tests/ese_densities".format(output_directory)
+        gen.create_output_directories(local_output_dir)
+        output_file = "{0}/{1}_{2}_ese_densities_all_seqs.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], output_prefix)
+        output_file_matched_size = "{0}/{1}_{2}_ese_densities.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], output_prefix)
+        output_file_flanks = "{0}/{1}_{2}_ese_densities_flanks.csv".format(local_output_dir, ese_file.split("/")[-1].split(".")[0], output_prefix)
         # run on whole sequence
         mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file, flanks = None, families_file = families_file)
         mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_matched_size, flanks = None, families_file = families_file, restrict_size = True)
