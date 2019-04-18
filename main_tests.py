@@ -254,11 +254,11 @@ def main():
         # # run on whole sequence
         mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file, flanks = None, families_file = families_file)
         # dont group by familiy
-        # mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_all_genes, flanks = None, families_file = None)
-        # # run on just longer ones
-        # mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_matched_size, flanks = None, families_file = families_file, restrict_size = True)
-        # # # run on flanks
-        # mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_flanks, flanks = True, families_file = families_file)
+        mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_all_genes, flanks = None, families_file = None)
+        # run on just longer ones
+        mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_matched_size, flanks = None, families_file = families_file, restrict_size = True)
+        # # run on flanks
+        mto.intron_length_test(input_fasta, input_fasta2, ese_file, output_file_flanks, flanks = True, families_file = families_file)
 
 
     exon_regions_directory = "{0}/tests/exon_regions".format(output_directory)
@@ -293,7 +293,7 @@ def main():
             output_file1 = "{0}/tests/ese_hits/{1}_processed.csv".format(output_directory, ese_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(local_output_dir)
 
-        runs = 1
+        runs = 10
         for run in range(runs):
             if output_prefix:
                 output_file = "{0}/{1}_{2}_hits_{3}.csv".format(local_output_dir, output_prefix, ese_file.split("/")[-1].split(".")[0], run+1)
