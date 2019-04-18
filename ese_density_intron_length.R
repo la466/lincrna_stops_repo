@@ -108,8 +108,8 @@ p_from_z <- function(z) {
 
 types = c("", "_flanks")
 for (type in types) {
-  lincrna = read.csv(paste("clean_run/tests/ese_densities/INT3_lincrna_ese_densities", type, ".csv", sep = "_"), head = T)
-  pc = read.csv(paste("clean_run/tests/ese_densities/INT3_pc_ese_densities_flanks", type, ".csv", sep = "_"), head = T)
+  lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_lincrna_ese_densities", type, ".csv", sep = ""), head = T)
+  pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities", type, ".csv", sep = ""), head = T)
   
   plot = ggarrange(
     intron_ese_plot(pc, title = "Protein-coding coding exons"),
@@ -120,7 +120,7 @@ for (type in types) {
     nrow = 2,
     labels = c("A", "B", "C", "D")
   )
-  ggsave(plot = plot, file = paste("clean_run/plots/intron_size_ese_density_plot", type, ".pdf", sep = "_"), width = 12, height = 10)
+  ggsave(plot = plot, file = paste("clean_run/plots/intron_size_ese_density_plot", type, ".pdf", sep = ""), width = 12, height = 10)
 }
 
 
