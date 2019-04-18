@@ -23,7 +23,7 @@ import copy
 
 
 seq_file = "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta"
-t_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences1.fasta"
+t_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences.fasta"
 families_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt"
 
 all = collections.defaultdict(lambda: [])
@@ -40,17 +40,4 @@ tnames, tseqs = gen.read_fasta(t_file)
 
 
 tall = sequo.pick_random_family_member(families_file, tall)
-print(len(tall))
-
-# retained = []
-# for name in all:
-#     test = [i for i in all[name] if "N" in i]
-#     if len(test) == 0:
-#         retained.append(name)
-
-# output_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences1.fasta"
-# with open(output_file, "w") as outfile:
-#     for name in tall:
-#         if name in retained:
-#             # for exon in sorted(tall[name]):
-#             outfile.write(">{0}\n{1}\n".format(name, tall[name]))
+print(len(tnames))

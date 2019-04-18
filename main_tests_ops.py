@@ -1278,11 +1278,13 @@ def intron_length_test(exons_fasta, introns_fasta, motif_file, output_file, flan
         exon_list = collections.defaultdict(lambda: collections.defaultdict())
         for i, name in enumerate(exon_names):
             if "N" not in exon_seqs[i]:
-                if restrict_size and len(exon_seqs[i]) > 211:
+                if restrict_size:
+                    if len(exon_seqs[i]) > 211:
+                        exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
+                else:
                     exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
-            else:
-                exon_list[name.split(".")[0]][int(name.split(".")[-1].split("(")[0])] = exon_seqs[i]
         exon_list = {i: exon_list[i] for i in exon_list}
+
 
         intron_list = collections.defaultdict(lambda: [])
         [intron_list[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if name.split(".")[0] in exon_list]
@@ -1317,13 +1319,14 @@ def run_intron_length_density_test(motif_file, exon_list, intron_list, output_fi
     stop_motif_densities = {i: seqo.calc_motif_density(exon_list[i], stop_motifs) for i in exon_list}
     non_stop_motif_densities = {i: seqo.calc_motif_density(exon_list[i], non_stop_motifs) for i in exon_list}
 
-    # group by family
-    families = gen.read_many_fields(families_file, "\t")
-    motif_densities = sequo.group_family_results(motif_densities, families)
-    stop_motif_densities = sequo.group_family_results(stop_motif_densities, families)
-    non_stop_motif_densities = sequo.group_family_results(non_stop_motif_densities, families)
-    exon_sizes = sequo.group_family_results(exon_sizes, families)
-    intron_sizes = sequo.group_family_results(intron_sizes, families)
+    if families_file:
+        # group by family
+        families = gen.read_many_fields(families_file, "\t")
+        motif_densities = sequo.group_family_results(motif_densities, families)
+        stop_motif_densities = sequo.group_family_results(stop_motif_densities, families)
+        non_stop_motif_densities = sequo.group_family_results(non_stop_motif_densities, families)
+        exon_sizes = sequo.group_family_results(exon_sizes, families)
+        intron_sizes = sequo.group_family_results(intron_sizes, families)
 
     with open(output_file, "w") as outfile:
         outfile.write("id,exon_size,intron_size,ese_density,stop_ese_density,non_stop_ese_density\n")
@@ -1413,38 +1416,30 @@ def process_seq_hits_linc(input_dir, output_file):
 
             norm_stops_greater = len(sims[sims["norm_stop"] >= real["norm_stop"].values[0]])
             norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
-            # norm_stops_adj_p = norm_stops_p*len(files)
             norm_non_stops_greater = len(sims[sims["norm_non_stop"] >= real["norm_non_stop"].values[0]])
             norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
-            # norm_non_stops_adj_p = norm_non_stops_p*len(files)
             diff_less = len(sims[sims["diff"] <= real["diff"].values[0]])
             diff_p = np.divide(diff_less + 1, len(sims) + 1)
-            # diff_adj_p = diff_p*len(files)/
             all_hits_greater = len(sims[sims["all_hits_normalised"] >= real["all_hits_normalised"].values[0]])
             all_hits_p = np.divide(all_hits_greater + 1, len(sims) + 1)
-            # all_hits_adj_p = all_hits_p*len(files)
 
             output = [file_no+1]
             output.append(real["norm_stop"].values[0])
             output.append(sims["norm_stop"].median())
             output.append(np.divide(real["norm_stop"].values[0] - sims["norm_stop"].mean(), sims["norm_stop"].mean()))
             output.append(norm_stops_p)
-            # output.append(norm_stops_adj_p if norm_stops_adj_p < 1 else 1)
             output.append(real["norm_non_stop"].values[0])
             output.append(sims["norm_non_stop"].median())
             output.append(np.divide(real["norm_non_stop"].values[0] - sims["norm_non_stop"].mean(), sims["norm_non_stop"].mean()))
             output.append(norm_non_stops_p)
-            # output.append(norm_non_stops_adj_p if norm_non_stops_adj_p < 1 else 1)
             output.append(real["diff"].values[0])
             output.append(sims["diff"].median())
             output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
             output.append(diff_p)
-            # output.append(diff_adj_p if diff_adj_p < 1 else 1)
             output.append(real["all_hits_normalised"].values[0])
             output.append(sims["all_hits_normalised"].median())
             output.append(np.divide(real["all_hits_normalised"].values[0] - sims["all_hits_normalised"].mean(), sims["all_hits_normalised"].mean()))
             output.append(all_hits_p)
-            # output.append(all_hits_adj_p if all_hits_adj_p < 1 else 1)
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
 

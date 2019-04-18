@@ -21,6 +21,8 @@ import itertools as it
 import random
 import copy
 
+### masking eses for orf lengths
+
 
 
 # file = "clean_run/genome_sequences/human/human.cds.clean_coding_exons.fasta"

@@ -85,6 +85,15 @@ stop_density
 normalised_density(data, "sim_id", "real", "stop_density")
 emperical_p(data, "sim_id", "real", "stop_density")
 
+filepath = "clean_run/motif_tests/iss_stop_codon_densities.csv"
+data = read.csv(filepath, head = T)
+iss_plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.0075, title = "ISS")
+ggsave("clean_run/plots/dinucleotide_matched_stop_densities_iss.pdf", plot = iss_plot)
+stop_density = real_density(data, "sim_id", "real", "stop_density")
+stop_density
+normalised_density(data, "sim_id", "real", "stop_density")
+emperical_p(data, "sim_id", "real", "stop_density")
+
 filepath = "clean_run/motif_tests/ess_fas_hex2_stop_codon_densities.csv"
 data = read.csv(filepath, head = T)
 fas_hex2_plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01, title = "FAS-hex2 ESS")
@@ -133,6 +142,7 @@ ese_plots = grid.arrange(
 
 other_plots = grid.arrange(
   ise_plot,
+  iss_plot,
   fas_hex2_plot,
   fas_hex3_plot,
   rbp_cds_plot,

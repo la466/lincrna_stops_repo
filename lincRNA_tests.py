@@ -410,7 +410,8 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None, r
 
     with open(output_file, "w") as outfile:
         outfile.write("run_number,seq_count,gc,density,median_simulated_density,normalised_density,p_value,adj_p_value\n")
-        for i, file in sorted(enumerate(os.scandir(output_dir))):
+        files = os.scandir(output_dir)
+        for i, file in sorted(enumerate(files)):
             data = pd.read_csv(file.path)
             real = data[data['id'] == "real"]
             sims = data[data['id'] != "real"]
@@ -421,7 +422,8 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None, r
             p = np.divide(count_list.sum() + 1, len(sims) + 1)
             median_sims = sims[test_col].median()
             nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
-            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["gc"][0], real[test_col][0], median_sims, nd, p, p*len(os.listdir(output_dir))))
+            adj_p = p*len(files) if p*len(files) < 1 else 1
+            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["gc"][0], real[test_col][0], median_sims, nd, p, adj_p))
 
 
 def sim_stop_density_within_genes(input_fasta, output_file, simulations = None, families_file = None):
@@ -474,15 +476,16 @@ def process_sim_stop_density_within_gene_outputs(output_dir, output_file):
     """
 
     with open(output_file, "w") as outfile:
-        outfile.write("run_number,data_points,depletions,depletions_binomial_p,adj_depletions_binomial_p,significant_depletions,significant_depletions_binomial_p,adj_significant_depletions_binomial_p\n")
-        for i, file in sorted(enumerate(os.scandir(output_dir))):
+        outfile.write("run_number,data_points,depletions,depletions_binomial_p,significant_depletions,significant_depletions_binomial_p\n")
+        files = os.scandir(output_dir)
+        for i, file in sorted(enumerate(files)):
             data = pd.read_csv(file.path)
             depletions = data["normalised_density"] < 0
             significant = data["p_value"] < 0.05
             rows = data.shape[0]
             binom_test_depletions = scipy.stats.binom_test(depletions.sum(), rows, p = 0.05, alternative = "greater")
             binom_test_significant_depletions = scipy.stats.binom_test(significant.sum(), rows, p = 0.05, alternative = "greater")
-            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, rows, depletions.sum(), binom_test_depletions, binom_test_depletions*rows, significant.sum(), binom_test_significant_depletions, binom_test_significant_depletions*rows))
+            outfile.write("{0},{1},{2},{3},{4},{5}\n".format(i+1, rows, depletions.sum(), binom_test_depletions, significant.sum(), binom_test_significant_depletions))
 
 
 def calculcate_motif_nd(input_fasta, motif_file, output_file, simulations = None, families_file = None):

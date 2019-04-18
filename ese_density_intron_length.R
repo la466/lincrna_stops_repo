@@ -18,6 +18,7 @@ ese_sets = c("int3", "RESCUE", "PESE", "ESR",  "combined_eses")
 cors_family = data.frame(motif_set = character(), lincrna_rho = double(), lincrna_p = double(), protein_coding_rho = double(), protein_coding_p = double(), mean_lincrna = double(), mean_pc = double(), wilcox_text_score = double(), wilcox_test_p = double())
 cors_flanks = data.frame(motif_set = character(), lincrna_rho = double(), lincrna_p = double(), protein_coding_rho = double(), protein_coding_p = double(), mean_lincrna = double(), mean_pc = double(), wilcox_text_score = double(), wilcox_test_p = double())
 
+
 for (set_name in ese_sets) {
   print(set_name)
   
@@ -123,79 +124,104 @@ for (type in types) {
 }
 
 
-
-ese_sets = c("int3", "RESCUE", "PESE", "PESE_hexamers", "ESR", "combined_eses", "PESE_removed_test")
-# set_types = c("pc", "lincrna")
-set_types = c("pc")
-types = c("", "_flanks")
-
-for (set_type in set_types) {
-  correlations = data.frame(
+all_eses_output <- function(set_types, types, ese_sets, output_name) {
+  blank_dataframe = data.frame(
     motif_set = character(),
-    stop_ese_rho = double(),
-    stop_ese_p = double(),
-    non_stop_ese_rho = double(),
-    non_stop_ese_p = double(),
-    fischers_z = double(),
-    diff_p = double()
+    median_ese_density(),
+    ese_rho = double(),
+    ese_p = double()
   )
-  correlations_flanks = data.frame(
-    motif_set = character(),
-    stop_ese_rho = double(),
-    stop_ese_p = double(),
-    non_stop_ese_rho = double(),
-    non_stop_ese_p = double(),
-    fischers_z = double(),
-    diff_p = double()
-  )
-
-  for (type in types) {
-    for (set_name in ese_sets) {
-      print(set_name)
-      data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
-      data = data[log10(data$intron_size) != 0,]
-
-      cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
-      cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
-      z = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
-
-      cor_output = data.frame(
-        motif_set = paste(set_name, type, sep = ""),
-        stop_ese_rho = cor1$estimate,
-        stop_ese_p = cor1$p.value,
-        non_stop_ese_rho = cor2$estimate,
-        non_stop_ese_p = cor2$p.value,
-        fischers_z = z,
-        diff_p = p_from_z(z)
-      )
-      if (type == "") {
+  for (set_type in set_types) {
+    cors = c()
+    for (type in types) {
+      correlations = blank_dataframe
+      for (set_name in ese_sets) {
+        print(set_name)
+        data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
+        data = data[log10(data$intron_size) != 0,]
+        cor1 = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
+        cor_output = data.frame(
+          motif_set = paste(set_name, type, sep = ""),
+          median_ese_density = median(data$ese_density),
+          ese_rho = cor1$estimate,
+          ese_p = cor1$p.value
+        )
         correlations = rbind(correlations, cor_output)
-      } else if (type == "_flanks") {
-        correlations_flanks = rbind(correlations_flanks, cor_output)
       }
+      cors = rbind(cors, correlations)
+      cors[nrow(cors)+1,] <- NA
     }
+    output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_correlations.csv", sep = "")
+    print(output_file)
+    write.csv(cors, file = output_file, row.names = F, na = "")
   }
-  
-  correlations[nrow(correlations)+1,] <- NA
-  cors = rbind(correlations, correlations_flanks)
-  output_file = paste("clean_run/tests/ese_densities/", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
-  print(output_file)
-  write.csv(cors, file = output_file, row.names = F, na = "")
-  
 }
 
+ese_sets = c("int3", "RESCUE", "PESE", "ESR", "combined_eses")
+set_types = c("pc")
+types = c("", "_flanks", "")
 
-cor_outputs = data.frame(
-  motif_set = character(),
-  ese_rho = double(),
-  ese_p = double(),
-  stop_ese_rho = double(),
-  stop_ese_p = double(),
-  non_stop_ese_rho = double(),
-  non_stop_ese_p = double(),
-  fischers_z = double(),
-  diff_p = double()
-)
+types = c("", "_flanks")
+all_eses_output(set_types, types, ese_sets, "main")
+types = c("_all_seq", "_all_seq_all_genes")
+all_eses_output(set_types, types, ese_sets, "other")
+
+
+# for the stop / non stop eses separately
+
+stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
+  blank_dataframe = data.frame(
+    motif_set = character(),
+    stop_ese_rho = double(),
+    stop_ese_p = double(),
+    non_stop_ese_rho = double(),
+    non_stop_ese_p = double(),
+    fischers_z = double(),
+    diff_p = double()
+  )
+  
+  for (set_type in set_types) {
+    cors = c()
+    for (type in types) {
+      correlations = blank_dataframe
+      for (set_name in ese_sets) {
+        print(set_name)
+        data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
+        data = data[log10(data$intron_size) != 0,]
+        
+        cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
+        cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
+        z = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
+        
+        cor_output = data.frame(
+          motif_set = paste(set_name, type, sep = ""),
+          stop_ese_rho = cor1$estimate,
+          stop_ese_p = cor1$p.value,
+          non_stop_ese_rho = cor2$estimate,
+          non_stop_ese_p = cor2$p.value,
+          fischers_z = z,
+          diff_p = p_from_z(z)
+        )
+        correlations = rbind(correlations, cor_output)
+      }
+      cors = rbind(cors, correlations)
+      cors[nrow(cors)+1,] <- NA
+    }
+    output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
+    print(output_file)
+    write.csv(cors, file = output_file, row.names = F, na = "")
+    
+  }
+}
+
+types = c("", "_flanks")
+stop_nonstop_correlations(set_types, types, ese_sets, "main")
+
+
+
+# for non-coding PESE
+
+
 
 for (type in types) {
   data = read.csv(paste("clean_run/tests/ese_densities/PESE_non_coding_ese_densities", type, ".csv", sep = ""), head = T)
