@@ -23,21 +23,42 @@ import copy
 
 
 seq_file = "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta"
-t_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences.fasta"
+seqs_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences.fasta"
 families_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt"
 
-all = collections.defaultdict(lambda: [])
-names, seqs = gen.read_fasta(seq_file)
-[all[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
 
-exons = collections.defaultdict(lambda: collections.defaultdict())
-for i, name in enumerate(names):
-    exons[name.split(".")[0]][int(name.split(".")[1].split("(")[0])] = seqs[i]
+def randomise_seqs(seqs):
+    new_seqs = []
+    for seq in seqs:
+        nts = list(seq)
+        np.random.shuffle(nts)
+        new_seqs.append("".join(nts))
 
-tall = collections.defaultdict(lambda: [])
-tnames, tseqs = gen.read_fasta(t_file)
-[tall[name.split(".")[0]].append(tseqs[i]) for i, name in enumerate(tnames)]
+    return new_seqs
 
+names, seqs = gen.read_fasta(seqs_file)
+# all = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
 
-tall = sequo.pick_random_family_member(families_file, tall)
-print(len(tnames))
+all = dict(zip([name.split(".")[0] for name in names], seqs))
+
+all = sequo.pick_random_family_member(families_file, all)
+# print(len(tnames))
+
+kept = []
+for id in all:
+    seq = all[id]
+    try:
+        atg = seq.index("ATG")
+        if atg > 50:
+            kept.append(seq[:atg])
+    except:
+        pass
+
+real_density = seqo.calc_motif_density(kept, stops)
+
+sim_densities  = []
+for i in range(50):
+    sim_seqs = randomise_seqs(kept)
+    sim_densities.append(seqo.calc_motif_density(sim_seqs, stops))
+print(real_density)
+print(sim_densities)

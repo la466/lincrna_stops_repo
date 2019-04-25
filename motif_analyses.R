@@ -79,8 +79,8 @@ plot
 
 ggsave("clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
 
-binom.test(nrow(gc_matched[gc_matched$density <= stops$density,]), nrow(gc_matched), alternative = "l")
-binom.test(nrow(gc_matched[gc_matched$nd <= stops$nd,]), nrow(gc_matched), alternative = "l")
+binom.test(nrow(gc_matched[gc_matched$density > stops$density,]), nrow(gc_matched), alternative = "g")
+binom.test(nrow(gc_matched[gc_matched$nd > stops$nd,]), nrow(gc_matched), alternative = "g")
 
 purine_matched = gc_matched[gc_matched$purine_content == stops$purine_content,]
 binom.test(nrow(purine_matched[purine_matched$nd <= stops$nd,]), nrow(purine_matched), alternative = "l")
@@ -131,16 +131,16 @@ file$gc = signif(file$gc_content, 1)
 file$purine = signif(file$purine_content, 1)
 stops =  file[file$codons == "TAA_TAG_TGA",]
 # gc_matched = file[file$gc == stops$gc,]
-close = c('TCA_TTA_TTG', 'AAA_TTA_TTG', 'AAG_TTA_TTG', 'AGA_TTA_TTG', 'AAA_TCA_TTA', 'AAG_TCA_TTA', 'AGA_TCA_TTA', 'AAA_AAG_TTA', 'AAA_AGA_TTA', 'AAG_AGA_TTA', 'AAA_TCA_TTG', 'AAG_TCA_TTG', 'AGA_TCA_TTG', 'AAA_AAG_TTG', 'AAA_AGA_TTG', 'AAG_AGA_TTG', 'AAA_AAG_TCA', 'AAA_AGA_TCA', 'AAG_AGA_TCA', 'AAA_AAG_AGA')
-close_cases = file[file$codons %in% close,]
-nrow(close_cases)
-
-boxplot(close_cases$nd)
-abline(h = stops$nd)
-nrow(close_cases[close_cases$nd <= stops$nd,]) / nrow(close_cases)
-
-less = close_cases[close_cases$nd <= stops$nd,]
-less
+# close = c('TCA_TTA_TTG', 'AAA_TTA_TTG', 'AAG_TTA_TTG', 'AGA_TTA_TTG', 'AAA_TCA_TTA', 'AAG_TCA_TTA', 'AGA_TCA_TTA', 'AAA_AAG_TTA', 'AAA_AGA_TTA', 'AAG_AGA_TTA', 'AAA_TCA_TTG', 'AAG_TCA_TTG', 'AGA_TCA_TTG', 'AAA_AAG_TTG', 'AAA_AGA_TTG', 'AAG_AGA_TTG', 'AAA_AAG_TCA', 'AAA_AGA_TCA', 'AAG_AGA_TCA', 'AAA_AAG_AGA')
+# close_cases = file[file$codons %in% close,]
+# nrow(close_cases)
+# 
+# boxplot(close_cases$nd)
+# abline(h = stops$nd)
+# nrow(close_cases[close_cases$nd <= stops$nd,]) / nrow(close_cases)
+# 
+# less = close_cases[close_cases$nd <= stops$nd,]
+# less
 
 
 less$gc = substr(less$gc_content, 0, 3)
