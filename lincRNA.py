@@ -250,7 +250,7 @@ def main():
         if families_file:
             sim_output_dir = "{0}/stop_density/{1}_{2}_stop_density_diff_grouped_families".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
             sim_output_file = "{0}/stop_density/{1}_{2}_stop_density_stop_density_diff_grouped_families.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            runs = 1
+            runs = 10
         else:
             sim_output_dir = "{0}/stop_density/{1}_{2}_stop_density_stop_density_diff_all_genes".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
             sim_output_file = "{0}/stop_density/{1}_{2}_stop_density_stop_density_diff_all_genes.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
