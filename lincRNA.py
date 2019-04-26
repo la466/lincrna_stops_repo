@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29], opt_flags = [3,4,5,6,7])
+    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], opt_flags = [3,4,5,6,7])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -34,6 +34,7 @@ def main():
     sim_stop_density_within_genes, \
     sim_stop_density_removed_motifs, \
     sim_stop_density_removed_motifs_sim_seqs, \
+    sim_stop_density_diff, \
     motif_nd, \
     excess_test, \
     single_exon,\
@@ -64,6 +65,7 @@ def main():
     args.sim_stop_density_within_genes, \
     args.sim_stop_density_removed_motifs, \
     args.sim_stop_density_removed_motifs_sim_seqs, \
+    args.sim_stop_density_diff, \
     args.motif_nd, \
     args.excess_test, \
     args.single_exon, \
@@ -244,36 +246,28 @@ def main():
         ltests.process_sim_stop_density_outputs(sim_output_dir, sim_output_file, reverse = True)
 
 
-    # if substitution_rate:
-    #     if not families_file or not motif_file:
-    #         print("\nPlease provide families file and motif file.\n")
-    #         raise Exception
-    #     gen.check_files_exists([families_file, motif_file])
-    #     if output_prefix:
-    #         output_file = "{0}/{1}_{2}_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-    #     else:
-    #         output_file = "{0}/{1}_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
-    #     ltests.calc_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
-    #
-    # if substitution_rate_motif:
-    #     gen.check_files_exists([families_file, motif_file])
-    #     if output_prefix:
-    #         output_file = "{0}/{1}_{2}_substitution_rates_motif.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-    #     else:
-    #         output_file = "{0}/{1}_substitution_rates_motif.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
-    #     ltests.calc_substitution_rates_motif(input_fasta, motif_file, required_simulations, sim_dir, output_file, families_file = families_file)
-    #
-    #
-    # if dinucleotide_substitution_rate:
-    #     if not families_file or not motif_file:
-    #         print("\nPlease provide families file and motif file.\n")
-    #         raise Exception
-    #     gen.check_files_exists([families_file, motif_file])
-    #     if output_prefix:
-    #         output_file = "{0}/{1}_{2}_dinucleotide_substitution_rates.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-    #     else:
-    #         output_file = "{0}/{1}_dinucleotide_substitution_rates.csv".format(output_directory, motif_file.split("/")[-1].split(".")[0])
-    #     ltests.calc_dinucleotide_substitution_rates(input_fasta, motif_file, required_simulations, output_file, families_file = families_file)
+    if sim_stop_density_diff:
+        if families_file:
+            sim_output_dir = "{0}/stop_density/{1}_{2}_stop_density_diff_grouped_families".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            sim_output_file = "{0}/stop_density/{1}_{2}_stop_density_stop_density_diff_grouped_families.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            runs = 1
+        else:
+            sim_output_dir = "{0}/stop_density/{1}_{2}_stop_density_stop_density_diff_all_genes".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            sim_output_file = "{0}/stop_density/{1}_{2}_stop_density_stop_density_diff_all_genes.csv".format(output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            runs = 1
+        # remove any previous runs
+        gen.remove_directory(sim_output_dir)
+        gen.create_output_directories(sim_output_dir)
+
+        # if we need to run the simulations
+        # if len(os.listdir(sim_output_dir)) < runs:
+        #     required_runs = list(range(runs - len(os.listdir(sim_output_dir))))
+        #     for run in required_runs:
+        for run in list(range(runs)):
+            run_output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_output_dir, run + 1)
+            ltests.sim_stop_density_diff(input_fasta, run_output_file, motif_file, sim_dir, simulations = int(required_simulations), families_file = families_file)
+        # process the outputs
+        ltests.process_sim_stop_density_diffs(sim_output_dir, sim_output_file, greater_than = False)
 
 
     motif_nd_output_file = "{0}/motif_nd.csv".format(lincrna_output_directory)

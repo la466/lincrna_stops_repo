@@ -1082,6 +1082,54 @@ def simulate_lincrna_stop_codon_density_within_genes(id_list, sequence_list, out
     return new_outputs
 
 
+def simulate_lincrna_stop_codon_density_diff(simulations, sequence_list, output_directory, motif_files):
+    """
+    Calculate stop codon densities in lincRNA sequences for predicted hits
+    and the remaining sequence
+
+    Args:
+        simulations (list): list containing simulation to iterate over
+        sequence_list (dict): sequences
+        output_directory (str): path to output directory
+        motif_files (dict): dictionary containing paths to motif files
+
+    Returns:
+        outputs (list): list of output files
+    """
+
+    new_outputs = {}
+
+    if simulations:
+        for i, simulation in enumerate(simulations):
+            gen.print_parallel_status(i, simulations)
+
+            #read in the motifs
+            motifs = sequo.read_motifs(motif_files[simulation])
+            # get all the bits that are hits to the motifs and those that arent
+            hits = []
+            non_hits = []
+            for id in sequence_list:
+                sequence = sequence_list[id]
+                overlaps = sequo.sequence_overlap_indicies(sequence, motifs)
+                non_overlaps = [i for i in list(range(len(sequence_list[id]))) if i not in overlaps]
+                chunked_overlaps = sequo.chunk_overlaps(overlaps)
+                overlap_motifs = ["".join([sequence_list[id][i] for i in chunk]) for chunk in chunked_overlaps]
+                hits.extend(overlap_motifs)
+                chunked_non_overlaps = sequo.chunk_overlaps(non_overlaps)
+                non_overlap_motifs = ["".join([sequence_list[id][i] for i in chunk]) for chunk in chunked_non_overlaps]
+                non_hits.extend(non_overlap_motifs)
+
+            hits_density = seqo.calc_motif_density(hits, stops)
+            non_hits_density = seqo.calc_motif_density(non_hits, stops)
+            diff = np.divide(hits_density, non_hits_density)
+            # write the results to file
+            output_file = "{0}/output_{1}.txt".format(output_directory, simulation)
+            with open(output_file, "w") as outfile:
+                outfile.write("{0},{1},{2},{3},{4}\n".format(simulation, len(sequence_list), hits_density, non_hits_density, diff))
+            new_outputs[simulation] = output_file
+    return new_outputs
+
+
 
 def simulate_lincrna_codon_set_density(simulations, sequence_list, codon_sets, output_directory, output_filelist):
     """

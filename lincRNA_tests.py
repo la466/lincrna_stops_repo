@@ -409,7 +409,7 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None, r
         test_col = "stop_codon_density"
 
     with open(output_file, "w") as outfile:
-        outfile.write("run_number,seq_count,gc,density,median_simulated_density,normalised_density,p_value,adj_p_value\n")
+        outfile.write("run_number,seq_count,gc,density,median_simulated_density,normalised_density,p_value\n")
         files = os.scandir(output_dir)
         for i, file in sorted(enumerate(files)):
             data = pd.read_csv(file.path)
@@ -422,8 +422,7 @@ def process_sim_stop_density_outputs(output_dir, output_file, test_col = None, r
             p = np.divide(count_list.sum() + 1, len(sims) + 1)
             median_sims = sims[test_col].median()
             nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
-            adj_p = p*len(files) if p*len(files) < 1 else 1
-            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["gc"][0], real[test_col][0], median_sims, nd, p, adj_p))
+            outfile.write("{0},{1},{2},{3},{4},{5},{6}\n".format(i+1, real["seq_count"][0], real["gc"][0], real[test_col][0], median_sims, nd, p))
 
 
 def sim_stop_density_within_genes(input_fasta, output_file, simulations = None, families_file = None):
@@ -904,3 +903,74 @@ def clean_alignments(input_bed, alignments_file, output_exon_file, output_intron
                                 human_intron_sequences = [human_seq[i[0]:i[1]].upper() for i in intron_coordinates]
                                 mac_intron_sequences = [mac_seq[i[0]:i[1]].upper() for i in intron_coordinates]
                                 [intron_outfile.write(">{0}.{1}\n{2},{3}\n".format(id, i+1, human_intron_sequences[i], mac_intron_sequences[i])) for i in range(len(human_intron_sequences))]
+
+
+def sim_stop_density_diff(input_fasta, output_file, motif_file, sim_dir, simulations = None, families_file = None):
+    """
+    Wrapper to calculate the differnece in stop density between ESE hits and the
+    remaining bits of sequence.
+
+    Args:
+        input_fasta (str): path to input fasta containing sequences
+        output_file (str): path to output file
+        simulations (int): if set, the number of simulations to run
+        families_file (str): if set, the path to the file containing the paralogous families
+    """
+    # get the sequences
+    names, sequences = gen.read_fasta(input_fasta)
+    sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
+
+    if families_file:
+        sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    # create a temporary output directory
+    temp_dir = "temp_lincrna_sim_diff"
+    gen.remove_directory(temp_dir)
+    gen.create_output_directories(temp_dir)
+    # set up the simulation
+    motif_files = {"real": motif_file}
+    random_motif_files = np.random.choice(list(range(len(os.listdir(sim_dir)))), simulations)
+    for i, file in enumerate(random_motif_files):
+        motif_files["sim_{0}".format(i+1)] = "{0}/{1}".format(sim_dir, os.listdir(sim_dir)[file])
+    simulation_list = list(motif_files)
+
+    args = [sequence_list, temp_dir, motif_files]
+    # run the simulation
+    outputs = simoc.run_simulation_function(simulation_list, args, simo.simulate_lincrna_stop_codon_density_diff, sim_run = False)
+    # join all outputs
+    # outputs = {**output_filelist, **outputs}
+    real_output = outputs["real"]
+    sim_outputs = {i: outputs[i] for i in outputs if i != "real"}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,seq_count,hit_stop_density,non_hit_stop_density,diff\n")
+        # real data
+        outfile.write("{0}\n".format(gen.read_many_fields(real_output, "\t")[0][0]))
+        # simulation data
+        for sim_id in sorted(sim_outputs):
+            data = gen.read_many_fields(sim_outputs[sim_id], "\t")[0][0]
+            outfile.write("{0}\n".format(",".join(data.split(","))))
+    # remove the temp directory
+    gen.remove_directory(temp_dir)
+
+def process_sim_stop_density_diffs(output_dir, output_file, greater_than = True):
+    """
+    Wrapper to process stop density diff outputs
+    """
+
+    test_col = "diff"
+    with open(output_file, "w") as outfile:
+        outfile.write("run_number,seq_count,hit_stop_density,non_hit_stop_density,diff,median_sim_diff,normalised_diff,p_value\n")
+        files = os.scandir(output_dir)
+        for i, file in sorted(enumerate(files)):
+            data = pd.read_csv(file.path)
+            real = data[data['id'] == "real"]
+            sims = data[data['id'] != "real"]
+            if greater_than:
+                count_list = sims[test_col] >= real[test_col][0]
+            else:
+                count_list = sims[test_col] <= real[test_col][0]
+            p = np.divide(count_list.sum() + 1, len(sims) + 1)
+            median_sims = sims[test_col].median()
+            nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
+            outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["hit_stop_density"][0], real["non_hit_stop_density"][0], real[test_col][0], median_sims, nd, p))
