@@ -2,6 +2,7 @@ import generic as gen
 import seq_ops as seqo
 import sequence_ops as sequo
 import sim_ops_containers as soc
+import sim_ops as simo
 import main_tests_ops as mto
 import ops
 import numpy as np
@@ -25,60 +26,49 @@ import copy
 ese_set = "combined_eses"
 motif_file = "source_data/motif_sets/{0}.txt".format(ese_set)
 controls_dir = "clean_run/dinucleotide_controls/{0}_dinucleotide_controls_matched_stops".format(ese_set)
-seqs_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences.fasta"
+# seqs_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_transcript_sequences.fasta"
+seqs_file = "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta"
+introns_file = "clean_run/genome_sequences/lincrna/cabili/introns.fasta"
 families_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt"
 
 names, seqs = gen.read_fasta(seqs_file)
-all = dict(zip([name.split(".")[0] for name in names], seqs))
-all = sequo.pick_random_family_member(families_file, all)
-seqs = [all[i] for i in all]
+exon_list = collections.defaultdict(lambda: [])
+[exon_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
+# exon_list = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
+exon_list = sequo.pick_random_family_member(families_file, exon_list)
 
-print(len(seqs))
+# seq_list = []
+# [seq_list.extend(exon_list[i]) for i in exon_list]
+# seq_list = seq_list[]
+# print(seq_list)
 
-# seqs = seqs[:500]
+intron_names, intron_seqs = gen.read_fasta(introns_file)
+intron_list = collections.defaultdict(lambda: [])
+[intron_list[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if name.split(".")[0] in exon_list]
+
+# intron_list = {i: "".join(intron_list[i]) for i in intron_list}
 
 
-# print(seqs)
+# real_density = seqo.calc_motif_density(introns, stops)
 
-sims = gen.get_filepaths(controls_dir)[:15]
+greater_than = []
 
-def return_overlap_motifs(seq, overlaps, inverse = None):
-    if inverse:
-        overlaps = [i for i in list(range(len(seq))) if i not in overlaps]
-    else:
-        overlaps = [i for i in list(range(len(seq))) if i in overlaps]
-    chunked_overlaps = sequo.chunk_overlaps(overlaps)
-    overlap_motifs = ["".join([seq[i] for i in chunk]) for chunk in chunked_overlaps]
-    return overlap_motifs
+for id in exon_list:
+    # exons = "".join(exon_list[id])
+    # introns = "".join(intron_list[id])]
+    exon_density = seqo.calc_motif_density(exon_list[id], stops)
+    intron_density = seqo.calc_motif_density(intron_list[id], stops)
+    # print(exon_density, intron_density)
+    if exon_density > intron_density:
+        greater_than.append(id)
 
-def calc_density(motif_set):
-    motifs = sequo.read_motifs(motif_set)
-    motif_gc = seqo.calc_seq_gc("".join(motifs))
-    non_hits = []
-    hits = []
-    for seq in seqs:
-        overlaps = sequo.sequence_overlap_indicies(seq, motifs)
-        hits.extend(return_overlap_motifs(seq, overlaps))
-        non_hits.extend(return_overlap_motifs(seq, overlaps, inverse = True))
-    hit_density = seqo.calc_motif_density(hits, stops)
-    non_hit_density = seqo.calc_motif_density(non_hits, stops)
-    hit_gc = seqo.calc_seq_gc("".join(non_hits))
-    print(hit_density, non_hit_density, np.divide(hit_density, non_hit_density), motif_gc, hit_gc)
+print(len(greater_than))
 
-calc_density(motif_file)
-[calc_density(i) for i in sims]
-
+# simulations = ["real", 1, 2, 3, 4, 5]
+# output_directory = "temp_files_working"
+# gen.remove_directory(output_directory)
+# gen.create_output_directories(output_directory)
+# output_filelist = []
 #
-# if simulation_id != "real":
-#     hit_lengths = [len(i) for i in hits]
-#     all_nts = list("".join(hits))
-#     np.random.shuffle(all_nts)
-#     nt_index = 0
-#     new_hits = []
-#     for length in hit_lengths:
-#         new_hits.append("".join(all_nts[nt_index:nt_index+length]))
-#         nt_index += length
-#     hits = new_hits
-#
-# # [test_kept.extend(sequo.return_overlap_motifs(i, motifs, inverse = True)) for i in test_seqs]
-# density = seqo.calc_motif_density(hits, stops)
+# outputs = simo.simulate_lincrna_stop_codon_density(simulations, intron_list, output_directory, output_filelist, inverse = None)
+# print(outputs)

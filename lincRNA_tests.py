@@ -166,6 +166,7 @@ def process_length_sim(input_file, output_file, families_file = None):
     empirical_ps = {}
     reals = {}
     means = {}
+    medians = {}
 
     for id in ids:
         gc = data[id][0]
@@ -179,9 +180,10 @@ def process_length_sim(input_file, output_file, families_file = None):
         z = np.divide(real - np.nanmean(sims), np.nanstd(sims))
         z_scores[id] = z
         means[id] = np.nanmean(sims)
+        medians[id] = np.nanmedian(sims)
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,gc,real,mean_sims,nd,empirical_p,z,p\n")
+        outfile.write("id,gc,real,mean_sims,median_sims,nd,empirical_p,z,p\n")
 
         if families_file:
             families = gen.read_many_fields(families_file, "\t")
@@ -190,8 +192,7 @@ def process_length_sim(input_file, output_file, families_file = None):
             z_scores = sequo.group_family_results(z_scores, families)
             gcs = sequo.group_family_results(gcs, families)
             means = sequo.group_family_results(means, families)
-
-            print(len(z_scores))
+            medians = sequo.group_family_results(medians, families)
 
             for id in z_scores:
                 real = np.nanmedian(reals[id])
@@ -199,6 +200,7 @@ def process_length_sim(input_file, output_file, families_file = None):
                 z = np.nanmedian(z_scores[id])
                 nd = np.nanmedian(nds[id])
                 mean = np.nanmedian(means[id])
+                median = np.nanmedian(medians[id])
 
                 if not np.isnan(nd):
                     if nd in nds[id]:
@@ -212,7 +214,7 @@ def process_length_sim(input_file, output_file, families_file = None):
                     empirical_p = "nan"
 
                 p = scipy.stats.norm.sf(abs(z))*2
-                outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, gc, real, mean, nd, empirical_p, z, p))
+                outfile.write("{0},{1},{2},{3},{4},{5},{6},{7},{8}\n".format(id, gc, real, mean, median, nd, empirical_p, z, p))
         else:
             for id in z_scores:
                 real = reals[id]
@@ -220,9 +222,10 @@ def process_length_sim(input_file, output_file, families_file = None):
                 z = z_scores[id]
                 nd = nds[id]
                 mean = means[id]
+                median = medians[id]
                 empirical_p = empirical_ps[id]
                 p = scipy.stats.norm.sf(abs(z))*2
-                outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(id, gc, real, mean, nd, empirical_p, z, p))
+                outfile.write("{0},{1},{2},{3},{4},{5},{6},{7},{8}\n".format(id, gc, real, mean, median, nd, empirical_p, z, p))
 
 
 def calculate_lengths(exons_fasta, output_file, families_file = None):

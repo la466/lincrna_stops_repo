@@ -145,9 +145,9 @@ def main():
         else:
             sim_orf_length_z_file = "{0}/{1}sim_orf_lengths_zs.csv".format(output_directory, "{0}_".format(output_prefix) if output_prefix else None)
 
-        # only run the simulation if not there or wanted
-        if not os.path.isfile(sim_orf_length_output_file) or clean_run:
-            simopc.sim_orf_length(input_fasta, required_simulations, sim_orf_length_output_file)
+        # # only run the simulation if not there or wanted
+        # if not os.path.isfile(sim_orf_length_output_file) or clean_run:
+        #     simopc.sim_orf_length(input_fasta, required_simulations, sim_orf_length_output_file)
         ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file, families_file = families_file)
 
 
@@ -157,7 +157,7 @@ def main():
         if families_file:
             sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_simulation_all_genes_grouped_families".format(output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_simulation_all_genes_grouped_families.csv".format(output_directory, output_prefix)
-            runs = 10
+            runs = 1
         else:
             sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_simulation_all_genes".format(output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_simulation_all_genes.csv".format(output_directory, output_prefix)
@@ -170,9 +170,9 @@ def main():
         # # if we need to run the simulations
         # # if len(os.listdir(sim_stop_density_output_dir)) < runs:
         # # required_runs = list(range(runs - len(os.listdir(sim_stop_density_output_dir))))
-        # for run in list(range(runs)):
-        #     output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
-        #     ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
+        for run in list(range(runs)):
+            output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
+            ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
         # process the outputs
         ltests.process_sim_stop_density_outputs(sim_stop_density_output_dir, sim_stop_density_output_file)
 
