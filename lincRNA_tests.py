@@ -246,7 +246,7 @@ def calculate_lengths(exons_fasta, output_file, families_file = None):
             outfile.write("{0},{1},{2}\n".format(id, np.median(gcs[id]), np.median(lengths[id])))
 
 
-def sim_stop_density(input_fasta, output_file, simulations = None, families_file = None):
+def sim_stop_density(input_fasta, output_file, simulations = None, families_file = None, introns = None):
     """
     Wrapper to calculate and simulate the stop codon density in lincRNA sequences.
 
@@ -258,10 +258,18 @@ def sim_stop_density(input_fasta, output_file, simulations = None, families_file
     """
     # get the sequences
     names, sequences = gen.read_fasta(input_fasta)
-    sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
+
+    if introns:
+        sequence_list = collections.defaultdict(lambda: [])
+        [sequence_list[name.split(".")[0]].append(sequences[i]) for i, name in enumerate(names)]
+        sequence_list = {i: "".join(sequence_list[i]) for i in sequence_list}
+    else:
+        sequence_list = {name.split(".")[0]: sequences[i] for i, name in enumerate(names)}
 
     if families_file:
         sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
+
+    print(len(sequence_list))
 
     # create a temporary output directory
     temp_dir = "temp_lincrna_sim"

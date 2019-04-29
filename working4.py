@@ -46,29 +46,30 @@ intron_names, intron_seqs = gen.read_fasta(introns_file)
 intron_list = collections.defaultdict(lambda: [])
 [intron_list[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if name.split(".")[0] in exon_list]
 
-# intron_list = {i: "".join(intron_list[i]) for i in intron_list}
+
+intron_list = {i: "".join(intron_list[i]) for i in intron_list}
 
 
 # real_density = seqo.calc_motif_density(introns, stops)
-
-greater_than = []
-
-for id in exon_list:
-    # exons = "".join(exon_list[id])
-    # introns = "".join(intron_list[id])]
-    exon_density = seqo.calc_motif_density(exon_list[id], stops)
-    intron_density = seqo.calc_motif_density(intron_list[id], stops)
-    # print(exon_density, intron_density)
-    if exon_density > intron_density:
-        greater_than.append(id)
-
-print(len(greater_than))
-
-# simulations = ["real", 1, 2, 3, 4, 5]
-# output_directory = "temp_files_working"
-# gen.remove_directory(output_directory)
-# gen.create_output_directories(output_directory)
-# output_filelist = []
 #
-# outputs = simo.simulate_lincrna_stop_codon_density(simulations, intron_list, output_directory, output_filelist, inverse = None)
-# print(outputs)
+# greater_than = []
+#
+# for id in exon_list:
+#     # exons = "".join(exon_list[id])
+#     # introns = "".join(intron_list[id])]
+#     exon_density = seqo.calc_motif_density(exon_list[id], stops)
+#     intron_density = seqo.calc_motif_density(intron_list[id], stops)
+#     # print(exon_density, intron_density)
+#     if intron_density > real_density:
+#         greater_than.append(id)
+#
+# print(len(greater_than))
+
+simulations = ["real", 1, 2, 3, 4, 5]
+output_directory = "temp_files_working"
+gen.remove_directory(output_directory)
+gen.create_output_directories(output_directory)
+output_filelist = []
+
+outputs = soc.run_simulation_function(simulations, [intron_list, output_directory, output_filelist], simo.simulate_lincrna_stop_codon_density, sim_run = False)
+print(outputs)

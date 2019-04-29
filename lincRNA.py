@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], opt_flags = [3,4,5,6,7])
+    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], opt_flags = [3,4,5,6,7])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -31,6 +31,7 @@ def main():
     compare_stop_density, \
     sim_orf_lengths, \
     sim_stop_density, \
+    sim_stop_density_introns, \
     sim_stop_density_within_genes, \
     sim_stop_density_removed_motifs, \
     sim_stop_density_removed_motifs_sim_seqs, \
@@ -62,6 +63,7 @@ def main():
     args.compare_stop_density, \
     args.sim_orf_lengths, \
     args.sim_stop_density, \
+    args.sim_stop_density_introns, \
     args.sim_stop_density_within_genes, \
     args.sim_stop_density_removed_motifs, \
     args.sim_stop_density_removed_motifs_sim_seqs, \
@@ -173,6 +175,29 @@ def main():
         for run in list(range(runs)):
             output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
             ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
+        # process the outputs
+        ltests.process_sim_stop_density_outputs(sim_stop_density_output_dir, sim_stop_density_output_file)
+
+    if sim_stop_density_introns:
+        if families_file:
+            sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes_grouped_families".format(output_directory, output_prefix)
+            sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes_grouped_families.csv".format(output_directory, output_prefix)
+            runs = 1
+        else:
+            sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes".format(output_directory, output_prefix)
+            sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes.csv".format(output_directory, output_prefix)
+            runs = 1
+        # remove any previous runs
+        if clean_run:
+            gen.remove_directory(sim_stop_density_output_dir)
+        gen.create_output_directories(sim_stop_density_output_dir)
+
+        # # if we need to run the simulations
+        # # if len(os.listdir(sim_stop_density_output_dir)) < runs:
+        # # required_runs = list(range(runs - len(os.listdir(sim_stop_density_output_dir))))
+        for run in list(range(runs)):
+            output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
+            ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file, introns = True)
         # process the outputs
         ltests.process_sim_stop_density_outputs(sim_stop_density_output_dir, sim_stop_density_output_file)
 
