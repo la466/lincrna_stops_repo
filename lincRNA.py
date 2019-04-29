@@ -10,12 +10,13 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31], opt_flags = [3,4,5,6,7])
+    args = gen.parse_arguments(description, arguments, flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32], opt_flags = [3,4,5,6,7,8])
     input_bed, \
     input_fasta, \
     output_directory, \
+    input_fasta2, \
     required_simulations, \
     motif_file, \
     families_file, \
@@ -48,6 +49,7 @@ def main():
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
+    args.input_fasta2, \
     args.required_simulations, \
     args.motif_file, \
     args.families_file, \
@@ -197,7 +199,7 @@ def main():
         # # required_runs = list(range(runs - len(os.listdir(sim_stop_density_output_dir))))
         for run in list(range(runs)):
             output_file =  "{0}/stop_density_simulation_{1}.csv".format(sim_stop_density_output_dir, run + 1)
-            ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file, introns = True)
+            ltests.sim_stop_density(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file, introns = True, input_fasta2 = input_fasta2)
         # process the outputs
         ltests.process_sim_stop_density_outputs(sim_stop_density_output_dir, sim_stop_density_output_file)
 
