@@ -159,7 +159,7 @@ def main():
         if families_file:
             sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_simulation_all_genes_grouped_families".format(output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_simulation_all_genes_grouped_families.csv".format(output_directory, output_prefix)
-            runs = 1
+            runs = 10
         else:
             sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_simulation_all_genes".format(output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_simulation_all_genes.csv".format(output_directory, output_prefix)
@@ -182,7 +182,7 @@ def main():
         if families_file:
             sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes_grouped_families".format(output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes_grouped_families.csv".format(output_directory, output_prefix)
-            runs = 1
+            runs = 10
         else:
             sim_stop_density_output_dir = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes".format(output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/stop_density/{1}_stop_density_introns_simulation_all_genes.csv".format(output_directory, output_prefix)
