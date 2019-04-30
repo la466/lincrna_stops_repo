@@ -26,6 +26,9 @@ plot = ggplot(data = file, aes(x = file$gc, y = file$z_score)) +
 ggsave(plot = plot, "clean_run/plots/lincRNA_orf_length_sim.pdf", width = 10, height = 7)
 
 
+head(file)
+
+
 
 cor.test(file$gc, file$real, method = "spearman")
 
@@ -55,6 +58,8 @@ hist(lengths_file$gc)
 
 file = read.csv("clean_run/tests/lincrna/cabili/orf_length_sim.csv", head = T)
 head(file)
+
+
 
 plot(file$gc, file$z_score)
 nrow(file[file$z_score > 1.96,])
@@ -87,8 +92,20 @@ binom.test(nrow(file[file$z < 0 & file$p < 0.05,]), nrow(file), p = 0.05,  alter
 cor.test(file$gc, file$nd, method = "spearman")
 cor.test(file$gc, file$z, method = "spearman")
 
+
+# used this
+
 file = read.csv("clean_run/tests/lincrna/orf_length_sim/cabili_sim_orf_lengths_zs_grouped.csv", head = T)
 file = file[!is.nan(file$real),]
+
+nrow(file)
+
+head(file)
+median(file$real)
+max(file$real)
+median(file$median_sims)
+max(file$median_sims)
+
 plot2 = gc_zscore_plot(file)
 ggsave(plot = plot2, "clean_run/plots/lincrna_orf_length_sim.pdf", width = 7, height = 5)
 
