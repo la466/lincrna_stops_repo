@@ -6,12 +6,18 @@ density_histogram<- function(data, xlab = "", ylab = "", binwidth = 0.01, title 
   real = data[data$sim_id == "real",]
   sims = data[data$sim_id != "real",]
   p <- ggplot() + 
-    geom_histogram(aes(sims$stop_density), binwidth = binwidth, fill = "RoyalBlue", col = "black") +
-    geom_vline(xintercept = real$stop_density, lty = 1, size = 1.5, col = "red") +
-    labs(x = xlab, y = ylab, title = title) + 
-    theme(plot.title = element_text(hjust = 0.5))
+    geom_histogram(aes(sims$stop_density), binwidth = binwidth, fill = "#d1d2d4", col = "#222222") +
+    geom_vline(xintercept = real$stop_density, lty = 1, size = 2, col = "#e74b4f") +
+    labs(x = xlab, y = ylab, title = title) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.margin = unit(c(0.2,0.1,0.2,0.1), units = "in")
+    ) 
   return(p)
 }
+
+density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01, title = "INT3")
 
 emperical_p <- function(data, id_col, id_differentiator, test_col) {
   query_val = data[data[[id_col]] == id_differentiator,]
@@ -143,17 +149,19 @@ ese_plots = grid.arrange(
 other_plots = grid.arrange(
   ise_plot,
   iss_plot,
-  fas_hex2_plot,
-  fas_hex3_plot,
+  # fas_hex2_plot,
+  # fas_hex3_plot,
   rbp_cds_plot,
-  rbp_non_cds_plot,
-  ncol = 2
+  # rbp_non_cds_plot,
+  ncol = 1
 )
 
 plot = ggarrange(
   ese_plots,
   other_plots,
-  labels = c("A", "B")
+  labels = c("A", "B"),
+  widths = c(2, 1)
 )
+plot
+ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height= 8, plot = plot)
 
-ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 15, height= 8, plot = plot)
