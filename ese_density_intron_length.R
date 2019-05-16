@@ -48,11 +48,12 @@ for (set_name in ese_sets) {
   
 }
 
-cors_family$adjusted_p = p.adjust(cors_family$wilcox_test_p, method = "bonferroni")
-cors_flanks$adjusted_p = p.adjust(cors_flanks$wilcox_test_p, method = "bonferroni")
+# cors_family$adjusted_p = p.adjust(cors_family$wilcox_test_p, method = "bonferroni")
+# cors_flanks$adjusted_p = p.adjust(cors_flanks$wilcox_test_p, method = "bonferroni")
 
 cors_family[nrow(cors_family)+1,] <- NA
 cors = rbind(cors_family, cors_flanks)
+cors
 write.csv(cors, file = "clean_run/tests/ese_densities/intron_size_ese_density_correlations.csv", row.names = F, na = "")
 
 
@@ -208,7 +209,8 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
       cors[nrow(cors)+1,] <- NA
     }
     output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
-    print(output_file)
+    # print(output_file)
+    print(cors)
     write.csv(cors, file = output_file, row.names = F, na = "")
     
   }
