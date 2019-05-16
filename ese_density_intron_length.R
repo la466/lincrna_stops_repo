@@ -3,15 +3,42 @@ library(gridExtra)
 library(ggpubr)
 library(reshape2)
 
-intron_ese_plot <- function(data, title = NULL) {
+intron_ese_plot <- function(data) {
   p = ggplot(data, aes(x = log10(data$intron_size), y = data$ese_density)) + 
     geom_point(size = 0.8) + 
-    geom_smooth(method='lm', col = "black") + 
+    geom_smooth(method='lm', col = "black", se = F) + 
     scale_y_continuous(limits = c(0, 1)) +
-    labs(x = "log10 intron size", y = "ESE density", title = title) +
+    labs(x = "log10 intron size", y = "Density") +
+    theme_minimal() +
     theme(plot.title = element_text(hjust = 0.5))
   return (p)
 }
+
+stop_density_plot <- function(data, title = NULL) {
+  data.melt = melt(data, id.vars = c("id", "intron_size"), measure.vars = c("stop_ese_density", "non_stop_ese_density"), value.name = "density")
+  legend_labs = labels = c("Stop ESEs", "Non stop ESEs")
+  ggplot(data.melt, aes(x = log10(intron_size), y = density, group = variable)) +
+    geom_point(cex = 1, aes(colour = variable, shape = variable)) +
+    geom_smooth(method = 'lm', aes(col = variable), show.legend = F) +
+    scale_color_manual(name = "", labels = legend_labs, values = c("RoyalBlue", "black")) +
+    scale_shape_manual(name = "", labels = legend_labs, values = c(4, 16)) +
+    scale_y_continuous(limits = c(0, 0.6)) +
+    labs(x = "log10 intron size", y = "Density", title = title) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      legend.position = c(0.85,0.9),
+      legend.title = element_blank(),
+      legend.background = element_blank(),
+      legend.key = element_blank(),
+    ) +
+    guides(shape = guide_legend(override.aes = list(size = 2)))
+}
+
+stop_density_plot(pc)
+
+
+
 
 ese_sets = c("int3", "RESCUE", "PESE", "ESR",  "combined_eses")
 
@@ -58,25 +85,6 @@ write.csv(cors, file = "clean_run/tests/ese_densities/intron_size_ese_density_co
 
 
 
-stop_density_plot <- function(data, title = NULL) {
-  data.melt = melt(data, id.vars = c("id", "intron_size"), measure.vars = c("stop_ese_density", "non_stop_ese_density"), value.name = "density")
-  legend_labs = labels = c("Stop ESEs", "Non stop ESEs")
-  ggplot(data.melt, aes(x = log10(intron_size), y = density, group = variable)) +
-    geom_point(cex = 1, aes(colour = variable, shape = variable)) +
-    geom_smooth(method = 'lm', aes(col = variable), show.legend = F) +
-    scale_color_manual(name = "", labels = legend_labs, values = c("RoyalBlue", "black")) +
-    scale_shape_manual(name = "", labels = legend_labs, values = c(4, 16)) +
-    scale_y_continuous(limits = c(0, 0.6)) +
-    labs(x = "log10 intron size", y = "ESE density", title = title) +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      legend.position = c(0.85,0.9),
-      legend.title = element_blank(),
-      legend.background = element_blank(),
-      legend.key = element_blank(),
-    ) +
-    guides(shape = guide_legend(override.aes = list(size = 2)))
-}
 
 fischers_z <- function(x, y1, y2) {
   # create linear models for both
@@ -105,6 +113,9 @@ p_from_z <- function(z) {
   pval <- 2*pnorm(z, lower.tail=FALSE)
   return(pval)
 }
+
+pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities", type, ".csv", sep = ""), head = T)
+intron_ese_plot(pc, title = "Protein-coding coding exons")
 
 
 types = c("", "_flanks")
@@ -173,6 +184,8 @@ all_eses_output(set_types, types, ese_sets, "other")
 stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
   blank_dataframe = data.frame(
     motif_set = character(),
+    ese_rho = double(),
+    ese_p = double(),
     stop_ese_rho = double(),
     stop_ese_p = double(),
     non_stop_ese_rho = double(),
@@ -190,12 +203,15 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
         data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
         data = data[log10(data$intron_size) != 0,]
         
+        cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
         cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
         cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
         z = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
         
         cor_output = data.frame(
           motif_set = paste(set_name, type, sep = ""),
+          ese_rho = cor$estimate,
+          ese_p = cor$p.value,
           stop_ese_rho = cor1$estimate,
           stop_ese_p = cor1$p.value,
           non_stop_ese_rho = cor2$estimate,
@@ -209,44 +225,46 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
       cors[nrow(cors)+1,] <- NA
     }
     output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
-    # print(output_file)
-    print(cors)
+    print(output_file)
+    # print(cors)
     write.csv(cors, file = output_file, row.names = F, na = "")
     
   }
 }
 
+set_types = c("pc", "lincrna")
+ese_sets = c("int3")
 types = c("", "_flanks")
-stop_nonstop_correlations(set_types, types, ese_sets, "main")
+stop_nonstop_correlations(set_types, types, ese_sets, "final")
 
 
 
-# for non-coding PESE
-
-
-
-for (type in types) {
-  data = read.csv(paste("clean_run/tests/ese_densities/PESE_non_coding_ese_densities", type, ".csv", sep = ""), head = T)
-  data = data[log10(data$intron_size) != 0,]
-  cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
-  cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
-  cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
-
-  z1 = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
-  
-  cor_output = data.frame(
-    motif_set = paste("PESE", type, sep = ""),
-    ese_rho = cor$estimate,
-    ese_p = cor$p.value,
-    stop_ese_rho = cor1$estimate,
-    stop_ese_p = cor1$p.value,
-    non_stop_ese_rho = cor2$estimate,
-    non_stop_ese_p = cor2$p.value,
-    fischers_z = z1,
-    diff_p = p_from_z(z1)
-  )
-  cor_outputs = rbind(cor_outputs, cor_output)
-}
-
-write.csv(cor_outputs, file = "clean_run/tests/ese_densities/intron_size_ese_density_stop_non_stop_correlations_non_coding.csv", row.names = F, na = "")
-
+# # for non-coding PESE
+# 
+# 
+# 
+# for (type in types) {
+#   data = read.csv(paste("clean_run/tests/ese_densities/PESE_non_coding_ese_densities", type, ".csv", sep = ""), head = T)
+#   data = data[log10(data$intron_size) != 0,]
+#   cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
+#   cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
+#   cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
+# 
+#   z1 = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
+#   
+#   cor_output = data.frame(
+#     motif_set = paste("PESE", type, sep = ""),
+#     ese_rho = cor$estimate,
+#     ese_p = cor$p.value,
+#     stop_ese_rho = cor1$estimate,
+#     stop_ese_p = cor1$p.value,
+#     non_stop_ese_rho = cor2$estimate,
+#     non_stop_ese_p = cor2$p.value,
+#     fischers_z = z1,
+#     diff_p = p_from_z(z1)
+#   )
+#   cor_outputs = rbind(cor_outputs, cor_output)
+# }
+# 
+# write.csv(cor_outputs, file = "clean_run/tests/ese_densities/intron_size_ese_density_stop_non_stop_correlations_non_coding.csv", row.names = F, na = "")
+# 

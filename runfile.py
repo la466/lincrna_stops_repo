@@ -1,13 +1,14 @@
 import generic as gen
 import copy
 
+# args = ["python3", "main_tests.py", "clean_run", "clean_run", "-input_fasta", "clean_run/genome_sequences/lincrna/cabili/multi_exons.fasta", "-input_fasta2", "clean_run/genome_sequences/lincrna/cabili/introns.fasta", "-families_file", "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.txt", "-output_prefix", "linc", "--intron_length_test", "-ese_file"]
 args = ["python3", "main_tests.py", "clean_run", "clean_run", "-input_fasta", "clean_run/genome_sequences/human/human.cds.clean_coding_exons.fasta", "-input_fasta2", "clean_run/genome_sequences/human/human.clean_introns.fasta", "-families_file", "clean_run/genome_sequences/human/human.cds.families.bed", "-output_prefix", "pc", "--intron_length_test", "-ese_file"]
 ese_files = [
-    # "source_data/motif_sets/int3.txt",
+    "source_data/motif_sets/int3.txt",
     # "source_data/motif_sets/RESCUE.txt",
-    "source_data/motif_sets/PESE.txt",
-    "source_data/motif_sets/ESR.txt",
-    "source_data/motif_sets/combined_eses.txt",
+    # "source_data/motif_sets/PESE.txt",
+    # "source_data/motif_sets/ESR.txt",
+    # "source_data/motif_sets/combined_eses.txt",
 ]
 
 

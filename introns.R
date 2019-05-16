@@ -1,3 +1,15 @@
+install.packages("ggExtra")
+library(ggplot2)
+library(ggpubr)
+library(Cairo)
+library(LSD)
+library(ggExtra)
+
+fill_colour = "#d1d2d4"
+line_colour = "#222222"
+red_colour = "#e74b4f"
+
+
 file = read.csv("clean_run/tests/introns/intron_hexamers.csv", head = T)
 
 real = file[file$id == "real",]
@@ -9,14 +21,6 @@ max_a = max(real$a_content, sims$a_content)
 min_a = min(real$a_content, sims$a_content)
 max_g = max(real$g_content, sims$g_content)
 min_g = min(real$g_content, sims$g_content)
-
-library(ggplot2)
-library(ggpubr)
-library(Cairo)
-library(LSD)
-library(ggExtra)
-
-install.packages("ggExtra")
 
 heatscatter(sims$g_content, sims$a_content, xlim = c(min_g, max_g), ylim = c(min_a, max_a))
 
@@ -46,10 +50,14 @@ plot = ggplot(data=sims, aes(g_content,a_content)) +
   theme(legend.position = "none")
 plot = ggMarginal(plot, type="histogram", fill = "RoyalBlue")
 
+plot
 
 final_plot = ggarrange(hist, scatter, ncol = 2, nrow = 1, labels = c("A", "B"))
 final_plot = ggarrange(hist, plot, ncol = 2, nrow = 1, labels = c("A", "B"))
 final_plot
+
+
+
 ggsave("clean_run/plots/intron_hexamers.eps", plot = final_plot, width = 12, height = 5)
 
 
