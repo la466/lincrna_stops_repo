@@ -19,7 +19,7 @@ stop_density_plot <- function(data, title = NULL) {
   legend_labs = labels = c("Stop ESEs", "Non stop ESEs")
   ggplot(data.melt, aes(x = log10(intron_size), y = density, group = variable)) +
     geom_point(cex = 1, aes(colour = variable, shape = variable)) +
-    geom_smooth(method = 'lm', aes(col = variable), show.legend = F) +
+    geom_smooth(method = 'lm', aes(col = variable), show.legend = F, se = FALSE) +
     scale_color_manual(name = "", labels = legend_labs, values = c("RoyalBlue", "black")) +
     scale_shape_manual(name = "", labels = legend_labs, values = c(4, 16)) +
     scale_y_continuous(limits = c(0, 0.6)) +
@@ -35,7 +35,7 @@ stop_density_plot <- function(data, title = NULL) {
     guides(shape = guide_legend(override.aes = list(size = 2)))
 }
 
-stop_density_plot(pc)
+
 
 
 
@@ -114,26 +114,44 @@ p_from_z <- function(z) {
   return(pval)
 }
 
-pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities", type, ".csv", sep = ""), head = T)
-intron_ese_plot(pc, title = "Protein-coding coding exons")
 
 
-types = c("", "_flanks")
-for (type in types) {
-  lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_lincrna_ese_densities", type, ".csv", sep = ""), head = T)
-  pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities", type, ".csv", sep = ""), head = T)
-  
-  plot = ggarrange(
-    intron_ese_plot(pc, title = "Protein-coding coding exons"),
-    stop_density_plot(pc, title = "Protein-coding coding exons"),
-    intron_ese_plot(lincrna, title = "LincRNA"),
-    stop_density_plot(lincrna, title = "LincRNA"),
+# types = c("", "_flanks")
+# for (type in types) {
+#   lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_lincrna_ese_densities", type, ".csv", sep = ""), head = T)
+#   pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities", type, ".csv", sep = ""), head = T)
+#   plot = ggarrange(
+#     intron_ese_plot(pc, title = "Protein-coding coding exons"),
+#     stop_density_plot(pc, title = "Protein-coding coding exons"),
+#     intron_ese_plot(lincrna, title = "LincRNA"),
+#     stop_density_plot(lincrna, title = "LincRNA"),
+#     ncol = 2,
+#     nrow = 2,
+#     labels = c("A", "B", "C", "D")
+#   )
+#   ggsave(plot = plot, file = paste("clean_run/plots/intron_size_ese_density_plot", type, ".pdf", sep = ""), width = 12, height = 10)
+# }
+
+pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities.csv", sep = ""), head = T)
+plot = ggarrange(
+    intron_ese_plot(pc),
+    stop_density_plot(pc),
     ncol = 2,
-    nrow = 2,
-    labels = c("A", "B", "C", "D")
+    labels = c("A", "B")
   )
-  ggsave(plot = plot, file = paste("clean_run/plots/intron_size_ese_density_plot", type, ".pdf", sep = ""), width = 12, height = 10)
-}
+ggsave(plot = plot, file = "clean_run/plots/pc_intron_size_ese_density_plot_flanks.pdf", width = 9, height = 4)
+
+lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_linc_ese_densities_all_seq.csv", sep = ""), head = T)
+plot = ggarrange(
+    intron_ese_plot(lincrna),
+    stop_density_plot(lincrna),
+    ncol = 2,
+    labels = c("A", "B")
+  )
+plot
+
+ggsave(plot = plot, file = "clean_run/plots/lincrna_intron_size_ese_density_plot.pdf", width = 9, height = 4)
+
 
 
 all_eses_output <- function(set_types, types, ese_sets, output_name) {
