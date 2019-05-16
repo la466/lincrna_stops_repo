@@ -58,26 +58,27 @@ file$purine = substr(file$purine_content, 0, 3)
 stops =  file[file$codons == "TAA_TAG_TGA",]
 gc_matched = file[file$gc == stops$gc & file$codons != "TAA_TAG_TGA",]
 
-density = ggplot() +
-  geom_histogram(aes(gc_matched$density), bins = 30, col = "black", fill = "RoyalBlue") + 
-  geom_vline(xintercept = stops$density, lty = 1, cex = 2, col = "red") + 
-  labs(x = "Codon set density", y = "Frequency")
+
+
+# density = ggplot() +
+#   geom_histogram(aes(gc_matched$density), bins = 30, col = "black", fill = "RoyalBlue") + 
+#   geom_vline(xintercept = stops$density, lty = 1, cex = 2, col = "red") + 
+#   labs(x = "Codon set density", y = "Frequency")
+#   
+#
+
+fill_colour = "#d1d2d4"
+line_colour = "#222222"
+red_colour = "#e74b4f"
+
+# plot of normalised densities #
 normalised_density = ggplot() +
-  geom_density(aes(gc_matched$nd), bins = 30, col = "black", fill = "RoyalBlue") + 
-  geom_vline(xintercept = stops$nd, lty = 1, cex = 2, col = "red") + 
-  labs(x = "Codon set normalised density (ND)", y = "Frequency")
+  geom_histogram(aes(gc_matched$nd), bins = 30, col = line_colour, fill = fill_colour) + 
+  geom_vline(xintercept = stops$nd, lty = 1, cex = 2, col = red_colour) + 
+  labs(x = "Codon set normalised density (ND)", y = "Count") +
+  theme_minimal()
 
-library(ggpubr)
-library(gridExtra)
-plot = ggarrange(
-  density,
-  normalised_density,
-  labels = c("A", "B")
-)
-
-plot
-
-ggsave("clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
+# ggsave("clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
 
 binom.test(nrow(gc_matched[gc_matched$density > stops$density,]), nrow(gc_matched), alternative = "g")
 binom.test(nrow(gc_matched[gc_matched$nd > stops$nd,]), nrow(gc_matched), alternative = "g")
@@ -86,20 +87,41 @@ purine_matched = gc_matched[gc_matched$purine_content == stops$purine_content,]
 binom.test(nrow(purine_matched[purine_matched$nd <= stops$nd,]), nrow(purine_matched), alternative = "l")
 
 
-data$colour <- ifelse(data$purine == stops$purine, "a", "b")
-purine_plot = ggplot(data, aes(x = data$purine, y = data$nd)) + 
+
+gc_matched$colour <- ifelse(gc_matched$purine == stops$purine, "a", "b")
+gc_matched
+purine_plot = ggplot(gc_matched, aes(x = gc_matched$purine, y = gc_matched$nd)) + 
+  geom_hline(yintercept = 0, lty=1) +
   stat_boxplot(geom ='errorbar') +
-  geom_boxplot(aes(fill=data$colour)) +
-  scale_fill_manual(values=c("RoyalBlue", "#dddddd")) +
+  geom_boxplot(aes(fill=gc_matched$colour)) +
+  scale_fill_manual(values=c("RoyalBlue", fill_colour)) +
   geom_hline(yintercept = stops$nd, lty=2) +
   labs(x = "Codon set purine content", y="ND") + 
-  annotate("text", x=min(as.numeric(data$purine)), hjust=0.2, y= stops$nd + 0.05, label="TAA,TAG,TGA", cex=3) +
-  annotate("text", x=min(as.numeric(data$purine)), hjust=0.1, y= stops$nd - 0.05, label=round(stops$nd,3), cex=3) +
+  annotate("text", x=min(as.numeric(gc_matched$purine)), hjust= -0.2, y= stops$nd + 0.05, label="TAA,TAG,TGA", cex=3) +
+  annotate("text", x=min(as.numeric(gc_matched$purine)), hjust= -0.5, y= stops$nd - 0.05, label=round(stops$nd,3), cex=3) +
   theme(legend.position="none") +
   scale_x_discrete(labels = c("0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4", "0.4-0.5", "0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1", "1")) +
-  stat_summary(fun.data = get_n, fun.args = list("vjust" = 0.1), geom = "text", aes(group = "purine"), size=3)
+  stat_summary(fun.data = get_n, fun.args = list("vjust" = 0.1), geom = "text", aes(group = "purine"), size = 3) + 
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    # axis.line.y = element_line(color="black", size = 0.5)
+  )
+purine_plot
 
-ggsave(plot = purine_plot, filename = "clean_run/plots/codon_sets_purine.pdf", width = 10, height = 7)
+library(ggpubr)
+library(gridExtra)
+plot = ggarrange(
+  normalised_density,
+  purine_plot,
+  labels = c("A", "B"),
+  nrow = 2, 
+  ncol = 1
+)
+
+plot
+
+ggsave(plot = plot, filename = "clean_run/plots/codon_sets_nd_purine.pdf", width = 10, height = 12)
 
 
 filepath = "clean_run/motif_tests/ises_wang_densities.csv"
