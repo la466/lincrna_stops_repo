@@ -1040,3 +1040,32 @@ def upstream_atg(input_fasta, output_file, simulations = None, families_file = N
     with open(output_file, "w") as outfile:
         outfile.write("minimum_upstream_threshold,real_density,median_sim_density,p_value\n")
         [outfile.write("{0}\n".format(",".join(gen.stringify(output)))) for output in length_outputs]
+
+def exon_intron_stop_density(exon_fasta, intron_fasta, output_file, families_file = None):
+    """
+    Get the stop density in corresponding exons and introns
+
+    Args:
+        exon_fasta (str): path to exon fasta
+        intron_fasta (str): path to intron_fasta
+        output_file (str): path to intron_fasta
+        families_file (str): if set, path to families file
+    """
+    # get exons
+    names, seqs = gen.read_fasta(exon_fasta)
+    exon_list = collections.defaultdict(lambda: [])
+    [exon_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
+    if families_file:
+        exon_list = sequo.pick_random_family_member(families_file, exon_list)
+
+    # get introns
+    intron_names, intron_seqs = gen.read_fasta(intron_fasta)
+    intron_list = collections.defaultdict(lambda: [])
+    [intron_list[name.split(".")[0]].append(intron_seqs[i]) for i, name in enumerate(intron_names) if name.split(".")[0] in exon_list]
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,exon_density,intron_density\n")
+        for id in exon_list:
+            exon_density = seqo.calc_motif_density(exons[id], stops)
+            intron_density = seqo.calc_motif_density(introns[id], stops)
+            outfile.write("{0},{1},{2}\n".format(id, exon_density, intron_density))

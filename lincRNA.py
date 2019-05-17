@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments", "upstream_atg"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments", "upstream_atg"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33], opt_flags = [3,4,5,6,7,8,9])
+    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34], opt_flags = [3,4,5,6,7,8,9])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -37,6 +37,7 @@ def main():
     sim_stop_density_removed_motifs, \
     sim_stop_density_removed_motifs_sim_seqs, \
     sim_stop_density_diff, \
+    exon_intron_density, \
     motif_nd, \
     excess_test, \
     single_exon,\
@@ -71,6 +72,7 @@ def main():
     args.sim_stop_density_removed_motifs, \
     args.sim_stop_density_removed_motifs_sim_seqs, \
     args.sim_stop_density_diff, \
+    args.exon_intron_density, \
     args.motif_nd, \
     args.excess_test, \
     args.single_exon, \
@@ -300,7 +302,12 @@ def main():
         # process the outputs
         ltests.process_sim_stop_density_diffs(sim_output_dir, sim_output_file, greater_than = False)
 
-
+    # get density in exons and introns
+    if exon_intron_density:
+        local_output_directory = "{0}/stop_density".format(global_output_directory)
+        gen.create_output_directories(local_output_directory)
+        output_file = "{0}/exon_intron_stop_density.csv".format(local_output_directory)
+        ltests.exon_intron_stop_density(input_fasta, input_fasta2, output_file, families_file = families_file)
 
 
 
