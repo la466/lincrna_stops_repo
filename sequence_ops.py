@@ -3743,3 +3743,20 @@ def get_stop_non_stop_motifs(motif_file):
     stop_motifs = [i for i in motifs if len(re.findall("(?=(TAA|TAG|TGA))", i)) > 0]
     non_stop_motifs = [i for i in motifs if i not in stop_motifs]
     return motifs, stop_motifs, non_stop_motifs
+
+
+def calc_upstream_sim_densities(sims, sim_seqs):
+    outputs = []
+    if len(sims):
+        for sim in sims:
+            sim_seqs = randomise_seqs(sim_seqs)
+            outputs.append(seqo.calc_motif_density(sim_seqs, stops))
+    return outputs
+
+def randomise_seqs(seqs):
+    new_seqs = []
+    for seq in seqs:
+        nts = list(seq)
+        np.random.shuffle(nts)
+        new_seqs.append("".join(nts))
+    return new_seqs

@@ -863,24 +863,33 @@ def generate_exon_dinucleotide_controls(motifs_file, exons_fasta, required_simul
     args = [motifs, dinucleotide_content, nucleotide_content, output_directory]
     simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_dinucleotide_matched_seqs, kwargs_dict = kwargs)
 
-def generate_motif_dinucleotide_controls(motifs_file, required_simulations, output_directory, match_density = None, match_subs = None):
 
-    motifs = [i[0] for i in gen.read_many_fields(motifs_file, "\t") if "#" not in i[0]]
+
+def generate_motif_dinucleotide_controls(motif_file, required_simulations, output_directory, match_density = None, match_subs = None):
+
+    output_directory = "{0}/dinucleotide_controls/{1}_dinucleotide_controls".format(output_directory, motif_file.split("/")[-1].split(".")[0])
+    if match_density:
+        output_directory += "_matched_stops"
+    if match_subs:
+        output_directory += "_matched_subs"
+
+    motifs = [i[0] for i in gen.read_many_fields(motif_file, "\t") if "#" not in i[0]]
     dinucleotide_content = seqo.get_dinucleotide_content(motifs)
     nucleotide_content = seqo.get_nucleotide_content(motifs)
 
-    if os.path.isdir(output_directory):
-        gen.remove_directory(output_directory)
+    # remove any old output directory
+    gen.remove_directory(output_directory)
+    # create a new one
     gen.create_output_directories(output_directory)
 
     start = time.time()
 
     # create sets of motifs
-    print("Simluating sequences...")
     kwargs = {"match_density": match_density, "match_subs": match_subs}
     args = [motifs, dinucleotide_content, nucleotide_content, output_directory]
     simulated_seqs = run_simulation_function(required_simulations, args, simo.generate_dinucleotide_matched_seqs, kwargs_dict = kwargs)
 
+    print("Controls can be found at:\n{0}".format(output_directory))
 
 
 def sim_motif_codon_densities(seqs_file, required_simulations, output_directory):

@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "required_simulations", "motif_file", "families_file", "output_prefix", "sim_dir", "extract_sequences", "clean_run", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments", "upstream_atg"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32], opt_flags = [3,4,5,6,7,8])
+    args = gen.parse_arguments(description, arguments, flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33], opt_flags = [3,4,5,6,7,8])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -45,7 +45,8 @@ def main():
     dinucleotide_substitution_rate,\
     motif_overlap, \
     motif_overlap_density, \
-    clean_alignments = \
+    clean_alignments, \
+    upstream_atg = \
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
@@ -78,7 +79,8 @@ def main():
     args.dinucleotide_substitution_rate, \
     args.motif_overlap, \
     args.motif_overlap_density, \
-    args.clean_alignments
+    args.clean_alignments, \
+    args.upstream_atg
 
     # make required simultions an int
     required_simulations = int(required_simulations) if required_simulations else None
@@ -327,6 +329,10 @@ def main():
         output_exon_file = "{0}/clean_exon_alignments.fasta"
         output_intron_file = "{0}/clean_intron_alignments.fasta"
         ltests.clean_alignments(input_bed, input_fasta, output_exon_file, output_intron_file)
+
+    if upstream_atg:
+        output_file = "{0}/tests/lincrna/stop_density/upstream_atg_stop_density.csv".format(output_directory)
+        ltests.upstream_atg(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
 
 
 if __name__ == "__main__":

@@ -990,3 +990,53 @@ def process_sim_stop_density_diffs(output_dir, output_file, greater_than = True)
             median_sims = sims[test_col].median()
             nd = np.divide(real[test_col][0] - sims[test_col].mean(), sims[test_col].mean())
             outfile.write("{0},{1},{2},{3},{4},{5},{6},{7}\n".format(i+1, real["seq_count"][0], real["hit_stop_density"][0], real["non_hit_stop_density"][0], real[test_col][0], median_sims, nd, p))
+
+
+def upstream_atg(input_fasta, output_file, simulations = None, families_file = None):
+    """
+    Calculate the stop codon density before the first ATG.
+
+    Args:
+        input_fasta (str): path to input file
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+
+    # read in the sequences
+    names, seqs = gen.read_fasta(input_fasta)
+    all_seqs = dict(zip([name.split(".")[0] for name in names], seqs))
+    # pick random family member if required
+    if families_file:
+        all_seqs = sequo.pick_random_family_member(families_file, all_seqs)
+
+    length_outputs = []
+
+    max_length = 100
+    step = 10
+    for length in list(range(step, max_length+step, step)):
+        print(length)
+        # keep only the bits of sequences before the atg
+        kept = []
+        for id in all_seqs:
+            seq = all_seqs[id]
+            try:
+                atg = seq.index("ATG")
+                if atg > length:
+                    kept.append(seq[:atg])
+            except:
+                pass
+
+        real_density = seqo.calc_motif_density(kept, stops)
+
+        sim_densities  = []
+        sims = list(range(simulations))
+        sim_densities = simoc.run_simulation_function(sims, [kept], sequo.calc_upstream_sim_densities, sim_run = False)
+        # calculate the number of simulants with density less than the real
+        less_than = [i for i in sim_densities if i <= real_density]
+        output = [length, real_density, np.median(sim_densities), np.divide(len(less_than) + 1, len(sims) + 1)]
+        length_outputs.append(output)
+
+    # write outputs to file
+    with open(output_file, "w") as outfile:
+        outfile.write("minimum_upstream_threshold,real_density,median_sim_density,p_value\n")
+        [outfile.write("{0}\n".format(",".join(gen.stringify(output)))) for output in length_outputs]
