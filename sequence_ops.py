@@ -3760,3 +3760,19 @@ def randomise_seqs(seqs):
         np.random.shuffle(nts)
         new_seqs.append("".join(nts))
     return new_seqs
+
+def mask_seq(seq, motifs, mask_character = "C"):
+    """
+    Given a seq and some motifs, mask out
+
+    Args:
+        seq (str): sequence to mask
+        motifs (list): list of motifs to mask
+        mask_character (str): if set, the character to replace with
+
+    Returns:
+        masked_seq (str): masked sequence
+    """
+    overlaps = sequo.sequence_overlap_indicies(seq, motifs)
+    masked_seq = "".join([nt if i not in overlaps else mask_character for i, nt in enumerate(list(seq))])
+    return masked_seq

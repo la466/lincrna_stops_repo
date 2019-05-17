@@ -1,5 +1,6 @@
 import generic as gen
 import sim_ops as simo
+import sim_ops_containers as simoc
 import seq_ops as seqo
 import sequence_ops as sequo
 import file_ops as fo
@@ -1384,3 +1385,67 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
             outputs.append(output_file)
 
     return outputs
+
+
+def sim_orf_length_masked(input_fasta, simulations, motif_file, controls_dir, output_file):
+    """
+    Mask motifs from sequences and calculate orf lengths.
+
+    Args:
+        input_fasta (str): path to sequence file
+        simulations (int): number of simulations
+        motif_file (str): motif file
+        controls_dir (str): path to directory containing control motifs
+        output_file (str): path to output file
+    """
+
+    # get the entries from the file, including z scores
+    entries = gen.read_many_fields(test_file, ",")[1:]
+    entries = {i[0]: float(i[7]) for i in entries if float(i[7]) > 0}
+    # get the motifs
+    motifs = sequo.read_motifs(motif_file)
+    # get the sequences from the file
+    names, seqs = gen.read_fasta(file)
+    families = gen.read_many_fields(families_file, "\t")
+    seqs = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
+    seqs = sequo.group_family_results(seqs, families)
+    seqs = {i: seqs[i] for i in seqs if i in entries}
+    # get the simulant motifs
+    sim_paths = gen.get_filepaths(controls_dir)[:simulations]
+    motif_sets = [sequo.read_motifs(sim_file) for i, sim_file in enumerate(sim_paths)]
+
+    # get the masked orf lengths for the real sequences
+    real_masked = {i: sequo.mask_seq(seqs[i][0], motifs) for i in seqs}
+    real_longest_orfs = {i: seqo.get_longest_orfs([real_masked[i]])[0] for i in real_masked}
+    # get the orf lengths for sims
+    sim_lengths = simoc.run_simulation_function(list(seqs), [seqs, motif_sets], calc_masked_orf_lengths, sim_run = False)
+    # write to output file
+    with open(output_file, "w") as outfile:
+        outfile.write("id,real,mean_sims,z\n")
+        for id in real_longest_orfs:
+            z = np.divide(real_longest_orfs[id] - np.nanmean(sim_lengths[id]), np.std(sim_lengths[id]))
+            outfile.write("{0},{1},{2},{3}\n".format(id, real_longest_orfs[id], np.nanmean(sim_lengths[id]), z))
+
+def calc_masked_orf_lengths(ids, seqs, motif_sets):
+    """
+    Wrapper to calculate simulant masked orf lengths
+
+    Args:
+        ids (list): list of ids to iterate over
+        seqs (dict): sequences
+        motif_sets (list): list of motifs
+
+    Returns:
+        sim_lengths (dict): sims for each seq
+    """
+    sim_lengths = {}
+    if len(ids):
+        for i, id in enumerate(ids):
+            gen.print_parallel_status(i, ids)
+            sim_lengths[id] = []
+            seq = seqs[id][0]
+            for motif_set in motif_sets:
+                masked_seq = sequo.mask_seq(seq, motif_set)
+                longest_orf = seqo.get_longest_orfs([new_seq])[0]
+                sim_lengths[id].append(longest_orf)
+    return sim_lengths
