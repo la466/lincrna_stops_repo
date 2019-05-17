@@ -31,6 +31,7 @@ def main():
     if generate_motif_controls:
         simopc.generate_motif_dinucleotide_controls(motif_file, simulations, output_directory, match_density = match_density, match_subs = match_subs)
 
+    # calculate stop codon densities in the motif sets
     if motif_stop_codon_densities:
         # create a local output directory
         local_output_directory = "{0}/motif_stop_density_simulations".format(global_output_directory)
@@ -44,19 +45,7 @@ def main():
         # # calculate densities
         mtop.motif_stop_codon_densities(motif_file, controls_directory, simulations, output_file)
 
-    # output_file = "{0}/{1}_stop_codon_densities_exon_dinucleotides.csv".format(global_output_directory, motif_file.split("/")[-1].split(".")[0])
-    # exon_controls_directory = "{0}/dinucleotide_controls/exon_dinucleotide_controls".format(output_directory)
-    # gen.create_output_directories(exon_controls_directory)
-    # if motif_densities_exon_dinucleotides:
-    #     if clean_run:
-    #         gen.remove_directory(exon_controls_directory)
-    #     gen.create_output_directories(exon_controls_directory)
-    #
-    #     if simulations > len(os.listdir(exon_controls_directory)):
-    #         simopc.generate_exon_dinucleotide_controls(motif_file, exons_fasta, simulations, exon_controls_directory, match_density = False)
-    #     # calculate densities
-    #     mtop.motif_stop_codon_densities(motif_file, exon_controls_directory, simulations, output_file)
-
+    # calculate other codon densities in motif sets
     if motif_codon_densities:
         local_output_directory = "{0}/codon_combination_densities".format(global_output_directory)
         gen.create_output_directories(local_output_directory)
