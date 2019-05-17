@@ -52,7 +52,7 @@ all = sequo.pick_random_family_member(families_file, all)
 # print(len(tnames))
 
 with open("clean_run/tests/lincrna/stop_density/upstream_atg_stop_density.csv", "w") as outfile:
-    outfile.write("threshold,real_density,median_sim_density,p_value\n")
+    outfile.write("minimum_upstream_threshold,real_density,median_sim_density,p_value\n")
     for length in list(range(10, 110, 10)):
         print(length)
         kept = []
