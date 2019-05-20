@@ -1387,7 +1387,7 @@ def calculate_substitution_rates_motifs(iteration_list, motif_file, motif_files,
     return outputs
 
 
-def sim_orf_length_masked(input_fasta, simulations, motif_file, controls_dir, output_file):
+def sim_orf_length_masked(input_fasta, simulations, motif_file, input_file, controls_dir, output_file, families_file = None):
     """
     Mask motifs from sequences and calculate orf lengths.
 
@@ -1400,23 +1400,26 @@ def sim_orf_length_masked(input_fasta, simulations, motif_file, controls_dir, ou
     """
 
     # get the entries from the file, including z scores
-    entries = gen.read_many_fields(test_file, ",")[1:]
+    entries = gen.read_many_fields(input_file, ",")[1:]
     entries = {i[0]: float(i[7]) for i in entries if float(i[7]) > 0}
     # get the motifs
     motifs = sequo.read_motifs(motif_file)
     # get the sequences from the file
-    names, seqs = gen.read_fasta(file)
-    families = gen.read_many_fields(families_file, "\t")
+    names, seqs = gen.read_fasta(input_fasta)
     seqs = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
-    seqs = sequo.group_family_results(seqs, families)
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        seqs = sequo.group_family_results(seqs, families)
     seqs = {i: seqs[i] for i in seqs if i in entries}
-    # get the simulant motifs
-    sim_paths = gen.get_filepaths(controls_dir)[:simulations]
-    motif_sets = [sequo.read_motifs(sim_file) for i, sim_file in enumerate(sim_paths)]
 
     # get the masked orf lengths for the real sequences
     real_masked = {i: sequo.mask_seq(seqs[i][0], motifs) for i in seqs}
     real_longest_orfs = {i: seqo.get_longest_orfs([real_masked[i]])[0] for i in real_masked}
+
+
+    sim_paths = gen.get_filepaths(controls_dir)[:simulations]
+    motif_sets = [sequo.read_motifs(sim_file) for i, sim_file in enumerate(sim_paths) if not sim_file.startswith(".")]
     # get the orf lengths for sims
     sim_lengths = simoc.run_simulation_function(list(seqs), [seqs, motif_sets], calc_masked_orf_lengths, sim_run = False)
     # write to output file
@@ -1446,6 +1449,6 @@ def calc_masked_orf_lengths(ids, seqs, motif_sets):
             seq = seqs[id][0]
             for motif_set in motif_sets:
                 masked_seq = sequo.mask_seq(seq, motif_set)
-                longest_orf = seqo.get_longest_orfs([new_seq])[0]
+                longest_orf = seqo.get_longest_orfs([masked_seq])[0]
                 sim_lengths[id].append(longest_orf)
     return sim_lengths

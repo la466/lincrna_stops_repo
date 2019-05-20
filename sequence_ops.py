@@ -3773,6 +3773,6 @@ def mask_seq(seq, motifs, mask_character = "C"):
     Returns:
         masked_seq (str): masked sequence
     """
-    overlaps = sequo.sequence_overlap_indicies(seq, motifs)
+    overlaps = sequence_overlap_indicies(seq, motifs)
     masked_seq = "".join([nt if i not in overlaps else mask_character for i, nt in enumerate(list(seq))])
     return masked_seq

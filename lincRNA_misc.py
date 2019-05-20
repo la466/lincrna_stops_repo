@@ -5,7 +5,7 @@ import file_ops as fo
 import time
 import os
 
-import lincRNA_tests as ltests
+import lincRNA_tests_ops as ltests
 import sim_ops_containers as simopc
 
 def main():
@@ -80,7 +80,7 @@ def main():
         simopc.sim_orf_length(multi_exon_transcript_sequences_fasta, 1000, sim_orf_length_output_file)
         ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file, families_file = multi_exon_families_file)
 
-    
+
 
 if __name__ == "__main__":
     main()
