@@ -302,18 +302,7 @@ def main():
         ltests.upstream_atg(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
 
 
-    # need to move to main
-    if motif_overlap:
-        gen.check_files_exists([input_fasta, motif_file, families_file])
-        output_file = "{0}/motif_overlaps/{1}_{2}_motif_overlap_chisquare.csv".format(global_output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-        runs = 10
-        ltests.motif_overlap_test(input_fasta, motif_file, output_file, runs = runs, families_file = families_file)
 
-    if motif_overlap_density:
-        gen.check_files_exists([input_fasta, motif_file, families_file])
-        output_file = "{0}/motif_overlaps/{1}_{2}_motif_overlap_density.csv".format(global_output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
-        runs = 10
-        ltests.motif_overlap_density_test(input_fasta, motif_file, output_file, runs = runs, families_file = families_file)
 
     # test hits to seqs
     if seq_hits_linc:
