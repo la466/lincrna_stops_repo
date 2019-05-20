@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments", "upstream_atg"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35], opt_flags = [3,4,5,6,7,8,9])
+    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], opt_flags = [3,4,5,6,7,8,9])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -48,6 +48,7 @@ def main():
     motif_overlap, \
     motif_overlap_density, \
     clean_alignments, \
+    seq_hits_linc, \
     upstream_atg = \
     args.input_bed, \
     args.input_fasta, \
@@ -84,6 +85,7 @@ def main():
     args.motif_overlap, \
     args.motif_overlap_density, \
     args.clean_alignments, \
+    args.seq_hits_linc, \
     args.upstream_atg
 
     # make required simultions an int
@@ -99,7 +101,7 @@ def main():
     start = time.time()
 
     # create the output_directory if it doenst already exist
-    gen.create_output_directories(output_directory)
+    gen.create_output_directories(global_output_directory)
 
     # get the sequences
     if extract_sequences:
@@ -312,6 +314,26 @@ def main():
         output_file = "{0}/motif_overlaps/{1}_{2}_motif_overlap_density.csv".format(global_output_directory, output_prefix, motif_file.split("/")[-1].split(".")[0])
         runs = 10
         ltests.motif_overlap_density_test(input_fasta, motif_file, output_file, runs = runs, families_file = families_file)
+
+    # test hits to seqs
+    if seq_hits_linc:
+        local_output_dir = "{0}/ese_hits".format(global_output_directory)
+        if output_prefix:
+            tests_output_dir = "{0}/{1}_{2}".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            final_output_file = "{0}/{1}_{2}_processed.csv".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        else:
+            tests_output_dir = "{0}/{1}_{2}".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            final_output_file = "{0}/{1}_{2}_processed.csv".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
+        gen.create_output_directories(tests_output_dir)
+
+        runs = 10
+        for run in range(runs):
+            if output_prefix:
+                output_file = "{0}/{1}_{2}_hits_{3}.csv".format(tests_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0], run+1)
+            else:
+                output_file = "{0}/{1}_hits_{2}.csv".format(tests_output_dir, motif_file.split("/")[-1].split(".")[0], run+1)
+            mto.calc_seq_hits_linc(input_fasta, output_file, motif_file, controls_dir, required_simulations = required_simulations, families_file = families_file)
+        mto.process_seq_hits_linc(tests_output_dir, final_output_file)
 
 
     # if density_sim:

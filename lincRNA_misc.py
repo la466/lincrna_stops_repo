@@ -74,13 +74,6 @@ def main():
         gen.check_files_exists([multi_exon_transcript_sequences_fasta])
         cons.filter_families(multi_exon_transcript_sequences_fasta, multi_exon_blast_file, multi_exon_families_file, database_path = multi_exon_blast_database, clean_run = clean_run)
 
-    sim_orf_length_output_file = "{0}/orf_length_sim.csv".format(output_directory)
-    sim_orf_length_z_file = "{0}/orf_length_sim_z.csv".format(output_directory)
-    if orf_length_sim:
-        simopc.sim_orf_length(multi_exon_transcript_sequences_fasta, 1000, sim_orf_length_output_file)
-        ltests.process_length_sim(sim_orf_length_output_file, sim_orf_length_z_file, families_file = multi_exon_families_file)
-
-
 
 if __name__ == "__main__":
     main()

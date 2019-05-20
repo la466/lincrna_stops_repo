@@ -70,6 +70,7 @@ def main():
         lincrna_seqs_fasta = "{0}/lincRNA_seqs.fasta".format(output_directory)
         print("Extracting lincRNA seqs...")
         fo.extract_seqs(input_file, genome_fasta, lincrna_exons_bed, lincrna_exons_fasta, lincrna_seqs_fasta, mapping_file, codes_file, exclude_XY=True, hg38=hg38, NONCODE=NONCODE)
+        print("Use lincRNA_misc.py to do further filtering...")
 
 if __name__ == "__main__":
     main()
