@@ -39,5 +39,8 @@ data2 = get_stats("clean_run/tests/motif_overlaps/protein_coding_RESCUE_motif_ov
 data3 = get_stats("clean_run/tests/motif_overlaps/lincrna_int3_motif_overlap_density.csv", "LincRNA INT3")
 data4 = get_stats("clean_run/tests/motif_overlaps/lincrna_RESCUE_motif_overlap_density.csv", "LincRNA RESCUE")
 dataframe = data.frame(rownames, data1, data2, data3, data4)
+
+dataframe
+
 write.table(dataframe, file = output_file,row.names=FALSE, col.names = FALSE, sep = ",")
 

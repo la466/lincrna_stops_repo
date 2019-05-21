@@ -3,7 +3,7 @@ library(gridExtra)
 library(ggpubr)
 library(reshape2)
 
-intron_ese_plot <- function(data) {
+all_ese_plot <- function(data) {
   p = ggplot(data, aes(x = log10(data$intron_size), y = data$ese_density)) + 
     geom_point(size = 0.8) + 
     geom_smooth(method='lm', col = "black", se = F) + 
@@ -14,7 +14,7 @@ intron_ese_plot <- function(data) {
   return (p)
 }
 
-stop_density_plot <- function(data, title = NULL) {
+split_ese_plot <- function(data, title = NULL) {
   data.melt = melt(data, id.vars = c("id", "intron_size"), measure.vars = c("stop_ese_density", "non_stop_ese_density"), value.name = "density")
   legend_labs = labels = c("Stop ESEs", "Non stop ESEs")
   ggplot(data.melt, aes(x = log10(intron_size), y = density, group = variable)) +
@@ -34,56 +34,6 @@ stop_density_plot <- function(data, title = NULL) {
     ) +
     guides(shape = guide_legend(override.aes = list(size = 2)))
 }
-
-
-
-
-
-
-ese_sets = c("int3", "RESCUE", "PESE", "ESR",  "combined_eses")
-
-cors_family = data.frame(motif_set = character(), lincrna_rho = double(), lincrna_p = double(), protein_coding_rho = double(), protein_coding_p = double(), mean_lincrna = double(), mean_pc = double(), wilcox_text_score = double(), wilcox_test_p = double())
-cors_flanks = data.frame(motif_set = character(), lincrna_rho = double(), lincrna_p = double(), protein_coding_rho = double(), protein_coding_p = double(), mean_lincrna = double(), mean_pc = double(), wilcox_text_score = double(), wilcox_test_p = double())
-
-
-for (set_name in ese_sets) {
-  print(set_name)
-  
-  lincrna = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_lincrna_ese_densities.csv", sep = ""), head = T)
-  pc = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_pc_ese_densities.csv", sep = ""), head = T)
-  cor1 = cor.test(log10(lincrna$intron_size), lincrna$ese_density, method = "spearman")
-  cor2 = cor.test(log10(pc$intron_size), pc$ese_density, method = "spearman")
-  w_test = wilcox.test(lincrna$ese_density, pc$ese_density)
-  cor_output = data.frame(motif_set = set_name, lincrna_rho = cor1$estimate, lincrna_p = cor1$p.value, protein_coding_rho = cor2$estimate, protein_coding_p = cor2$p.value, mean_lincrna = mean(lincrna$ese_density), mean_pc = mean(pc$ese_density), wilcox_text_score = w_test$statistic, wilcox_test_p = w_test$p.value)
-  cors_family = rbind(cors_family, cor_output)
-
-  lincrna = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_lincrna_ese_densities_flanks.csv", sep = ""), head = T)
-  pc = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_pc_ese_densities_flanks.csv", sep = ""), head = T)
-  cor1 = cor.test(log10(lincrna$intron_size), lincrna$ese_density, method = "spearman")
-  cor2 = cor.test(log10(pc$intron_size), pc$ese_density, method = "spearman")
-  w_test = wilcox.test(lincrna$ese_density, pc$ese_density)
-  cor_output = data.frame(motif_set = paste(set_name, "_flanks", sep = ""), lincrna_rho = cor1$estimate, lincrna_p = cor1$p.value, protein_coding_rho = cor2$estimate, protein_coding_p = cor2$p.value, mean_lincrna = mean(lincrna$ese_density), mean_pc = mean(pc$ese_density), wilcox_text_score = w_test$statistic, wilcox_test_p = w_test$p.value)
-  cors_flanks = rbind(cors_flanks, cor_output)
-  
-  plot = ggarrange(
-    intron_ese_plot(lincrna, "LincRNA"),
-    intron_ese_plot(pc, "Protein-coding coding exons"),
-    ncol = 2,
-    labels = c("A", "B")
-  )
-  ggsave(plot = plot, file = paste("clean_run/plots/intron_size_ese_density_flanks_", set_name, ".pdf", sep = ""), width = 10, height = 5)
-  
-}
-
-# cors_family$adjusted_p = p.adjust(cors_family$wilcox_test_p, method = "bonferroni")
-# cors_flanks$adjusted_p = p.adjust(cors_flanks$wilcox_test_p, method = "bonferroni")
-
-cors_family[nrow(cors_family)+1,] <- NA
-cors = rbind(cors_family, cors_flanks)
-cors
-write.csv(cors, file = "clean_run/tests/ese_densities/intron_size_ese_density_correlations.csv", row.names = F, na = "")
-
-
 
 
 fischers_z <- function(x, y1, y2) {
@@ -109,93 +59,10 @@ fischers_z <- function(x, y1, y2) {
 
 
 p_from_z <- function(z) {
-   #  calculate p value
+  #  calculate p value
   pval <- 2*pnorm(z, lower.tail=FALSE)
   return(pval)
 }
-
-
-
-# types = c("", "_flanks")
-# for (type in types) {
-#   lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_lincrna_ese_densities", type, ".csv", sep = ""), head = T)
-#   pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities", type, ".csv", sep = ""), head = T)
-#   plot = ggarrange(
-#     intron_ese_plot(pc, title = "Protein-coding coding exons"),
-#     stop_density_plot(pc, title = "Protein-coding coding exons"),
-#     intron_ese_plot(lincrna, title = "LincRNA"),
-#     stop_density_plot(lincrna, title = "LincRNA"),
-#     ncol = 2,
-#     nrow = 2,
-#     labels = c("A", "B", "C", "D")
-#   )
-#   ggsave(plot = plot, file = paste("clean_run/plots/intron_size_ese_density_plot", type, ".pdf", sep = ""), width = 12, height = 10)
-# }
-
-pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities.csv", sep = ""), head = T)
-plot = ggarrange(
-    intron_ese_plot(pc),
-    stop_density_plot(pc),
-    ncol = 2,
-    labels = c("A", "B")
-  )
-ggsave(plot = plot, file = "clean_run/plots/pc_intron_size_ese_density_plot_flanks.pdf", width = 9, height = 4)
-
-lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_linc_ese_densities_all_seq.csv", sep = ""), head = T)
-plot = ggarrange(
-    intron_ese_plot(lincrna),
-    stop_density_plot(lincrna),
-    ncol = 2,
-    labels = c("A", "B")
-  )
-plot
-
-ggsave(plot = plot, file = "clean_run/plots/lincrna_intron_size_ese_density_plot.pdf", width = 9, height = 4)
-
-
-
-all_eses_output <- function(set_types, types, ese_sets, output_name) {
-  blank_dataframe = data.frame(
-    motif_set = character(),
-    median_ese_density(),
-    ese_rho = double(),
-    ese_p = double()
-  )
-  for (set_type in set_types) {
-    cors = c()
-    for (type in types) {
-      correlations = blank_dataframe
-      for (set_name in ese_sets) {
-        print(set_name)
-        data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
-        data = data[log10(data$intron_size) != 0,]
-        cor1 = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
-        cor_output = data.frame(
-          motif_set = paste(set_name, type, sep = ""),
-          median_ese_density = median(data$ese_density),
-          ese_rho = cor1$estimate,
-          ese_p = cor1$p.value
-        )
-        correlations = rbind(correlations, cor_output)
-      }
-      cors = rbind(cors, correlations)
-      cors[nrow(cors)+1,] <- NA
-    }
-    output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_correlations.csv", sep = "")
-    print(output_file)
-    write.csv(cors, file = output_file, row.names = F, na = "")
-  }
-}
-
-ese_sets = c("int3", "RESCUE", "PESE", "ESR", "combined_eses")
-set_types = c("pc")
-types = c("", "_flanks", "")
-
-types = c("", "_flanks")
-all_eses_output(set_types, types, ese_sets, "main")
-types = c("_all_seq", "_all_seq_all_genes")
-all_eses_output(set_types, types, ese_sets, "other")
-
 
 # for the stop / non stop eses separately
 
@@ -244,45 +111,31 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
     }
     output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
     print(output_file)
-    # print(cors)
     write.csv(cors, file = output_file, row.names = F, na = "")
     
   }
 }
+####
 
 set_types = c("pc", "lincrna")
 ese_sets = c("int3")
 types = c("", "_flanks")
-stop_nonstop_correlations(set_types, types, ese_sets, "final")
+stop_nonstop_correlations(set_types, types, ese_sets, "processed_output")
 
+pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities.csv", sep = ""), head = T)
+pc_plot = ggarrange(
+  all_ese_plot(pc),
+  split_ese_plot(pc),
+  ncol = 2,
+  labels = c("A", "B")
+)
+ggsave(plot = pc_plot, file = "clean_run/plots/pc_intron_size_ese_density_plot_flanks.pdf", width = 9, height = 4)
 
-
-# # for non-coding PESE
-# 
-# 
-# 
-# for (type in types) {
-#   data = read.csv(paste("clean_run/tests/ese_densities/PESE_non_coding_ese_densities", type, ".csv", sep = ""), head = T)
-#   data = data[log10(data$intron_size) != 0,]
-#   cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
-#   cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
-#   cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
-# 
-#   z1 = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
-#   
-#   cor_output = data.frame(
-#     motif_set = paste("PESE", type, sep = ""),
-#     ese_rho = cor$estimate,
-#     ese_p = cor$p.value,
-#     stop_ese_rho = cor1$estimate,
-#     stop_ese_p = cor1$p.value,
-#     non_stop_ese_rho = cor2$estimate,
-#     non_stop_ese_p = cor2$p.value,
-#     fischers_z = z1,
-#     diff_p = p_from_z(z1)
-#   )
-#   cor_outputs = rbind(cor_outputs, cor_output)
-# }
-# 
-# write.csv(cor_outputs, file = "clean_run/tests/ese_densities/intron_size_ese_density_stop_non_stop_correlations_non_coding.csv", row.names = F, na = "")
-# 
+lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_linc_ese_densities_all_seq.csv", sep = ""), head = T)
+lincrna_plot = ggarrange(
+  all_ese_plot(lincrna),
+  split_ese_plot(lincrna),
+  ncol = 2,
+  labels = c("A", "B")
+)
+ggsave(plot = lincrna_plot, file = "clean_run/plots/lincrna_intron_size_ese_density_plot.pdf", width = 9, height = 4)

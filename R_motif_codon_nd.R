@@ -10,43 +10,6 @@ get_n <- function(x, vjust=0){
   data = data.frame(y = max(x)+vjust,label = paste("n = ", length(x), sep=""))
   return(data)
 }
-
-density_scatterplot <- function(data, ycol = "density", xlab = "", ylab = "") {
-  data$id = as.numeric(seq(1:nrow(data)))
-  stops = data[data$codons == "TAA_TAG_TGA",]
-  not_stops = data[data$codons != "TAA_TAG_TGA",]
-  p <- ggplot() +
-    geom_point(aes(x = not_stops$id, y = not_stops$nd), cex = 0.5, pch = 16) +
-    geom_point(aes(x = stops$id, y = stops$nd), cex = 3, pch = 16, col = "red") +
-    # scale_x_continuous(labels = not_stops$codons, breaks = seq(1:nrow(not_stops))) +
-    theme(axis.text.x = element_blank()) +
-    geom_hline(yintercept = 0, lty = 2) +
-    labs(x = xlab, y = ylab)
-
-  return(p)
-}
-
-density_boxplot <- function(data, ycol = "density") {
-  stops_purine = data$purine[data$codons=="TAA_TAG_TGA"]
-  stops_density =  data[[ycol]][data$codons=="TAA_TAG_TGA"]
-  data$purine <- as.factor(data$purine)
-  data$col <- ifelse(data$purine == stops_purine, "a", "b")
-  p <- ggplot(data, aes(x=data$purine, y=data[[ycol]])) +
-    stat_boxplot(geom ='errorbar') +
-    geom_boxplot(aes(fill=data$col)) +
-    scale_fill_manual(values=c("RoyalBlue", "#dddddd")) +
-    geom_hline(yintercept = stops_density, lty=2) +
-    labs(x = "Query codons purine content", y="Query codons ND") +
-    annotate("text", x=min(as.numeric(data$purine)), hjust=0.2, y=stops_density + 0.05, label="TAA,TAG,TGA", cex=3) +
-    annotate("text", x=min(as.numeric(data$purine)), hjust=0.1, y=stops_density - 0.05, label=round(stops_density,4), cex=3) +
-    theme(legend.position="none") +
-    scale_x_discrete(labels = c("0-0.1", "0.1-0.2", "0.2-0.3", "0.3-0.4", "0.4-0.5", "0.5-0.6", "0.6-0.7", "0.7-0.8", "0.8-0.9", "0.9-1", "1")) +
-    stat_summary(fun.data = get_n, fun.args = list("vjust" = 0.1), geom = "text", aes(group = "purine"), size=3)
-  return(p)
-}
-
-
-
 normalised_density_plot = function(data, stops) {
   # plot of normalised densities #
   plot = ggplot() +
@@ -58,6 +21,7 @@ normalised_density_plot = function(data, stops) {
 }
 
 purine_boxplot = function(data, stops) {
+  data$colour <- ifelse(data$purine == stops$purine, "a", "b")
   plot = ggplot(data, aes(x = data$purine, y = data$nd)) + 
     geom_hline(yintercept = 0, lty=1) +
     stat_boxplot(geom ='errorbar') +
@@ -95,9 +59,23 @@ file = read.csv(filepath, head = T)
 file$gc = substr(file$gc_content, 0, 3)
 file$purine = substr(file$purine_content, 0, 3)
 
+nrow(file)
+
+
 stops =  file[file$codons == "TAA_TAG_TGA",]
 gc_matched = file[file$gc == stops$gc & file$codons != "TAA_TAG_TGA",]
 
+pm = file[file$purine_content == stops$purine_content,]
+
+nrow(pm)
+nrow(pm[pm$nd > stops$nd,]) / nrow(pm)
+
+binom.test(nrow(pm[pm$nd > stops$nd,]), nrow(pn), alternative =)
+
+hist(gc_matched$density)
+abline(v = stops$density)
+nrow(gc_matched[gc_matched$density > stops$density,])
+nrow(gc_matched)
 
 norm_density_gc_plot = normalised_density_plot(gc_matched, stops)
 # ggsave(plot = norm_density_gc_plot, "clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
@@ -120,3 +98,4 @@ plot = ggarrange(
   ncol = 1
 )
 
+ggsave(plot = plot, file = "clean_run/plots/codon_nd_histogram_boxplot.pdf", width = 8, height = 10)
