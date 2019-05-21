@@ -2,7 +2,7 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-density_histogram<- function(data, xlab = "", ylab = "", binwidth = 0.01, title = "") {
+density_histogram <- function(data, xlab = "", ylab = "", binwidth = 0.01, title = "") {
   real = data[data$sim_id == "real",]
   sims = data[data$sim_id != "real",]
   p <- ggplot() + 
@@ -17,8 +17,6 @@ density_histogram<- function(data, xlab = "", ylab = "", binwidth = 0.01, title 
   return(p)
 }
 
-density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.01, title = "INT3")
-
 emperical_p <- function(data, id_col, id_differentiator, test_col) {
   query_val = data[data[[id_col]] == id_differentiator,]
   test_vals = data[data[[id_col]] != id_differentiator,]
@@ -28,7 +26,7 @@ emperical_p <- function(data, id_col, id_differentiator, test_col) {
 
 real_density <- function(data, id_col, id_differentiator, test_col) {
   real = data[data[[id_col]] == id_differentiator,]
-  return (real[[test_col]])
+  return(real[[test_col]])
 }
 
 normalised_density <- function(data, id_col, id_differentiator, test_col) {
@@ -127,16 +125,6 @@ stop_density
 normalised_density(data, "sim_id", "real", "stop_density")
 emperical_p(data, "sim_id", "real", "stop_density")
 
-filepath = "clean_run/motif_tests/rbp_motifs_non_cds_stop_codon_densities.csv"
-data = read.csv(filepath, head = T)
-rbp_non_cds_plot = density_histogram(data, xlab = "Stop codon density", ylab = "Count", binwidth = 0.004, title = "RBPs (non CDS-binding)")
-ggsave("clean_run/plots/dinucleotide_matched_stop_densities_rbp_motifs_non_cds.pdf", plot = rbp_non_cds_plot)
-stop_density = real_density(data, "sim_id", "real", "stop_density")
-stop_density
-normalised_density(data, "sim_id", "real", "stop_density")
-emperical_p(data, "sim_id", "real", "stop_density")
-
-
 ese_plots = grid.arrange(
   int3_plot,
   rescue_plot,
@@ -162,6 +150,6 @@ plot = ggarrange(
   labels = c("A", "B"),
   widths = c(2, 1)
 )
-plot
-ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height= 8, plot = plot)
+
+ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height = 8, plot = plot)
 
