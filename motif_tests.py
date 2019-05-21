@@ -13,11 +13,11 @@ import os
 
 def main():
 
-    arguments = ["output_directory", "motif_file", "simulations", "controls_directory", "exons_fasta", "motif_stop_codon_densities", "motif_codon_densities", "motif_densities_exon_dinucleotides", "generate_motif_controls", "match_density", "match_subs"]
+    arguments = ["output_directory", "motif_file", "simulations", "controls_directory", "exons_fasta", "motifs_stop_density", "motif_stop_codon_densities_sim", "motif_codon_densities", "motif_densities_exon_dinucleotides", "generate_motif_controls", "match_density", "match_subs"]
 
     description = ""
-    args = gen.parse_arguments(description, arguments, opt_flags=[2,3,4], flags = [5,6,7,8,9,10])
-    output_directory, motif_file, simulations, controls_directory, exons_fasta, motif_stop_codon_densities, motif_codon_densities, motif_densities_exon_dinucleotides, generate_motif_controls, match_density, match_subs = args.output_directory, args.motif_file, args.simulations, args.controls_directory, args.exons_fasta, args.motif_stop_codon_densities, args.motif_codon_densities, args.motif_densities_exon_dinucleotides, args.generate_motif_controls, args.match_density, args.match_subs
+    args = gen.parse_arguments(description, arguments, opt_flags=[2,3,4], flags = [5,6,7,8,9,10,11])
+    output_directory, motif_file, simulations, controls_directory, exons_fasta, motifs_stop_density, motif_stop_codon_densities_sim, motif_codon_densities, motif_densities_exon_dinucleotides, generate_motif_controls, match_density, match_subs = args.output_directory, args.motif_file, args.simulations, args.controls_directory, args.exons_fasta, args.motifs_stop_density, args.motif_stop_codon_densities_sim, args.motif_codon_densities, args.motif_densities_exon_dinucleotides, args.generate_motif_controls, args.match_density, args.match_subs
 
     # interger the simulations
     if simulations:
@@ -31,8 +31,12 @@ def main():
     if generate_motif_controls:
         simopc.generate_motif_dinucleotide_controls(motif_file, simulations, output_directory, match_density = match_density, match_subs = match_subs)
 
+    # get the stop density if motifs and non motifs of same length
+    if motifs_stop_density:
+        mtop.calc_stop_densities(motif_file)
+
     # calculate stop codon densities in the motif sets
-    if motif_stop_codon_densities:
+    if motif_stop_codon_densities_sim:
         # create a local output directory
         local_output_directory = "{0}/motif_stop_density_simulations".format(global_output_directory)
         gen.create_output_directories(local_output_directory)

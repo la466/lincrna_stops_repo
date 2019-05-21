@@ -119,3 +119,24 @@ def calculate_motif_densities(file_ids, filelist, codon_sets, output_directory):
                 [temp.write("{0}\t{1}\n".format(i, density_list[i])) for i in sorted(density_list)]
 
     return outputs
+
+
+def calc_stop_densities(input_file):
+    """
+    Calculate the stop density in the set of motifs and other hexamers of same length.
+
+    Args:
+        input_file (str): path to input file
+    """
+
+    motifs = sequo.read_motifs(input_file)
+    motif_lengths = list(set([len(i) for i in motifs]))
+
+    all_motifs = []
+    for length in motif_lengths:
+        all_motifs.extend(["".join(j) for j in it.product(nucleotides, repeat = length)])
+
+    non_motifs = [i for i in all_motifs if i not in motifs]
+
+    print("Stop density in motifs: {0}".format(seqo.calc_gc_seqs_combined(motifs)))
+    print("Stop density in non motifs {0}".format(seqo.calc_gc_seqs_combined(non_motif)))
