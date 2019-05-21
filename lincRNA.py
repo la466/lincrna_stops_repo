@@ -324,6 +324,12 @@ def main():
             mto.calc_seq_hits_linc(input_fasta, output_file, motif_file, controls_dir, required_simulations = required_simulations, families_file = families_file)
         mto.process_seq_hits_linc(tests_output_dir, final_output_file)
 
+    if excess_length_thresholds:
+        local_output_dir = "{0}/orf_length_thresholds".format(global_output_directory)
+        gen.create_output_directories(local_output_dir)
+        ltests.orf_exceed_length_threshold(input_fasta, local_output_directory, required_simulations = required_simulations, families_file = families_file)
+
+
 
     # if density_sim:
     #     ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)

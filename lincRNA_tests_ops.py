@@ -1069,3 +1069,72 @@ def exon_intron_stop_density(exon_fasta, intron_fasta, output_file, families_fil
             exon_density = seqo.calc_motif_density(exons[id], stops)
             intron_density = seqo.calc_motif_density(introns[id], stops)
             outfile.write("{0},{1},{2}\n".format(id, exon_density, intron_density))
+
+
+def orf_exceed_length_threshold(input_fasta, output_directory, required_simulations = None, families_file = None):
+    """
+    Calculate the number of ORFs that exceed given thresholds compared
+    with simulated sequences.
+
+    Args:
+        input_fasta (str): path to input transcript file
+        output_directory (str): path to directory to hold outputs
+        required_simulations (int): if set, the number of simulations to run
+        families_file (str): if set, path to families file
+    """
+
+    names, seqs = gen.read_fasta(input_fasta)
+    seqs = {name.split(".")[0]: seqs[i] for i, name in enumerate(names)}
+    # join all seqeunces together
+    seqs_string = "".join([seqs[i] for i in seqs])
+    # pick only one sequence per family for tests
+    seqs = sequo.pick_random_family_member(families_file, seqs)
+    # get the lengths of sequences
+    seqs = [seqs[i] for i in seqs]
+    seqs_lengths = [len(i) for i in seqs]
+
+    real_longest_orfs = seqo.get_longest_orfs(seqs)
+
+    simulant_longest_orfs = simoc.run_simulation_function(list(range(required_simulations)), [seqs_string, seqs_lengths], calc_sim_orfs, sim_run = False)
+
+    # now for each threshold, see how many exceed
+    for threshold in list(range(200,610,10)):
+        real_greater = len([i for i in real_longest_orfs if i >= threshold])
+        output_file = "{0}/{1}.csv".format(output_dir, threshold)
+        with open(output_file, "w") as outfile:
+            outfile.write("id,greater,max_orf,total\n")
+            outfile.write("real,{0},{1},{2}\n".format(real_greater, max(real_longest_orfs), len(real_longest_orfs)))
+            for i in simulant_longest_orfs:
+                sim_output = simulant_longest_orfs[i]
+                outfile.write("sim_{0},{1},{2},{3}\n".format(i, len([j for j in sim_output if j >= threshold]), max(sim_output), len(sim_output)))
+
+
+def calc_sim_orfs(sims, seqs_string, seqs_lengths):
+    """
+    For each simulation, shuffle sequence and pick a simulant set of sequences
+    with the same lengths as the real ones. Then calculate the longest orfs.
+
+    Args:
+        sims (list): list of simulations to iterate over
+        seqs_string (str): sequence to take simulants from
+        seqs_lengths (list): list of the lengths of the real sequeneces
+
+    Returns:
+        outputs (dict): longest orfs for each simulation
+    """
+
+    outputs = {}
+    if len(sims):
+        np.random.seed()
+        for i, sim in enumerate(sims):
+            gen.print_parallel_status(i, sims)
+            sim_nts = list(seqs_string)
+            np.random.shuffle(sim_nts)
+            sim_string = "".join(sim_nts)
+            new_seqs = []
+            index = 0
+            for length in seqs_lengths:
+                new_seqs.append(sim_string[index:index+length])
+            sim_orfs = seqo.get_longest_orfs(new_seqs)
+            outputs[sim] = sim_orfs
+    return outputs
