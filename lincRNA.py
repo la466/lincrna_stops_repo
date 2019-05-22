@@ -10,9 +10,9 @@ import os
 
 def main():
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "substitution_rate", "substitution_rate_motif", "dinucleotide_substitution_rate", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], opt_flags = [3,4,5,6,7,8,9])
+    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33], opt_flags = [3,4,5,6,7,8,9])
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -42,9 +42,6 @@ def main():
     motif_nd, \
     excess_test, \
     single_exon,\
-    substitution_rate,\
-    substitution_rate_motif,\
-    dinucleotide_substitution_rate,\
     motif_overlap, \
     motif_overlap_density, \
     clean_alignments, \
@@ -79,9 +76,6 @@ def main():
     args.motif_nd, \
     args.excess_test, \
     args.single_exon, \
-    args.substitution_rate, \
-    args.substitution_rate_motif, \
-    args.dinucleotide_substitution_rate, \
     args.motif_overlap, \
     args.motif_overlap_density, \
     args.clean_alignments, \
@@ -328,43 +322,6 @@ def main():
         local_output_dir = "{0}/orf_length_thresholds".format(global_output_directory)
         gen.create_output_directories(local_output_dir)
         ltests.orf_exceed_length_threshold(input_fasta, local_output_directory, required_simulations = required_simulations, families_file = families_file)
-
-
-
-    # if density_sim:
-    #     ltests.density_simulation(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, required_simulations, families_file = lincRNA_multi_exon_families)
-
-    # # calculate the nd of each motif
-    # if motif_nd:
-    #     output_file = "{0}/motif_nd.csv".format(global_global_output_directory)
-    #     ltests.calculcate_motif_nd(input_fasta, motif_file, output_file, simulations = int(required_simulations), families_file = families_file)
-
-
-    # multi_exon_sequence_density_simulation = "{0}/lincrna/tests/lincRNA.multi_exon.full_sequence.stop_density_simulation.csv".format(output_directory)
-    # if stop_density_test:
-    #     ltests.stop_density_test(lincRNA_multi_exon_fasta, multi_exon_sequence_density_simulation, required_simulations, families_file = lincRNA_multi_exon_families)
-    # single_exon_sequence_density_simulation = "{0}/lincrna/tests/lincRNA.single_exon.full_sequence.stop_density_simulation.csv".format(output_directory)
-    # if stop_density_test:
-    #     ltests.stop_density_test(lincRNA_single_exon_fasta, single_exon_sequence_density_simulation, required_simulations, families_file = lincRNA_single_exon_families)
-
-
-
-    # exon_dint_control_directory = "{0}/lincrna/exon_dinucleotide_controls".format(global_output_directory)
-    # if get_exon_dint_controls:
-    #     simopc.generate_dint_controls(lincRNA_multi_exon_fasta, exon_dint_control_directory)
-
-    # intron_dint_control_directory = "{0}/lincrna/intron_dinucleotide_controls".format(global_output_directory)
-    # if get_intron_dint_controls:
-    #     simopc.generate_dint_intron_controls(lincRNA_multi_exon_intron_fasta, intron_dint_control_directory)
-    #
-    # exon_region_density_file = "{0}/exon_region_densities.csv".format(global_global_output_directory)
-    # if exon_region_density:
-    #     mto.exon_region_density(lincRNA_multi_exon_fasta, lincRNA_multi_exon_exons_fasta, None, exon_region_density_file, families_file = lincRNA_multi_exon_families)
-    #
-    # # get the stop density
-    # exon_intron_density_file = "{0}/compare_exon_intron_stop_density.csv".format(global_global_output_directory)
-    # if compare_stop_density:
-    #     mto.compare_stop_density(lincRNA_multi_exon_exons_fasta, lincRNA_multi_exon_intron_fasta, exon_intron_density_file, families_file = lincRNA_multi_exon_families)
 
 
 

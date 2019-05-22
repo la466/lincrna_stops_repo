@@ -4,9 +4,9 @@ library(ggpubr)
 library(reshape2)
 
 all_ese_plot <- function(data) {
-  p = ggplot(data, aes(x = log10(data$intron_size), y = data$ese_density)) + 
-    geom_point(size = 0.8) + 
-    geom_smooth(method='lm', col = "black", se = F) + 
+  p = ggplot(data, aes(x = log10(data$intron_size), y = data$ese_density)) +
+    geom_point(size = 0.8) +
+    geom_smooth(method='lm', col = "black", se = F) +
     scale_y_continuous(limits = c(0, 1)) +
     labs(x = "log10 intron size", y = "Density") +
     theme_minimal() +
@@ -78,21 +78,21 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
     fischers_z = double(),
     diff_p = double()
   )
-  
+
   for (set_type in set_types) {
     cors = c()
     for (type in types) {
       correlations = blank_dataframe
       for (set_name in ese_sets) {
         print(set_name)
-        data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
+        data = read.csv(paste("clean_run/tests/intron_length_ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
         data = data[log10(data$intron_size) != 0,]
-        
+
         cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
         cor1 = cor.test(log10(data$intron_size), data$stop_ese_density, method = "spearman")
         cor2 = cor.test(log10(data$intron_size), data$non_stop_ese_density, method = "spearman")
         z = fischers_z(log10(data$intron_size), data$stop_ese_density, data$non_stop_ese_density)
-        
+
         cor_output = data.frame(
           motif_set = paste(set_name, type, sep = ""),
           ese_rho = cor$estimate,
@@ -109,10 +109,10 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
       cors = rbind(cors, correlations)
       cors[nrow(cors)+1,] <- NA
     }
-    output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
+    output_file = paste("clean_run/tests/intron_length_ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
     print(output_file)
     write.csv(cors, file = output_file, row.names = F, na = "")
-    
+
   }
 }
 ####
@@ -122,7 +122,7 @@ ese_sets = c("int3")
 types = c("", "_flanks")
 stop_nonstop_correlations(set_types, types, ese_sets, "processed_output")
 
-pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities.csv", sep = ""), head = T)
+pc = read.csv(paste("clean_run/tests/intron_length_ese_densities/int3_pc_ese_densities.csv", sep = ""), head = T)
 pc_plot = ggarrange(
   all_ese_plot(pc),
   split_ese_plot(pc),
@@ -131,7 +131,7 @@ pc_plot = ggarrange(
 )
 ggsave(plot = pc_plot, file = "clean_run/plots/pc_intron_size_ese_density_plot_flanks.pdf", width = 9, height = 4)
 
-lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_linc_ese_densities_all_seq.csv", sep = ""), head = T)
+lincrna = read.csv(paste("clean_run/tests/intron_length_ese_densities/int3_linc_ese_densities_all_seq.csv", sep = ""), head = T)
 lincrna_plot = ggarrange(
   all_ese_plot(lincrna),
   split_ese_plot(lincrna),

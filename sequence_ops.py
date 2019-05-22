@@ -3776,3 +3776,42 @@ def mask_seq(seq, motifs, mask_character = "C"):
     overlaps = sequence_overlap_indicies(seq, motifs)
     masked_seq = "".join([nt if i not in overlaps else mask_character for i, nt in enumerate(list(seq))])
     return masked_seq
+
+
+def locate_random_motifs(iterations, seq, motifs, output_directory):
+    """
+    Given a sequence, locate a set amount of random motifs
+
+    Args:
+        iterations (list): list of items to iterate over
+        seq (str): the sequence to pick motifs frmo
+        motifs (list): list of motifs to simulate
+        output_directory (str): path to output directory of outputs
+    """
+    # get a list of positions in the string
+    choices = list(range(len(seq)))
+    output_files = []
+
+    choice_length = list(set([len(i) for i in motifs]))[0]
+    # for each of the iterations
+    if len(iterations):
+        for i, iteration in enumerate(iterations):
+            np.random.seed()
+            gen.print_parallel_status(i, iterations)
+
+            test_set = []
+            generated = False
+            # if not generated
+            while not generated:
+                required = len(motifs) - len(test_set)
+                # choose a random position
+                chosen = np.random.choice(choices, len(motifs) - len(test_set))
+                # get the motif and check whether it is not already in set
+                test_set.extend(list(set([seq[i:i+choice_length] for i in chosen if "X" not in seq[i:i+choice_length] and seq[i:i+choice_length] not in test_set])))
+                if len(test_set) == len(motifs):
+                    generated = True
+
+            # write motifs to file
+            output_file = "{0}/{1}.txt".format(output_directory, random.random())
+            with open(output_file, "w") as outfile:
+                [outfile.write("{0}\n".format(i)) for i in test_set]

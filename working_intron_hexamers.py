@@ -96,20 +96,21 @@ def run_hexamer_test(simulatioms, motif_file, sequences_file, controls_dir, outp
         for i in range(len(test_purine_content)):
             outfile.write("{0},{1},{2}\n".format(i+1, test_purine_content[i], ",".join(gen.stringify([test_nt_content[i][j] for j in sorted(test_nt_content[i])]))))
 
+    gen.remove_directory(controls_dir)
+
 simulations = 1000
 
-# intron_hexamer_dir = "clean_run/intron_hexamers"
-# intron_output_dir = "clean_run/tests/introns"
-# gen.create_output_directories(intron_output_dir)
-# intron_output_file = "{0}/intron_hexamers.csv".format(intron_output_dir)
-# run_hexamer_text(ese_file, introns_file, families_file = families_file)
+intron_hexamer_dir = "clean_run/intron_hexamers"
+intron_output_dir = "clean_run/tests/introns"
+gen.create_output_directories(intron_output_dir)
+intron_output_file = "{0}/intron_hexamers.csv".format(intron_output_dir)
 
-exon_hexamer_dir = "clean_run/exon_hexamers"
-exon_output_dir = "clean_run/tests/exons"
-gen.create_output_directories(exon_output_dir)
-exon_output_file = "{0}/exon_hexamers.csv".format(exon_output_dir)
-run_hexamer_test(simulations, ese_file, exons_file, exon_hexamer_dir, exon_output_file, families_file = families_file)
+# exon_hexamer_dir = "clean_run/exon_hexamers"
+# exon_output_dir = "clean_run/tests/exons"
+# gen.create_output_directories(exon_output_dir)
+# exon_output_file = "{0}/exon_hexamers.csv".format(exon_output_dir)
+# run_hexamer_test(simulations, ese_file, exons_file, exon_hexamer_dir, exon_output_file, families_file = families_file)
+#
 
 
-
-# run_hexamer_text(simulations, ese_file, exons_file, intron_hexamer_dir, output_file, families_file = families_file)
+run_hexamer_test(simulations, ese_file, exons_file, intron_hexamer_dir, output_file, families_file = families_file)

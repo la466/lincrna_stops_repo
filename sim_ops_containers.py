@@ -85,7 +85,15 @@ def run_simulation_function(required_simulations, sim_args, function_to_run, kwa
 
 
 def generate_gc_controls(input_file, untranslated_sequence_file, output_directory, required_simulations = None):
+    """
+    Wrapper to get GC matched sequences from non-transcribed sequence
 
+    Args:
+        input_file (str): path to input file
+        unstranslated_sequence_file (str): path to unstranslated sequences
+        output_directory (str): path to output directory
+        required_simulations (int): if set, number of simulations to run
+    """
     if not required_simulations:
         required_simulations = 1000
 
