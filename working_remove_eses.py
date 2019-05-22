@@ -38,22 +38,24 @@ for i, name in enumerate(exon_names):
 
 motifs = sequo.read_motifs("source_data/motif_sets/combined_eses.txt")
 
-def remove_motifs(seqs, motifs):
+def remove_motifs(ids, seqs, motifs):
     kept = {}
-    for id in seqs:
-        kept_seqs = []
-        for seq in seqs[id]:
-            overlaps = sequo.get_motifs_overlap_indices([seq], motifs)
-            kept_seq = "".join([nt for i, nt in enumerate(list(seq)) if i not in overlaps])
-            kept_seqs.append(kept_seq)
-        kept[id] = kept_seqs
+    if len(ids):
+        for i, id in enumerate(ids):
+            gen.print_parallel_status(i, ids)
+            kept_seqs = []
+            for seq in seqs[id]:
+                overlaps = sequo.get_motifs_overlap_indices([seq], motifs)
+                kept_seq = "".join([nt for i, nt in enumerate(list(seq)) if i not in overlaps])
+                kept_seqs.append(kept_seq)
+            kept[id] = kept_seqs
     return kept
 
 exons = {i: [exons[i][j] for j in exons[i]] for i in exons}
 introns = {i: [introns[i][j] for j in introns[i]] for i in introns}
 
-exons = remove_motifs(exons, motifs)
-introns = remove_motifs(introns, motifs)
+exons = soc.run_simulation_function(list(exons), [exons, motifs], remove_motifs, sim_run = False)
+introns = soc.run_simulation_function(list(introns), [introns, motifs], remove_motifs, sim_run = False)
 
 exon_purine = {i: sequo.calc_purine_content(exons[i]) for i in exons}
 intron_purine = {i: sequo.calc_purine_content(introns[i]) for i in introns}
