@@ -1,57 +1,51 @@
-file = read.csv("clean_run/purine_content.csv", head=T)
+library(ggplot2)
+library(reshape2)
+
+fill_colour = "#d1d2d4"
+line_colour = "#222222"
+red_colour = "#e74b4f"
+
+
+purine_boxplot = function(data) {
+  data = purine
+  colnames(data) = c("id", "Exons", "Introns")
+  data = melt(data)
+  plot = ggplot() + 
+    geom_boxplot(aes(x = data$variable, y = data$value), fill = fill_colour) + 
+    labs(x = "", y = "Purine content") + 
+    geom_hline(yintercept = 0.784, col = red_colour, size = 1.1) +
+    theme_minimal()
+  return(plot)
+}
+ 
+
+purine = read.csv("clean_run/tests/purine_content/exon_intron_purine.csv", head = T)
+nrow(purine)
+wilcox.test(purine$exon_purine, purine$intron_purine, paired = T)
+median(purine$exon_purine)
+median(purine$intron_purine)
+
+plot = purine_boxplot(purine)
+plot
+ggsave(plot = plot, file = "clean_run/plots/exon_intron_purine_boxplot.pdf", width = 4, height = 4)
+
+
+file = read.csv("clean_run/tests/purine_content/int3_purine_content.csv", head = T)
+file = file[complete.cases(file), ]
 nrow(file)
-head(file)
-
-qqnorm(file$exon_purine_content)
-qqnorm(file$intron_purine_content)
-
-wilcox.test(file$exon_purine_content, file$intron_purine_content, paired = T)
-median(file$exon_purine_content)
-median(file$intron_purine_content)
-
-nrow(file)
-
-cor.test(file$exon_purine_content, file$intron_purine_content, method = "spearman")
-
-wilcox.test(file$exon_core_purine_content, file$intron_core_purine_content, paired = T)
-median(file$exon_core_purine_content)
-median(file$intron_core_purine_content)
+# all ese
+median(file$ese_purine)
+median(file$non_ese_purine)
+wilcox.test(file$ese_purine, file$non_ese_purine, paired = T)
+# just terminal 50 nts
+median(file$flanking_50_ese_purine)
+median(file$flanking_50_non_ese_purine)
+wilcox.test(file$flanking_50_ese_purine, file$flanking_50_non_ese_purine, paired = T)
 
 
-file = read.csv("temp_files/random_purine_content.csv", head = T)
-head(file)
-
-real = file[file$id == "real",]
-sims = file[file$id != "real",]
-
-btest = binom.test(nrow(sims[sims$pvalue < 0.05,]), nrow(sims), alternative = "g")
-btest
-
-exons = (nrow(sims[sims$median_exon >= real$median_exon,]) + 1) / (nrow(sims) + 1)
-intron = (nrow(sims[sims$median_intron <= real$median_intron,]) + 1) / (nrow(sims) + 1)
 
 
-file = read.csv("clean_run/purine_content_no_eses.csv", head = T)
-head(file)
-nrow(file)
-wilcox.test(file$exon, file$intron, paired = T)
-median(file$exon)
-median(file$intron)
-
-nrow(file)
-
-file = read.csv("clean_run/tests/purine_content/exon_intron_purine_content_with_ese.csv", head = T)
-file$padj = p.adjust(file$pvalue, method = "bonferroni")
-
-
-real = file[file$id == "real",]
-sims = file[file$id != "real",]
-
-head(sims)
-
-sims[sims$pvalue < 0.05,]
-nrow(sims[sims$pvalue < 0.05 & sims$median_exon > sims$median_intron,])
-binom.test(nrow(sims[sims$pvalue < 0.05 & sims$median_exon > sims$median_intron,]), nrow(sims), p = 0.05, alternative = "g")
-nrow(sims[sims$padj < 0.05,])
-
-binom.test(19, 1000, p = 0.05, alternative = "g")
+purine = read.csv("clean_run/tests/purine_content/exon_intron_purine_no_eses.csv", head = T)
+head(purine)
+median(purine$exon_purine)
+median(purine$intron_purine)

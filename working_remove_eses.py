@@ -36,9 +36,24 @@ for i, name in enumerate(exon_names):
     if name.split(".")[0] in introns:
         exons[name.split(".")[0]][int(name.split(".")[1].split("(")[0])] = exon_seqs[i]
 
+motifs = sequo.read_motifs("source_data/motif_sets/combined_eses.txt")
+
+def remove_motifs(seqs, motifs):
+    kept = {}
+    for id in seqs:
+        kept_seqs = []
+        for seq in seqs[id]:
+            overlaps = sequo.get_motifs_overlap_indices([seq], motifs)
+            kept_seq = "".join([nt for i, nt in enumerate(list(seq)) if i not in overlaps])
+            kept_seqs.append(kept_seq)
+        kept[id] = kept_seqs
+    return kept
 
 exons = {i: [exons[i][j] for j in exons[i]] for i in exons}
 introns = {i: [introns[i][j] for j in introns[i]] for i in introns}
+
+exons = remove_motifs(exons, motifs)
+introns = remove_motifs(introns, motifs)
 
 exon_purine = {i: sequo.calc_purine_content(exons[i]) for i in exons}
 intron_purine = {i: sequo.calc_purine_content(introns[i]) for i in introns}
@@ -46,7 +61,7 @@ intron_purine = {i: sequo.calc_purine_content(introns[i]) for i in introns}
 families = gen.read_many_fields(families_file, "\t")
 exon_purine = sequo.group_family_results(exon_purine, families)
 intron_purine = sequo.group_family_results(intron_purine, families)
-
-with open('clean_run/tests/purine_content/exon_intron_purine.csv', "w") as outfile:
+#
+with open('clean_run/tests/purine_content/exon_intron_purine_no_eses.csv', "w") as outfile:
     outfile.write("id,exon_purine,intron_purine\n")
     [outfile.write("{0},{1},{2}\n".format(id, np.nanmedian(exon_purine[id]), np.nanmedian(intron_purine[id]))) for id in exon_purine]

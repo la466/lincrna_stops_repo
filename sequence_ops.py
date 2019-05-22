@@ -3815,3 +3815,38 @@ def locate_random_motifs(iterations, seq, motifs, output_directory):
             output_file = "{0}/{1}.txt".format(output_directory, random.random())
             with open(output_file, "w") as outfile:
                 [outfile.write("{0}\n".format(i)) for i in test_set]
+
+def calc_motif_hit_purine(ids, seq_list, motifs):
+    """
+    Calculate the purine content in and out of motif hits
+
+    Args:
+        ids (list): list of sequence ids
+        seq_list (dict): sequences
+        motifs (list): list of motifs
+        
+    Returns:
+        outputs (dict): purine contents for each seq
+    """
+    outputs = {}
+
+    if len(ids):
+        for i, id in enumerate(ids):
+            gen.print_parallel_status(i, ids)
+
+            motif_sequence = []
+            non_motif_sequence = []
+            flank_sequence_motif = []
+            flank_sequence_non_motif = []
+            for sequence in exons[id]:
+                overlaps = sequo.sequence_overlap_indicies(sequence, motifs)
+                motif_sequence.append("".join([sequence[i] for i in overlaps]))
+                non_motif_sequence.append("".join([sequence[i] for i in range(len(sequence)) if i not in overlaps]))
+
+                flank_sequence = "".join([sequence[:50], sequence[-50:]])
+                flank_sequence_motif.append("".join([flank_sequence[i] for i in overlaps if i in range(len(flank_sequence))]))
+                flank_sequence_non_motif.append("".join([flank_sequence[i] for i in range(len(flank_sequence)) if i not in overlaps]))
+
+            outputs[id] = [sequo.calc_purine_content("".join(motif_sequence)), sequo.calc_purine_content("".join(non_ese_sequence)), sequo.calc_purine_content("".join(flank_sequence_ese)), sequo.calc_purine_content("".join(flank_sequence_non_ese))]
+
+    return outputs

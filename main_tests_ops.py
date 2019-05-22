@@ -1539,3 +1539,89 @@ def calc_overlap_diffs(input_fasta, motif_file, output_file, required_simulation
     with open(output_file, "w") as outfile:
         outfile.write("id,single_stop_density,overlap_stop_density,motif_diff,sequence_diff,diff_diff\n")
         [outfile.write("{0},{1}\n".format(id, ",".join(gen.stringify(outputs[id])))) for id in outputs]
+
+def motif_purine_content(input_fasta, motif_file, output_file, families_file = None):
+    """
+    Calculate the purine content in and outside motif hits.
+
+    Args:
+        input_fasta (str): path to input file
+        motif_file (str): path to input file
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+
+    names, seqs = gen.read_fasta(input_fasta)
+    all_seqs = collections.defaultdict(lambda: [])
+    for i, name in enumerate(names):
+        if len(seqs[i]) > 100:
+            all_seqs[name.split(".")[0]].append(seqs[i])
+    all_seqs = {i: all_seqs[i] for i in all_seqs if len(all_seqs[i]) > 1}
+
+    motifs = sequo.read_motifs(motif_file)
+    # calc hit purine
+    outputs = soc.run_simulation_function(list(all_seqs), [all_seqs, motifs], calc_motif_hit_purine, sim_run = False)
+
+    motif_purine = {}
+    non_motif_purine = {}
+    flank_sequence_motif = {}
+    flank_sequence_non_motif = {}
+
+    for id in outputs:
+        motif_purine[id] = outputs[id][0]
+        non_motif_purine[id] = outputs[id][1]
+        flank_sequence_motif[id] = outputs[id][2]
+        flank_sequence_non_motif[id] = outputs[id][3]
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        motif_purine = sequo.group_family_results(motif_purine, families)
+        non_motif_purine = sequo.group_family_results(non_motif_purine, families)
+        flank_sequence_motif = sequo.group_family_results(flank_sequence_motif, families)
+        flank_sequence_non_motif = sequo.group_family_results(flank_sequence_non_motif, families)
+
+    # write to output file
+    with open(output_file, "w") as outfile:
+        outfile.write("id,motif_purine,non_motif_purine,flanking_50_motif_purine,flanking_50_non_motif_purine\n")
+        [outfile.write("{0},{1},{2},{3},{4}\n".format(id, np.nanmedian(motif_purine[id]), np.nanmedian(non_motif_purine[id]), np.nanmedian(flank_sequence_motif[id]), np.nanmedian(flank_sequence_non_motif[id]))) for id in motif_purine]
+
+
+def exon_intron_purine(input_fasta, input_fasta2, output_file, families_file = None):
+    """
+    Calcaulte the pruine content in exons and corresponding introns
+
+    Args:
+        input_fasta (str): path to file containing exons
+        input_fasta2 (str): path to file containing introns
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+
+    exon_names, exon_seqs = gen.read_fasta(input_fasta)
+    intron_names, intron_seqs = gen.read_fasta(input_fasta2)
+
+    # get the introns and corresponding exons
+    introns = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(intron_names):
+        introns[name.split(".")[0]][int(name.split(".")[1].split("(")[0].split("-")[0])] = intron_seqs[i]
+
+    exons = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(exon_names):
+        if name.split(".")[0] in introns:
+            exons[name.split(".")[0]][int(name.split(".")[1].split("(")[0])] = exon_seqs[i]
+
+    exons = {i: [exons[i][j] for j in exons[i]] for i in exons}
+    introns = {i: [introns[i][j] for j in introns[i]] for i in introns}
+
+    # calc the purine content
+    exon_purine = {i: sequo.calc_purine_content(exons[i]) for i in exons}
+    intron_purine = {i: sequo.calc_purine_content(introns[i]) for i in introns}
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        exon_purine = sequo.group_family_results(exon_purine, families)
+        intron_purine = sequo.group_family_results(intron_purine, families)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,exon_purine,intron_purine\n")
+        [outfile.write("{0},{1},{2}\n".format(id, np.nanmedian(exon_purine[id]), np.nanmedian(intron_purine[id]))) for id in exon_purine]

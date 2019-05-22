@@ -14,10 +14,9 @@ import os
 def main():
 
 
-    arguments = ["input_directory", "output_directory", "simulations", "motif_file", "input_fasta", "input_fasta2", "families_file", "output_prefix", "controls_dir", "output_prefix", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "match_density", "match_subs", "intron_length_test", "seq_hits", "seq_hits_linc", "overlap", "overlap_diffs", "intron_hexamers"]
-
+    arguments = ["input_directory", "output_directory", "simulations", "motif_file", "input_fasta", "input_fasta2", "families_file", "output_prefix", "controls_dir", "output_prefix", "clean_run",  "generate_gc_matched_stop_sets", "generate_motif_dinucleotide_controls", "compare_stop_density", "compare_codon_density", "coding_exons", "generate_gc_controls_exons", "generate_gc_controls_introns", "generate_dint_exon_controls", "generate_dint_intron_controls", "cds_density_nd", "stop_density_nd", "without_ese", "exon_region_density", "intron_density", "calc_purine_content", "exon_region_excess", "non_coding_exons", "match_density", "match_subs", "intron_length_test", "seq_hits", "seq_hits_linc", "overlap", "overlap_diffs", "intron_hexamers", "ese_purine", "exon_intron_purine"]
     description = ""
-    args = gen.parse_arguments(description, arguments, flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35], ints=[], opt_flags=[2,3,4,5,6,7,8])
+    args = gen.parse_arguments(description, arguments, flags = [9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37], ints=[], opt_flags=[2,3,4,5,6,7,8])
     input_directory, \
     output_directory, \
     simulations, \
@@ -53,7 +52,9 @@ def main():
     seq_hits_linc, \
     overlap, \
     overlap_diffs, \
-    intron_hexamers = \
+    intron_hexamers, \
+    ese_purine, \
+    exon_intron_purine = \
     args.input_directory, \
     args.output_directory, \
     args.simulations, \
@@ -90,7 +91,10 @@ def main():
     args.seq_hits_linc, \
     args.overlap, \
     args.overlap_diffs, \
-    args.intron_hexamers
+    args.intron_hexamers, /
+    args.ese_purine, \
+    args.exon_intron_purine
+
 
     if simulations:
         simulations = int(simulations)
@@ -229,9 +233,19 @@ def main():
         mto.calc_purine_content(coding_exons_fasta, introns_fasta, output_file, families_file = families_file)
 
     if intron_hexamers:
-        local_output_directory = "{0}/tests/intron_hexamers".format(output_directory)
+        local_output_directory = "{0}/tests/introns".format(output_directory)
         output_file = "{0}/intron_hexamers.csv".format(local_output_directory)
         mto.intron_hexamer_test(input_fasta, motif_file, local_output_directory, output_file, required_simulations = simulations, families_file = families_file)
+
+    if ese_purine:
+        local_output_directory = "{0}/tests/purine_content".format(output_directory)
+        output_file = "{0}/{1}_purine_content.csv".format(local_output_directory, motif_file.split("/")[-1].split(".")[0])
+        mto.motif_purine_content(input_fasta, motif_file, output_file, families_file = families_file)
+
+    if exon_intron_purine:
+        local_output_directory = "{0}/tests/purine_content".format(output_directory)
+        output_file = "{0}/exon_intron_purine.csv".format(local_output_directory)
+        mto.exon_intron_purine(input_fasta, input_fasta2, output_file, families_file = families_file)
 
 
 if __name__ == "__main__":
