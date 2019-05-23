@@ -1625,3 +1625,47 @@ def exon_intron_purine(input_fasta, input_fasta2, output_file, families_file = N
     with open(output_file, "w") as outfile:
         outfile.write("id,exon_purine,intron_purine\n")
         [outfile.write("{0},{1},{2}\n".format(id, np.nanmedian(exon_purine[id]), np.nanmedian(intron_purine[id]))) for id in exon_purine]
+
+
+def exon_intron_purine_no_motifs(input_fasta, input_fasta2, motif_file, output_file, families_file = None):
+    """
+    Calculate the purine content in exons and corresponding introns after
+    removing hits to given motifs
+
+    Args:
+        input_fasta (str): path to file containing exons
+        input_fasta2 (str): path to file containing introns
+        motif_file (str): path to file containing motifs
+        output_file (str): path to output file
+        families_file (str): if set, path to families file
+    """
+
+    exon_names, exon_seqs = gen.read_fasta(input_fasta)
+    intron_names, intron_seqs = gen.read_fasta(input_fasta2)
+
+    introns = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(intron_names):
+        introns[name.split(".")[0]][int(name.split(".")[1].split("(")[0].split("-")[0])] = intron_seqs[i]
+
+    exons = collections.defaultdict(lambda: collections.defaultdict())
+    for i, name in enumerate(exon_names):
+        if name.split(".")[0] in introns:
+            exons[name.split(".")[0]][int(name.split(".")[1].split("(")[0])] = exon_seqs[i]
+
+    exons = {i: [exons[i][j] for j in exons[i]] for i in exons}
+    introns = {i: [introns[i][j] for j in introns[i]] for i in introns}
+
+    exons = soc.run_simulation_function(list(exons), [exons, motifs], sequo.remove_motifs, sim_run = False)
+    introns = soc.run_simulation_function(list(introns), [introns, motifs], sequo.remove_motifs, sim_run = False)
+
+    exon_purine = {i: sequo.calc_purine_content(exons[i]) for i in exons}
+    intron_purine = {i: sequo.calc_purine_content(introns[i]) for i in introns}
+
+    if families_file:
+        families = gen.read_many_fields(families_file, "\t")
+        exon_purine = sequo.group_family_results(exon_purine, families)
+        intron_purine = sequo.group_family_results(intron_purine, families)
+
+    with open(output_file, "w") as outfile:
+        outfile.write("id,exon_purine,intron_purine\n")
+        [outfile.write("{0},{1},{2}\n".format(id, np.nanmedian(exon_purine[id]), np.nanmedian(intron_purine[id]))) for id in exon_purine]

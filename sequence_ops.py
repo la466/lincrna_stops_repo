@@ -3824,7 +3824,7 @@ def calc_motif_hit_purine(ids, seq_list, motifs):
         ids (list): list of sequence ids
         seq_list (dict): sequences
         motifs (list): list of motifs
-        
+
     Returns:
         outputs (dict): purine contents for each seq
     """
@@ -3850,3 +3850,29 @@ def calc_motif_hit_purine(ids, seq_list, motifs):
             outputs[id] = [sequo.calc_purine_content("".join(motif_sequence)), sequo.calc_purine_content("".join(non_ese_sequence)), sequo.calc_purine_content("".join(flank_sequence_ese)), sequo.calc_purine_content("".join(flank_sequence_non_ese))]
 
     return outputs
+
+def remove_motifs(ids, seqs, motifs):
+    """
+    Given a list of sequence ids, remove the motifs and return the remaining
+    sequence.
+
+    Args:
+        ids (list): list of seq ids
+        seqs (dict): sequences
+        motifs (list): list of motifs to remove
+
+    Returns:
+        kept (dict): the remaining bits of sequence
+    """
+
+    kept = {}
+    if len(ids):
+        for i, id in enumerate(ids):
+            gen.print_parallel_status(i, ids)
+            kept_seqs = []
+            for seq in seqs[id]:
+                overlaps = get_motifs_overlap_indices([seq], motifs)
+                kept_seq = "".join([nt for i, nt in enumerate(list(seq)) if i not in overlaps])
+                kept_seqs.append(kept_seq)
+            kept[id] = kept_seqs
+    return kept

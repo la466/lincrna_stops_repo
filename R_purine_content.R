@@ -19,6 +19,7 @@ purine_boxplot = function(data) {
 }
  
 
+# exon intron purine
 purine = read.csv("clean_run/tests/purine_content/exon_intron_purine.csv", head = T)
 nrow(purine)
 wilcox.test(purine$exon_purine, purine$intron_purine, paired = T)
@@ -29,7 +30,14 @@ plot = purine_boxplot(purine)
 plot
 ggsave(plot = plot, file = "clean_run/plots/exon_intron_purine_boxplot.pdf", width = 4, height = 4)
 
+# no eses
+purine_no_eses = read.csv("clean_run/tests/purine_content/exon_intron_purine_no_eses.csv", head = T)
+median(purine_no_eses$exon_purine)
+median(purine_no_eses$intron_purine)
+wilcox.test(purine_no_eses$exon_purine, purine_no_eses$intron_purine, paired= T)
 
+
+# purine content of motifs
 file = read.csv("clean_run/tests/purine_content/int3_purine_content.csv", head = T)
 file = file[complete.cases(file), ]
 nrow(file)
@@ -45,7 +53,4 @@ wilcox.test(file$flanking_50_ese_purine, file$flanking_50_non_ese_purine, paired
 
 
 
-purine = read.csv("clean_run/tests/purine_content/exon_intron_purine_no_eses.csv", head = T)
-head(purine)
-median(purine$exon_purine)
-median(purine$intron_purine)
+
