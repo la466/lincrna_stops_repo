@@ -64,28 +64,25 @@ nrow(file)
 
 stops =  file[file$codons == "TAA_TAG_TGA",]
 gc_matched = file[file$gc == stops$gc & file$codons != "TAA_TAG_TGA",]
+purine_matched = file[file$purine_content == stops$purine_content,]
 
-pm = file[file$purine_content == stops$purine_content,]
 
-nrow(pm)
-nrow(pm[pm$nd > stops$nd,]) / nrow(pm)
-
-binom.test(nrow(pm[pm$nd > stops$nd,]), nrow(pn), alternative =)
-
-hist(gc_matched$density)
-abline(v = stops$density)
-nrow(gc_matched[gc_matched$density > stops$density,])
+# gc matched
 nrow(gc_matched)
+nrow(gc_matched[gc_matched$density > stops$density,])
+binom.test(nrow(gc_matched[gc_matched$nd > stops$nd,]), nrow(gc_matched), alternative = "g")
 
 norm_density_gc_plot = normalised_density_plot(gc_matched, stops)
 # ggsave(plot = norm_density_gc_plot, "clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
 
-# normalised density binom test
-binom.test(nrow(gc_matched[gc_matched$nd > stops$nd,]), nrow(gc_matched), alternative = "g")
-
-# match by purine too
-purine_matched = gc_matched[gc_matched$purine_content == stops$purine_content,]
+# purine matched
+nrow(purine_matched)
+nrow(purine_matched[purine_matched$nd > stops$nd,])
 binom.test(nrow(purine_matched[purine_matched$nd > stops$nd,]), nrow(purine_matched), alternative = "g")
+
+# match by gc and purine
+gc_purine_matched = gc_matched[gc_matched$purine_content == stops$purine_content,]
+binom.test(nrow(gc_purine_matched[gc_purine_matched$nd > stops$nd,]), nrow(gc_purine_matched), alternative = "g")
 # plot
 purine_plot = purine_boxplot(gc_matched, stops)
 purine_plot
