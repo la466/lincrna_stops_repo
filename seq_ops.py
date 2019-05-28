@@ -9,7 +9,6 @@ import os
 from useful_motif_sets import stops, nucleotides
 import sequence_ops as sequo
 
-# stops = ["TAT", "TAC", "TCA"]
 
 def calc_motif_density(seq_list, motif_set):
 
