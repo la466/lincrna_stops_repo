@@ -274,7 +274,7 @@ def sim_stop_density(input_fasta, output_file, simulations = None, families_file
     if families_file:
         sequence_list = sequo.pick_random_family_member(families_file, sequence_list)
 
-    print(len(sequence_list))
+
 
     # create a temporary output directory
     temp_dir = "temp_lincrna_sim"
