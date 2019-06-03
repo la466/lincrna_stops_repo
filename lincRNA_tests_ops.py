@@ -498,6 +498,7 @@ def process_sim_stop_density_within_gene_outputs(output_dir, output_file):
             depletions = data["normalised_density"] < 0
             significant = data["p_value"] < 0.05
             rows = data.shape[0]
+            print(file, rows)
             binom_test_depletions = scipy.stats.binom_test(depletions.sum(), rows, p = 0.05, alternative = "greater")
             binom_test_significant_depletions = scipy.stats.binom_test(significant.sum(), rows, p = 0.05, alternative = "greater")
             outfile.write("{0},{1},{2},{3},{4},{5}\n".format(i+1, rows, depletions.sum(), binom_test_depletions, significant.sum(), binom_test_significant_depletions))
