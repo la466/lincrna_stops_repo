@@ -11,15 +11,11 @@ import os
 
 def main():
 
-<<<<<<< HEAD
+
     arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg", "excess_length_thresholds", "extract_second"]
     description = "Container for analysis on lincRNAs"
     args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35], opt_flags = [3,4,5,6,7,8,9])
-=======
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "excess_length_thresholds", "upstream_atg"]
-    description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34], opt_flags = [3,4,5,6,7,8,9])
->>>>>>> 565d25bb4523f2bbfb577507065e35aba861736d
+
     input_bed, \
     input_fasta, \
     output_directory, \
@@ -53,14 +49,9 @@ def main():
     motif_overlap_density, \
     clean_alignments, \
     seq_hits_linc, \
-<<<<<<< HEAD
     upstream_atg, \
     excess_length_thresholds, \
     extract_second = \
-=======
-    excess_length_thresholds, \
-    upstream_atg = \
->>>>>>> 565d25bb4523f2bbfb577507065e35aba861736d
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
@@ -94,14 +85,9 @@ def main():
     args.motif_overlap_density, \
     args.clean_alignments, \
     args.seq_hits_linc, \
-<<<<<<< HEAD
     args.upstream_atg, \
     args.excess_length_thresholds, \
     args.extract_second
-=======
-    args.excess_length_thresholds, \
-    args.upstream_atg
->>>>>>> 565d25bb4523f2bbfb577507065e35aba861736d
 
     # make required simultions an int
     required_simulations = int(required_simulations) if required_simulations else None
@@ -206,7 +192,7 @@ def main():
         if families_file:
             sim_stop_density_output_dir = "{0}/{1}_stop_density_introns_simulation_all_genes_grouped_families".format(local_output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/{1}_stop_density_introns_simulation_all_genes_grouped_families.csv".format(local_output_directory, output_prefix)
-            runs = 10
+            runs = 1
         else:
             sim_stop_density_output_dir = "{0}/{1}_stop_density_introns_simulation_all_genes".format(local_output_directory, output_prefix)
             sim_stop_density_output_file = "{0}/{1}_stop_density_introns_simulation_all_genes.csv".format(local_output_directory, output_prefix)

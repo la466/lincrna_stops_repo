@@ -255,6 +255,8 @@ def sim_stop_density(input_fasta, output_file, simulations = None, families_file
         output_file (str): path to output file
         simulations (int): if set, the number of simulations to run
         families_file (str): if set, the path to the file containing the paralogous families
+        introns (bool): if true, look at introns (also need input_fasta2)
+        input_fasta2 (str): if set, the path to the exons file whe looking at introns
     """
     # get the sequences
     names, sequences = gen.read_fasta(input_fasta)
