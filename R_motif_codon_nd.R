@@ -73,12 +73,16 @@ nrow(gc_matched[gc_matched$density > stops$density,])
 binom.test(nrow(gc_matched[gc_matched$nd > stops$nd,]), nrow(gc_matched), alternative = "g")
 
 norm_density_gc_plot = normalised_density_plot(gc_matched, stops)
-# ggsave(plot = norm_density_gc_plot, "clean_run/plots/codon_sets_densities_nds.pdf", width = 12, height= 5, plot = plot)
+# ggsave(plot = norm_density_gc_plot, "clean_run/plots/codon_sets_nd_gc_matched.pdf", width = 12, height= 5, plot = plot)
 
 # purine matched
 nrow(purine_matched)
 nrow(purine_matched[purine_matched$nd > stops$nd,])
 binom.test(nrow(purine_matched[purine_matched$nd > stops$nd,]), nrow(purine_matched), alternative = "g")
+
+norm_density_purine_plot = normalised_density_plot(purine_matched, stops)
+ggsave(plot = norm_density_purine_plot, "clean_run/plots/codon_sets_nd_purine_matched.pdf", width = 6, height= 5)
+
 
 # match by gc and purine
 gc_purine_matched = gc_matched[gc_matched$purine_content == stops$purine_content,]
