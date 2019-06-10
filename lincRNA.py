@@ -12,9 +12,9 @@ import os
 def main():
 
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg", "excess_length_thresholds", "extract_second"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg", "excess_length_thresholds", "density_regions", "extract_second"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35], opt_flags = [3,4,5,6,7,8,9])
+    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], opt_flags = [3,4,5,6,7,8,9])
 
     input_bed, \
     input_fasta, \
@@ -51,6 +51,7 @@ def main():
     seq_hits_linc, \
     upstream_atg, \
     excess_length_thresholds, \
+    density_regions, \
     extract_second = \
     args.input_bed, \
     args.input_fasta, \
@@ -87,6 +88,7 @@ def main():
     args.seq_hits_linc, \
     args.upstream_atg, \
     args.excess_length_thresholds, \
+    args.density_regions, \
     args.extract_second
 
     # make required simultions an int
@@ -296,10 +298,16 @@ def main():
 
     # upstream from the atg
     if upstream_atg:
-        output_file = "{0}/tests/lincrna/stop_density/upstream_atg_stop_density.csv".format(global_output_directory)
+        output_file = "{0}/stop_density/upstream_atg_stop_density.csv".format(global_output_directory)
         ltests.upstream_atg(input_fasta, output_file, simulations = int(required_simulations), families_file = families_file)
 
-
+    # calculate the density in the different regions
+    if density_regions:
+        local_output_directory = "{0}/stop_density".format(global_output_directory)
+        gen.create_output_directories(local_output_directory)
+        output_file = "{0}/stop_density_regions_chisq.csv".format(local_output_directory)
+        output_file1 = "{0}/stop_density_regions.csv".format(local_output_directory)
+        ltests.density_regions(input_fasta, motif_file, output_file, output_file1, required_simulations = required_simulations, families_file = families_file)
 
 
     # test hits to seqs

@@ -1141,3 +1141,88 @@ def calc_sim_orfs(sims, seqs_string, seqs_lengths):
             sim_orfs = seqo.get_longest_orfs(new_seqs)
             outputs[sim] = sim_orfs
     return outputs
+
+
+def randomise_seqs(seqs):
+    new_seqs = []
+    for seq in seqs:
+        nts = list(seq)
+        np.random.shuffle(nts)
+        new_seqs.append("".join(nts))
+    return new_seqs
+
+
+def randomise_regions(iterations, seq_list):
+    output = {}
+    if len(iterations):
+        np.random.seed()
+        for i, iteration in enumerate(iterations):
+            gen.print_parallel_status(i, iterations)
+            output[iteration] = {region: randomise_seqs(seq_list[region]) for region in seq_list}
+    return output
+
+
+def density_regions(input_fasta, motif_file, output_file, output_file1, required_simulations = None, families_file = None):
+    """
+    """
+    # get the motifs
+    motifs = sequo.read_motifs(motif_file)
+    # read in the seqs only keeping those longer than 207 nts
+    names, seqs = gen.read_fasta(input_fasta)
+    seqs_list = collections.defaultdict(lambda: [])
+    [seqs_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names) if len(seqs[i]) >= 207]
+    if families_file:
+        seqs_list = sequo.pick_random_family_member(families_file, seqs_list)
+
+    # get the different parts of the sequences
+    seq_parts = collections.defaultdict(lambda: [])
+    for id in seqs_list:
+        for seq in seqs_list[id]:
+            seq_parts["five"].append(seq[2:69])
+            seq_parts["three"].append(seq[-69:-2])
+            midpoint = int(len(seq)/2)
+            seq_parts["core"].append(seq[midpoint-33:midpoint+34])
+    seq_parts = {i: seq_parts[i] for i in seq_parts}
+
+
+    # do chisquare test on hit counts
+    region_hit_counts = {region: seqo.calc_motif_counts(seq_parts[region], stops) for region in seq_parts}
+    total_hits = sum([region_hit_counts[i] for i in region_hit_counts])
+    sequence_total_lengths = {region: sum([len(i) for i in seq_parts[region]]) for region in seq_parts}
+    total_lengths = sum([sequence_total_lengths[i] for i in sequence_total_lengths])
+    expecteds = {i: np.divide(sequence_total_lengths[i], total_lengths)*total_hits for i in sorted(sequence_total_lengths)}
+    observeds = {i: region_hit_counts[i] for i in sorted(sequence_total_lengths)}
+    expected = [expecteds[i] for i in expecteds]
+    observed = [observeds[i] for i in observeds]
+    chisq = scipy.stats.chisquare(observed, f_exp = expected)
+    oe = {i: np.divide(observeds[i], expecteds[i]) for i in expecteds}
+
+    ese_densities = {region: seqo.calc_motif_density(seq_parts[region], motifs) for region in seq_parts}
+    stop_densities = {region: seqo.calc_motif_density(seq_parts[region], stops) for region in seq_parts}
+
+    with open(output_file, "w") as outfile:
+        outfile.write("region,nucleotides,prop_nucleotides,stop_hits,prop_stop_hits,expected,o/e\n")
+        for region in ["five", "core", "three"]:
+            output = [region, sequence_total_lengths[region], np.divide(sequence_total_lengths[region], total_lengths), region_hit_counts[region], np.divide(region_hit_counts[region], total_hits), expecteds[region], oe[region]]
+            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+        outfile.write("total,{0},,{1},,{2}".format(total_lengths, total_hits, sum(expected)))
+        outfile.write("\n")
+        outfile.write("\nChisquare\n")
+        outfile.write("Statistic:,{0}\n".format(chisq.statistic))
+        outfile.write("P value:,{0}\n".format(chisq.pvalue))
+
+    sims = simoc.run_simulation_function(list(range(1, required_simulations + 1)), [seq_parts], randomise_regions, sim_run = False)
+    sim_stop_densities = collections.defaultdict(lambda: [])
+    for it in sims:
+        for region in sims[it]:
+            stop_density = seqo.calc_motif_density(sims[it][region], stops)
+            sim_stop_densities[region].append(stop_density)
+
+    nds = {}
+    for region in stop_densities:
+        nds[region] = np.divide(stop_densities[region] - np.mean(sim_stop_densities[region]), np.mean(sim_stop_densities[region]))
+
+    with open(output_file1, "w") as outfile:
+        outfile.write("region,ese_density,stop_density,mean_sim_stop_density,nd\n")
+        for region in ["five", "core", "three"]:
+            outfile.write("{0},{1},{2},{3},{4}\n".format(region, ese_densities[region], stop_densities[region], np.mean(sim_stop_densities[region]), nds[region]))
