@@ -129,7 +129,7 @@ ese_plots = grid.arrange(
   int3_plot,
   rescue_plot,
   ke400_plot,
-  pese_plot,
+  # pese_plot,
   esr_plot,
   ncol = 2
 )
@@ -141,15 +141,54 @@ other_plots = grid.arrange(
   # fas_hex3_plot,
   rbp_cds_plot,
   # rbp_non_cds_plot,
-  ncol = 1
+  ncol = 2
 )
 
 plot = ggarrange(
   ese_plots,
   other_plots,
-  labels = c("A", "B"),
-  widths = c(2, 1)
+  labels = c("A", "B")
+  # widths = c(2, 1)
 )
 
 ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height = 8, plot = plot)
+
+
+## merge with ese_plots
+
+library(ggplot2)
+library(reshape2)
+library(ggpubr)
+
+data = read.csv("clean_run/tests/lincrna/stop_density/stop_density_regions.csv", head = T)
+
+melt = melt(data, id.vars = c("region"), measure.vars = c("ese_density", "stop_density"))
+melt$region <- factor(melt$region, levels = c("five", "core", "three"))
+melt$variable <- factor(melt$variable, c("ese_density", "stop_density"))
+
+region_plot = ggplot(melt, aes(fill=variable, y=value, x=region)) + 
+  geom_bar(position="dodge", stat="identity") + 
+  scale_fill_manual(values = c("RoyalBlue", "#e74b4f"), labels = c("ESE", "Stop codon")) +
+  scale_x_discrete(labels = c("5' flank", "Core", "3' flank")) + 
+  scale_y_continuous(limits = c(0, 0.2)) + 
+  labs(x = "", y = "Density") + 
+  theme_minimal() + 
+  theme(
+    legend.title = element_blank()
+  )
+
+region_plot = ggarrange(
+  region_plot,
+  labels = c("C")
+)
+
+final_plot = ggarrange(
+  plot,
+  region_plot,
+  nrow = 2,
+)
+
+ggsave("clean_run/plots/ese_densities_regions.pdf", plot = final_plot, width = 10, height = 10)
+
+
 
