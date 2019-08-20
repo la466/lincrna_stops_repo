@@ -306,8 +306,9 @@ def main():
         local_output_directory = "{0}/stop_density".format(global_output_directory)
         gen.create_output_directories(local_output_directory)
         output_file = "{0}/stop_density_regions_chisq.csv".format(local_output_directory)
-        output_file1 = "{0}/stop_density_regions.csv".format(local_output_directory)
-        ltests.density_regions(input_fasta, motif_file, output_file, output_file1, required_simulations = required_simulations, families_file = families_file)
+        output_file1 = "{0}/stop_density_regions1.csv".format(local_output_directory)
+        output_file2 = "{0}/stop_density_regions_per_seq.csv".format(local_output_directory)
+        ltests.density_regions(input_fasta, motif_file, output_file, output_file1, output_file2, required_simulations = required_simulations, families_file = families_file)
 
 
     # test hits to seqs

@@ -1162,7 +1162,7 @@ def randomise_regions(iterations, seq_list):
     return output
 
 
-def density_regions(input_fasta, motif_file, output_file, output_file1, required_simulations = None, families_file = None):
+def density_regions(input_fasta, motif_file, output_file, output_file1, output_file2, required_simulations = None, families_file = None):
     """
     """
     # get the motifs
@@ -1200,6 +1200,13 @@ def density_regions(input_fasta, motif_file, output_file, output_file1, required
     ese_densities = {region: seqo.calc_motif_density(seq_parts[region], motifs) for region in seq_parts}
     stop_densities = {region: seqo.calc_motif_density(seq_parts[region], stops) for region in seq_parts}
 
+    ese_densities_per_seq = collections.defaultdict(lambda: [])
+    stop_densities_per_seq = collections.defaultdict(lambda: [])
+    for region in seq_parts:
+        for seq in seq_parts[region]:
+            ese_densities_per_seq[region].append(seqo.calc_motif_density([seq], motifs))
+            stop_densities_per_seq[region].append(seqo.calc_motif_density([seq], stops))
+
     with open(output_file, "w") as outfile:
         outfile.write("region,nucleotides,prop_nucleotides,stop_hits,prop_stop_hits,expected,o/e\n")
         for region in ["five", "core", "three"]:
@@ -1213,16 +1220,28 @@ def density_regions(input_fasta, motif_file, output_file, output_file1, required
 
     sims = simoc.run_simulation_function(list(range(1, required_simulations + 1)), [seq_parts], randomise_regions, sim_run = False)
     sim_stop_densities = collections.defaultdict(lambda: [])
+    sim_seqs = collections.defaultdict(lambda: collections.defaultdict(lambda: []))
     for it in sims:
         for region in sims[it]:
             stop_density = seqo.calc_motif_density(sims[it][region], stops)
             sim_stop_densities[region].append(stop_density)
 
+            for i, seq in enumerate(sims[it][region]):
+                sim_seqs[region][i].append(seq)
+
     nds = {}
     for region in stop_densities:
         nds[region] = np.divide(stop_densities[region] - np.mean(sim_stop_densities[region]), np.mean(sim_stop_densities[region]))
 
+    for region in per_seq_nds:
+        print(region, per_seq_nds[region])
     with open(output_file1, "w") as outfile:
         outfile.write("region,ese_density,stop_density,mean_sim_stop_density,nd\n")
         for region in ["five", "core", "three"]:
             outfile.write("{0},{1},{2},{3},{4}\n".format(region, ese_densities[region], stop_densities[region], np.mean(sim_stop_densities[region]), nds[region]))
+
+
+    with open(output_file2, "w") as outfile:
+        for region in ["five", "core", "three"]:
+            outfile.write("{0}_ese,{1}\n".format(region, ",".join(gen.stringify(ese_densities_per_seq[region]))))
+            outfile.write("{0}_stop,{1}\n".format(region, ",".join(gen.stringify(stop_densities_per_seq[region]))))

@@ -153,3 +153,16 @@ plot = ggarrange(
 
 ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height = 8, plot = plot)
 
+region_plot = ggarrange(region_plot, labels = c("C"))
+
+final_plot = ggarrange(
+  plot,
+  region_plot,
+  nrow = 2,
+  heights = c(5, 3)
+)
+
+final_plot
+
+ggsave("clean_run/plots/motif_sets_stop_densities_regions_density.pdf", width = 8, height = 10, plot = final_plot)
+
