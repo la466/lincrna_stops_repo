@@ -5,7 +5,7 @@ library(gridExtra)
 density_histogram <- function(data, xlab = "", ylab = "", binwidth = 0.01, title = "") {
   real = data[data$sim_id == "real",]
   sims = data[data$sim_id != "real",]
-  p <- ggplot() + 
+  p <- ggplot() +
     geom_histogram(aes(sims$stop_density), binwidth = binwidth, fill = "#d1d2d4", col = "#222222") +
     geom_vline(xintercept = real$stop_density, lty = 1, size = 2, col = "#e74b4f") +
     labs(x = xlab, y = ylab, title = title) +
@@ -13,7 +13,7 @@ density_histogram <- function(data, xlab = "", ylab = "", binwidth = 0.01, title
     theme(
       plot.title = element_text(hjust = 0.5),
       plot.margin = unit(c(0.2,0.1,0.2,0.1), units = "in")
-    ) 
+    )
   return(p)
 }
 
@@ -129,7 +129,7 @@ ese_plots = grid.arrange(
   int3_plot,
   rescue_plot,
   ke400_plot,
-  pese_plot,
+  # pese_plot,
   esr_plot,
   ncol = 2
 )
@@ -141,14 +141,14 @@ other_plots = grid.arrange(
   # fas_hex3_plot,
   rbp_cds_plot,
   # rbp_non_cds_plot,
-  ncol = 1
+  ncol = 2
 )
 
 plot = ggarrange(
   ese_plots,
   other_plots,
-  labels = c("A", "B"),
-  widths = c(2, 1)
+  labels = c("A", "B")
+  # widths = c(2, 1)
 )
 
 ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height = 8, plot = plot)
@@ -165,4 +165,3 @@ final_plot = ggarrange(
 final_plot
 
 ggsave("clean_run/plots/motif_sets_stop_densities_regions_density.pdf", width = 8, height = 10, plot = final_plot)
-
