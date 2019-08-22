@@ -67,6 +67,7 @@ def randomise(seq):
 
 def get_seq_list(fasta_file, with_chr = False):
     names, seqs = gen.read_fasta(fasta_file)
+    print(len(names))
     seq_list = collections.defaultdict(lambda: [])
     for i, name in enumerate(names):
         id = name.split("(")[0]
@@ -84,43 +85,49 @@ def calc_values(seq_list):
             density = seqo.calc_motif_density([seq], stops)
             densities[id].append(density)
 
-    random_densities = collections.defaultdict(lambda: [])
-    for id in seq_list:
-        for seq in seq_list[id]:
-            sim_densities = []
-            for i in range(1):
-                random_seq = randomise(seq)
-                sim_density = seqo.calc_motif_density([random_seq], stops)
-                sim_densities.append(sim_density)
-            random_densities[id].append(sim_densities)
+    # random_densities = collections.defaultdict(lambda: [])
+    # for id in seq_list:
+    #     for seq in seq_list[id]:
+    #         sim_densities = []
+    #         for i in range(1):
+    #             random_seq = randomise(seq)
+    #             sim_density = seqo.calc_motif_density([random_seq], stops)
+    #             sim_densities.append(sim_density)
+    #         random_densities[id].append(sim_densities)
+    #
+    # nds = collections.defaultdict(lambda: [])
+    # for id in densities:
+    #     for i, exon_density in enumerate(densities[id]):
+    #         nd = np.divide(exon_density - np.mean(random_densities[id][i]), np.mean(random_densities[id][i]))
+    #         nds[id].append(nd)
 
-    nds = collections.defaultdict(lambda: [])
-    for id in densities:
-        for i, exon_density in enumerate(densities[id]):
-            nd = np.divide(exon_density - np.mean(random_densities[id][i]), np.mean(random_densities[id][i]))
-            nds[id].append(nd)
-
-    return densities, nds
+    return densities
+    # return densities, nds
 
 
-single_exon_seq_list = get_seq_list(single_exon_fasta)
-single_densities, single_nds = calc_values(single_exon_seq_list)
+# single_exon_seq_list = get_seq_list(single_exon_fasta)
+# single_densities, single_nds = calc_values(single_exon_seq_list)
 
 multi_exon_seq_list = get_seq_list(multi_exon_fasta, with_chr = True)
-multi_densities, multi_nds = calc_values(multi_exon_seq_list)
+multi_densities = calc_values(multi_exon_seq_list)
+
+print(len(multi_densities))
+[print(i) for i in sorted(multi_densities)]
 
 
-single_exon_families = gen.read_many_fields(single_exon_families_file, "\t")
-single_densities = sequo.group_family_results(single_densities, single_exon_families)
-single_nds = sequo.group_family_results(single_nds, single_exon_families)
+# single_exon_families = gen.read_many_fields(single_exon_families_file, "\t")
+# single_densities = sequo.group_family_results(single_densities, single_exon_families)
+# single_nds = sequo.group_family_results(single_nds, single_exon_families)
 
 multi_exon_families = gen.read_many_fields(multi_exon_families_file, "\t")
+multi_exon_families = [[".".join(i.split(":")) for i in family] for family in multi_exon_families]
+print(len(multi_exon_families))
 # # print(multi_exon_families)
 multi_densities = sequo.group_family_results(multi_densities, multi_exon_families)
-multi_nds = sequo.group_family_results(multi_nds, multi_exon_families)
+# multi_nds = sequo.group_family_results(multi_nds, multi_exon_families)
 #
-print(len(single_densities), len(single_nds))
-print(len(multi_densities), len(multi_nds))
+# print(len(single_densities), len(single_nds))
+print(len(multi_densities))
 
 
 # output_file = "temp_data/compare_densities.csv"
