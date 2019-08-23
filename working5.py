@@ -120,32 +120,40 @@ def calc_values(seq_list):
     return densities, nds
 
 
+motif_file = "source_data/motif_sets/int3.txt"
 
 names, seqs = gen.read_fasta(multi_exon_transcripts)
 full_seq_list = {".".join(name.split(":")): seqs[i] for i, name in enumerate(names)}
 
 single_exon_seq_list = get_seq_list(single_exon_fasta)
 single_exon_seq_list = sequo.pick_random_family_member(single_exon_families_file, single_exon_seq_list)
-single_densities, single_nds = calc_values(single_exon_seq_list)
+# single_densities, single_nds = calc_values(single_exon_seq_list)
 
 multi_exon_seq_list = get_seq_list(multi_exon_fasta, full_seq_list = full_seq_list, with_chr = True)
 multi_exon_seq_list = sequo.pick_random_family_member(multi_exon_families_file, multi_exon_seq_list)
-multi_densities, multi_nds = calc_values(multi_exon_seq_list)
+# multi_densities, multi_nds = calc_values(multi_exon_seq_list)
+
+motifs = sequo.read_motifs(motif_file)
+multi_seqs = []
+[multi_seqs.extend(multi_exon_seq_list[i]) for i in multi_exon_seq_list]
+single_seqs = []
+[single_seqs.extend(single_exon_seq_list[i]) for i in single_exon_seq_list]
+print(seqo.calc_motif_density(single_seqs, motifs))
+print(seqo.calc_motif_density(multi_seqs, motifs))
 
 
-
-output_file = "temp_data/compare_densities1.csv"
-
-def get_output(entry):
-    output = []
-    for id in entry:
-        output.extend(entry[id])
-    return gen.stringify(output)
-
-with open(output_file, "w") as outfile:
-
-
-    outfile.write("single_density,{0}\n".format(",".join(get_output(single_densities))))
-    outfile.write("single_nd,{0}\n".format(",".join(get_output(single_nds))))
-    outfile.write("multi_density,{0}\n".format(",".join(get_output(multi_densities))))
-    outfile.write("multi_nd,{0}\n".format(",".join(get_output(multi_nds))))
+# output_file = "temp_data/compare_densities1.csv"
+#
+# def get_output(entry):
+#     output = []
+#     for id in entry:
+#         output.extend(entry[id])
+#     return gen.stringify(output)
+#
+# with open(output_file, "w") as outfile:
+#
+#
+#     outfile.write("single_density,{0}\n".format(",".join(get_output(single_densities))))
+#     outfile.write("single_nd,{0}\n".format(",".join(get_output(single_nds))))
+#     outfile.write("multi_density,{0}\n".format(",".join(get_output(multi_densities))))
+#     outfile.write("multi_nd,{0}\n".format(",".join(get_output(multi_nds))))

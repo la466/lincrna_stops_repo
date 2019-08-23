@@ -24,6 +24,7 @@ import itertools as it
 import random
 import copy
 
+motif_file = "source_data/motif_sets/int3.txt"
 
 cds_fasta = "clean_run/genome_sequences/human/human.cds.clean.fasta"
 single_exon_cds_fasta = "clean_run/genome_sequences/human/human.cds.single_exons.fasta"
@@ -102,14 +103,14 @@ def randomise_densities(ids, seq_list, iterations):
 def calc_values(seq_list):
 
     densities = collections.defaultdict(lambda: [])
+
     for id in seq_list:
         for seq in seq_list[id]:
             density = seqo.calc_motif_density([seq], stops)
             densities[id].append(density)
 
-
     ids = list(seq_list)
-    sim_outputs = gen.run_in_parallel(list(seq_list), ["foo", seq_list, 10], randomise_densities)
+    sim_outputs = gen.run_in_parallel(list(seq_list), ["foo", seq_list, 1000], randomise_densities)
 
     random_densities = collections.defaultdict(lambda: [])
     for output in sim_outputs:
@@ -148,6 +149,12 @@ def get_utrs(transcript_fasta, cds_fasta, output_file):
                 pass
 
 
+def get_output(entry):
+    output = []
+    for id in entry:
+        output.extend(entry[id])
+    return gen.stringify(output)
+
 # cons.filter_families(single_exon_cds_fasta, single_exon_blast_file, single_exon_families, database_path = None, clean_run = None)
 
 # get_full_transcripts(cds_fasta, all_exons_fasta, full_mature_transcripts)
@@ -160,29 +167,46 @@ def get_utrs(transcript_fasta, cds_fasta, output_file):
 
 
 single_cds_names, single_cds_seqs = gen.read_fasta(single_utr)
-single_cds_list = {name: single_cds_seqs[i] for i, name in enumerate(single_cds_names) if len(single_cds_seqs[i]) > 50}
+single_cds_list = {name: [single_cds_seqs[i]] for i, name in enumerate(single_cds_names) if len(single_cds_seqs[i]) > 50}
 single_cds_list = sequo.pick_random_family_member(single_exon_families, single_cds_list)
-single_densities, single_nds = calc_values(single_cds_list)
+# single_densities, single_nds = calc_values(single_cds_list)
+
+# 473
+
+cds_names, cds_seqs = gen.read_fasta(cds_fasta)
+cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names)}
+
+# print(list(cds_list))
 
 multi_cds_names, multi_cds_seqs = gen.read_fasta(multi_utr)
-multi_cds_list = {name: multi_cds_seqs[i] for i, name in enumerate(multi_cds_names) if len(multi_cds_seqs[i]) > 50}
+multi_cds_list = {name: [multi_cds_seqs[i]] for i, name in enumerate(multi_cds_names) if len(multi_cds_seqs[i]) > 50 and name in cds_list}
 multi_cds_list = sequo.pick_random_family_member(families_file, multi_cds_list)
-multi_densities, multi_nds = calc_values(multi_cds_list)
+#
+# 6086
+# multi_densities, multi_nds = calc_values(multi_cds_list)
 
 
+motifs = sequo.read_motifs(motif_file)
+multi_seqs = [multi_cds_list[i][0] for i in multi_cds_list]
+single_seqs = [single_cds_list[i][0] for i in single_cds_list]
+single_ese_desities = [seqo.calc_motif_density([i], motifs) for i in single_seqs]
+multi_ese_densities = [seqo.calc_motif_density([i], motifs) for i in multi_seqs]
 
+print(single_ese_desities)
 
-output_file = "temp_data/utr_densities.csv"
-
-def get_output(entry):
-    output = []
-    for id in entry:
-        output.extend(entry[id])
-    return gen.stringify(output)
-
+output_file = "temp_data/utr_ese_densities.csv"
 with open(output_file, "w") as outfile:
+    outfile.write("single,{0}\n".format(",".join(gen.stringify(single_ese_desities))))
+    outfile.write("multi,{0}\n".format(",".join(gen.stringify(multi_ese_densities))))
 
-    outfile.write("single_density,{0}\n".format(",".join(get_output(single_densities))))
-    outfile.write("single_nd,{0}\n".format(",".join(get_output(single_nds))))
-    outfile.write("multi_density,{0}\n".format(",".join(get_output(multi_densities))))
-    outfile.write("multi_nd,{0}\n".format(",".join(get_output(multi_nds))))
+
+# output_file = "temp_data/utr_densities.csv"
+#
+
+#
+# with open(output_file, "w") as outfile:
+#
+#     outfile.write("single_density,{0}\n".format(",".join(get_output(single_densities))))
+#     outfile.write("single_nd,{0}\n".format(",".join(get_output(single_nds))))
+#     outfile.write("multi_density,{0}\n".format(",".join(get_output(multi_densities))))
+#     outfile.write("multi_nd,{0}\n".format(",".join(get_output(multi_nds))))
