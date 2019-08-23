@@ -11,14 +11,14 @@ transpose_data = function(data) {
   return(data)
 }
 
-file = "temp_data/compare_densities1.csv"
-
-
+# file = "temp_data/compare_densities1.csv"
+file = "temp_data/utr_densities.csv"
 
 data = read.csv(file, head = F)
 data = transpose_data(data)
 
 head(data)
+nrow(data[!is.na(data$single_density),])
 
 boxplot(data$single_density, data$multi_density)
 boxplot(data$single_nd, data$multi_nd, ylim = c(-1, 2))
@@ -39,20 +39,14 @@ data
 median(data$single_nd, na.rm = T)
 
 
-tail(data)
 
-(median(data$single, na.rm = T) - median(data$multi, na.rm = T)) / median(data$single, na.rm = T)
+file1 = "temp_data/utr_densities.csv"
+data1 = read.csv(file1, head = T)
+head(data1)
 
+boxplot(data1$nd)
 
-wilcox.test(data$single_nd, data$multi_nd)
+binom.test(nrow(data1[data1$nd < 0,]), nrow(data1), p = 0.5)
+median(data1$nd, na.rm = T)
 
-
-nrow(data[!is.na(data$single_density),])
-
-data1 = data[!is.name(data$single_density),]
-nrow(data1)
-
-nrow(data)
-tail(data)
-
-data$multi_density
+wilcox.test(data$multi_nd, data1$nd)
