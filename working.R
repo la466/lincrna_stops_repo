@@ -50,3 +50,12 @@ binom.test(nrow(data1[data1$nd < 0,]), nrow(data1), p = 0.5)
 median(data1$nd, na.rm = T)
 
 wilcox.test(data$multi_nd, data1$nd)
+
+
+utr_ese_densities = read.csv("temp_data/utr_ese_densities.csv", head = F)
+utr_densities = transpose_data(utr_ese_densities)
+
+wilcox.test(utr_densities$single, utr_densities$multi)
+median(utr_densities$single, na.rm =  T)
+median(utr_densities$multi, na.rm =  T)
+
