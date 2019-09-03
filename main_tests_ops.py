@@ -1550,7 +1550,7 @@ def process_seq_hits(input_dir, output_file):
 
     files = gen.get_filepaths(input_dir)
     files = [i for i in files if "total_density" not in i]
-    
+
     with open(output_file, "w") as outfile:
         # outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p\n")
 
@@ -1590,17 +1590,17 @@ def process_seq_hits(input_dir, output_file):
 
             stop_hits = 1000*np.divide(real["total_norm_stop"].values[0], total_bp)
             sim_stop_hits = [1000*np.divide(i, total_bp) for i in sims["total_norm_stop"]]
-            p_stop_hits = np.divide(len([i for i in sim_stop_hits if i >= stop_hits]) + 1, len(sim_stop_hits))
+            p_stop_hits = np.divide(len([i for i in sim_stop_hits if i >= stop_hits]) + 1, len(sim_stop_hits) + 1)
             output1.append([file_no + 1, stop_hits, np.nanmedian(sim_stop_hits), p_stop_hits])
 
             non_stop_hits = 1000*np.divide(real["total_norm_non_stop"].values[0], total_bp)
             sim_non_stop_hits = [1000*np.divide(i, total_bp) for i in sims["total_norm_non_stop"]]
-            p_non_stop_hits = np.divide(len([i for i in sim_non_stop_hits if i >= non_stop_hits]) + 1, len(sim_non_stop_hits))
+            p_non_stop_hits = np.divide(len([i for i in sim_non_stop_hits if i >= non_stop_hits]) + 1, len(sim_non_stop_hits) + 1)
             output2.append([file_no + 1, non_stop_hits, np.nanmedian(sim_non_stop_hits), p_non_stop_hits])
 
-            ratio_hits = np.divide(stop_hits, sim_stop_hits)[0]
+            ratio_hits = np.divide(stop_hits, non_stop_hits)
             sim_ratio_hits = [np.divide(sim_stop_hits[i], sim_non_stop_hits[i]) for i in range(len(sim_stop_hits))]
-            p_ratio_hits = np.divide(len([i for i in sim_ratio_hits if i >= ratio_hits]) + 1, len(sim_ratio_hits))
+            p_ratio_hits = np.divide(len([i for i in sim_ratio_hits if i >= ratio_hits]) + 1, len(sim_ratio_hits) + 1)
             output3.append([file_no + 1, ratio_hits, np.nanmedian(sim_ratio_hits), p_ratio_hits])
 
 
