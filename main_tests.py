@@ -137,7 +137,7 @@ def main():
             final_output_file = "{0}/{1}_processed1.csv".format(local_output_dir, motif_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(local_output_dir)
 
-        runs = 1
+        runs = 10
         for run in range(runs):
             if output_prefix:
                 output_file = "{0}/{1}_{2}_hits_{3}.csv".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0], run+1)
