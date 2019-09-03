@@ -1,14 +1,16 @@
 library(ggplot2)
 library(ggpubr)
 
-fill_colour = "#d1d2d4"
+grey = "#d1d2d4"
+fill_colour = "#2678b2"
 line_colour = "#222222"
-red_colour = "#e74b4f"
+red_colour = "#d4292f"
+
 
 gc_zscore_plot = function(data) {
   print(head(data))
 plot = ggplot(data = data, aes(x = data$gc, y = data$z)) + 
-  geom_point(col = ifelse(data$p < 0.05, "RoyalBlue", "black"), size = ifelse(data$p < 0.05, 1.5, 1), pch = ifelse(data$p < 0.05, 18, 16) ) + 
+  geom_point(col = ifelse(data$p < 0.05, fill_colour, "black"), size = ifelse(data$p < 0.05, 1.5, 1), pch = ifelse(data$p < 0.05, 18, 16) ) + 
   geom_smooth(method = "lm", se = FALSE, col = "black", fullrange = TRUE) + 
   geom_hline(yintercept = 0, lty = 2) + 
   scale_y_continuous(limits = c(-5, 10)) + 
@@ -67,7 +69,7 @@ threshold_plot = function(directory, alpha) {
 
   
   plot = ggplot(data = new_data, aes(x = threshold, y = greater)) + 
-    geom_ribbon(data=subset(new_data, 200 <= threshold & threshold <= 300), aes(ymin = 0, ymax = predict(loess(greater ~ threshold))), fill = fill_colour) +
+    geom_ribbon(data=subset(new_data, 200 <= threshold & threshold <= 300), aes(ymin = 0, ymax = predict(loess(greater ~ threshold))), fill = grey) +
     geom_ribbon(data=subset(model_data, 300 <= threshold & threshold <= round(pass_threshold)), aes(ymin = 0, ymax = predict(loess(greater ~ threshold))), fill = red_colour) +
     geom_hline(yintercept = 0.05, lty = 2) + 
     # geom_vline(xintercept = pass_threshold) +
@@ -150,10 +152,11 @@ plot = ggarrange(
   zplot, 
   alpha_plot,
   ncol = 2,
-  labels = c("A", "B")
+  labels = c("A", "B"),
+  widths = c(4, 6)
 )
 
-ggsave(plot = plot, filename = "clean_run/plots/orf_lengths_z_thresholds.pdf", width = 12, height = 5)
+ggsave(plot = plot, filename = "clean_run/plots/orf_lengths_z_thresholds.pdf", width = 10, height = 5)
 
 
 
