@@ -121,22 +121,21 @@ max(file$median_sims)
 max(file$z)
 
 
-# now look at how many exceed thresholds
-# longer than 300
-nrow(file[file$real > 300,])
-nrow(file[file$real > 300 & file$z > 0 & file$p < 0.05,])
-
-# compare with simulants
+# now look at how many exceed thresholds using each of the threshold parameters
+# longer than 300 and compare with simulants
 filepath = paste("clean_run/tests/lincrna/total_lengths1/", "300", ".csv", sep = "") 
 threshold_file = read.csv(filepath, head = T)
 
 real = threshold_file[threshold_file$id == "real",]
+real$greater
 sims = threshold_file[threshold_file$id != "real",]
 max(sims$max_orf)
 mean(sims$greater)
+sd(sims$greater)
+
 
 # p value for number of sets with greater
-nrow(sims[sims$greater >= real$greater,]) / nrow(sims)
+(nrow(sims[sims$greater >= real$greater,])+1) / (nrow(sims) + 1)
 # excess excess 
 (real$greater - mean(sims$greater)) / real$total
 

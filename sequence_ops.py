@@ -3582,7 +3582,7 @@ def calc_hits(file_ids, filelist, exon_list, exon_start_indices):
 
 
 
-def calc_hits_lincrna(file_ids, filelist, exon_list):
+def calc_hits_lincrna(file_ids, filelist, exon_list, total_bp):
 
     outputs = {}
 
@@ -3606,13 +3606,23 @@ def calc_hits_lincrna(file_ids, filelist, exon_list):
                     hit_motifs = [match.group(1) for match in matches]
                     all_hits.extend(hit_motifs)
 
-            stop_hits = [i for i in all_hits if i in stop_motifs]
-            non_stop_hits = [i for i in all_hits if i in non_stop_motifs]
+            stop_hits = len([i for i in all_hits if i in stop_motifs])
+            non_stop_hits = len([i for i in all_hits if i in non_stop_motifs])
 
-            stop_normalised = np.divide(len(stop_hits), len(stop_motifs))
-            non_stop_normalised = np.divide(len(non_stop_hits), len(non_stop_motifs))
-            all_hits_normalised = np.divide(len(all_hits), len(motifs))
-            outputs[id] = [id, len(stop_hits), len(non_stop_hits), stop_normalised, non_stop_normalised, len(stop_motifs), len(non_stop_motifs), len(all_hits), all_hits_normalised]
+            # print(len(non_stop_hits))
+
+
+            # print(id, stop_hits, total_bp)
+
+            stop_hits = 1000*np.divide(stop_hits, total_bp)
+            non_stop_hits = 1000*np.divide(non_stop_hits, total_bp)
+            all_hits = 1000*np.divide(len(all_hits), total_bp)
+
+
+            stop_normalised = np.divide(stop_hits, len(stop_motifs))
+            non_stop_normalised = np.divide(non_stop_hits, len(non_stop_motifs))
+            all_hits_normalised = np.divide(all_hits, len(motifs))
+            outputs[id] = [id, stop_hits, non_stop_hits, stop_normalised, non_stop_normalised, len(stop_motifs), len(non_stop_motifs), all_hits, all_hits_normalised]
 
     return outputs
 

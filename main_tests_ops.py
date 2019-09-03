@@ -1342,6 +1342,9 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
     seq_list = collections.defaultdict(lambda: [])
     [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
     seq_list = sequo.pick_random_family_member(families_file, seq_list)
+    flat_list = []
+    [flat_list.extend(seq_list[i]) for i in seq_list]
+    total_bp = sum([len(i) for i in flat_list])
     # get cds
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
     cds_list = {name.split(".")[0]: cds_seqs[i] for i, name in enumerate(cds_names)}
@@ -1363,7 +1366,7 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
     outputs = simoc.run_simulation_function(list(filelist), args, sequo.calc_hits, sim_run = False)
 
     with open(output_file, "w") as outfile:
-        outfile.write("id,stop_0,stop_1,stop_2,stop_total,non_stop_0,non_stop_1,non_stop_2,non_stop_total,stops_function_0,stops_function_1,stops_function_2,total_stop_motifs,total_non_stop_motifs\n")
+        outfile.write("id,stop_0,stop_1,stop_2,stop_total,non_stop_0,non_stop_1,non_stop_2,non_stop_total,stops_function_0,stops_function_1,stops_function_2,total_stop_motifs,total_non_stop_motifs,total_bp\n")
         for id in outputs:
             output = outputs[id]
             outline = [id]
@@ -1372,6 +1375,7 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
             outline.extend([output[2][i] for i in sorted(output[2])])
             outline.append(output[3])
             outline.append(output[4])
+            outline.append(total_bp)
             outfile.write("{0}\n".format(",".join(gen.stringify(outline))))
 
 
@@ -1383,20 +1387,40 @@ def calc_seq_hits_linc(exons_fasta, output_file, motif_file, motif_simulations_d
     [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
     seq_list = sequo.pick_random_family_member(families_file, seq_list)
 
+    flat_list = []
+    [flat_list.extend(seq_list[i]) for i in seq_list]
+    total_bp = sum([len(i) for i in flat_list])
+
     filelist = {"real": motif_file}
     if required_simulations and required_simulations > 0:
         sim_files = sims = gen.get_filepaths(motif_simulations_directory)[:required_simulations]
         for i, file in enumerate(sim_files):
             filelist["sim_{0}".format(i+1)] = file
 
-    args = [filelist, seq_list]
+    args = [filelist, seq_list, total_bp]
     outputs = simoc.run_simulation_function(list(filelist), args, sequo.calc_hits_lincrna, sim_run = False)
 
     with open(output_file, "w") as outfile:
         outfile.write("id,stop_hits,non_stop_hits,norm_stop,norm_non_stop,stop_motifs,non_stop_motifs,all_hits,all_hits_normalised\n")
         for id in outputs:
             output = outputs[id]
-            outfile.write("{0}\n".format(",".join(gen.stringify(outputs[id]))))
+            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
+
+def process_seq_hits_linc_per_seq(input_dir, seq_no = 1):
+    files = gen.get_filepaths(input_dir)
+    for file in files:
+        if ".norm" not in file:
+            output_file = "{0}.norm.csv".format(file[:-4])
+            entries = gen.read_many_fields(file, ",")
+            with open(output_file, "w") as outfile:
+                outfile.write("{0}\n".format(",".join(entries[0])))
+                for entry in entries[1:]:
+                    entry[3] = np.divide(float(entry[3]), seq_no)
+                    entry[4] = np.divide(float(entry[4]), seq_no)
+                    entry[-1] = np.divide(float(entry[-1]), seq_no)
+                    outfile.write("{0}\n".format(",".join(gen.stringify(entry))))
+
 
 
 def process_seq_hits_linc(input_dir, output_file):
@@ -1404,7 +1428,8 @@ def process_seq_hits_linc(input_dir, output_file):
 
     with open(output_file, "w") as outfile:
         # outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,adj_stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,adj_non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,adj_diff_p,all_hits,median_sim_all_hits,all_hits_normalised,all_hits_p,all_hits_adj_p\n")
-        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p,all_hits,median_sim_all_hits,all_hits_normalised,all_hits_p\n")
+        outfile.write("Stop codon containing motifs per motif per 1000bp sequence hits\n")
+        outfile.write("run,NMH,median_sim_NMH,fold_enrichment_NMH,NMH_empirical_p\n")
 
         for file_no, file in enumerate(sorted(files)):
 
@@ -1413,46 +1438,117 @@ def process_seq_hits_linc(input_dir, output_file):
             real = data.loc[data['id'] == 'real']
             sims = data.loc[data['id'] != 'real']
 
-
             norm_stops_greater = len(sims[sims["norm_stop"] >= real["norm_stop"].values[0]])
             norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
-            norm_non_stops_greater = len(sims[sims["norm_non_stop"] >= real["norm_non_stop"].values[0]])
-            norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
-            diff_less = len(sims[sims["diff"] <= real["diff"].values[0]])
-            diff_p = np.divide(diff_less + 1, len(sims) + 1)
-            all_hits_greater = len(sims[sims["all_hits_normalised"] >= real["all_hits_normalised"].values[0]])
-            all_hits_p = np.divide(all_hits_greater + 1, len(sims) + 1)
 
             output = [file_no+1]
             output.append(real["norm_stop"].values[0])
             output.append(sims["norm_stop"].median())
             output.append(np.divide(real["norm_stop"].values[0] - sims["norm_stop"].mean(), sims["norm_stop"].mean()))
             output.append(norm_stops_p)
+            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
+        outfile.write("\n")
+        outfile.write("\n")
+        outfile.write("Non-stop codon containing motifs per motif per 1000bp sequence hits\n")
+        outfile.write("run,NMH,median_sim_NMH,fold_enrichment_NMH,NMH_empirical_p\n")
+
+        for file_no, file in enumerate(sorted(files)):
+
+            data = pd.read_csv(file)
+            data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
+            real = data.loc[data['id'] == 'real']
+            sims = data.loc[data['id'] != 'real']
+
+            norm_non_stops_greater = len(sims[sims["norm_non_stop"] >= real["norm_non_stop"].values[0]])
+            norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
+
+            output = [file_no+1]
             output.append(real["norm_non_stop"].values[0])
             output.append(sims["norm_non_stop"].median())
             output.append(np.divide(real["norm_non_stop"].values[0] - sims["norm_non_stop"].mean(), sims["norm_non_stop"].mean()))
             output.append(norm_non_stops_p)
+            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
+        outfile.write("\n")
+        outfile.write("\n")
+        outfile.write("Normalised hit ratios stop cdon:non stop codon\n")
+        outfile.write("run,NMH_ratio,median_sim_NMH_ratio,fold_enrichment_NMH_ratio,NMH_ratio_empirical_p\n")
+
+        for file_no, file in enumerate(sorted(files)):
+
+            data = pd.read_csv(file)
+            data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
+            real = data.loc[data['id'] == 'real']
+            sims = data.loc[data['id'] != 'real']
+            diff_less = len(sims[sims["diff"] <= real["diff"].values[0]])
+            diff_p = np.divide(diff_less + 1, len(sims) + 1)
+
+            output = [file_no+1]
             output.append(real["diff"].values[0])
             output.append(sims["diff"].median())
             output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
             output.append(diff_p)
+            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
+        outfile.write("\n")
+        outfile.write("\n")
+        outfile.write("All motifs combined per motif per 1000bp sequence hits\n")
+        outfile.write("run,NMH,median_sim_NMH,fold_enrichment_NMH,NMH_empirical_p\n")
+
+
+        for file_no, file in enumerate(sorted(files)):
+
+            data = pd.read_csv(file)
+            data["diff"] = np.divide(data["norm_stop"], data["norm_non_stop"])
+            real = data.loc[data['id'] == 'real']
+            sims = data.loc[data['id'] != 'real']
+            all_hits_greater = len(sims[sims["all_hits_normalised"] >= real["all_hits_normalised"].values[0]])
+            all_hits_p = np.divide(all_hits_greater + 1, len(sims) + 1)
+
+            output = [file_no + 1]
             output.append(real["all_hits_normalised"].values[0])
             output.append(sims["all_hits_normalised"].median())
             output.append(np.divide(real["all_hits_normalised"].values[0] - sims["all_hits_normalised"].mean(), sims["all_hits_normalised"].mean()))
             output.append(all_hits_p)
             outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
+def process_seq_hits_per_seq(input_dir, seq_no = 1):
+    files = gen.get_filepaths(input_dir)
+    for file in files:
+        if ".norm" not in file:
+            output_file = "{0}.norm.csv".format(file[:-4])
+            entries = gen.read_many_fields(file, ",")
+            with open(output_file, "w") as outfile:
+                outfile.write("{0}\n".format(",".join(entries[0])))
+                for entry in entries[1:]:
+                    for i in range(1, 9):
+                        entry[i] = np.divide(float(entry[i]), seq_no)
+                    # entry[3] = np.divide(float(entry[3]), seq_no)
+                    # entry[4] = np.divide(float(entry[4]), seq_no)
+                    # entry[-1] = np.divide(float(entry[-1]), seq_no)
+                    outfile.write("{0}\n".format(",".join(gen.stringify(entry))))
 
 def process_seq_hits(input_dir, output_file):
 
     files = gen.get_filepaths(input_dir)
     with open(output_file, "w") as outfile:
-        outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p\n")
+        # outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p\n")
+
+        output1 = []
+        output2 = []
+        output3 = []
 
         for file_no, file in enumerate(sorted(files)):
             data = pd.read_csv(file)
+            total_bp = data["total_bp"][0]
+
 
             new_data = pd.DataFrame()
+
+
+            # logic to calculate per motifs
+
             new_data["id"] = data["id"]
             stop_entries = ["stop_0", "stop_1", "stop_2"]
             norm_stop_entries = ["norm_stop_0", "norm_stop_1", "norm_stop_2"]
@@ -1470,27 +1566,56 @@ def process_seq_hits(input_dir, output_file):
             real = new_data.loc[new_data['id'] == 'real']
             sims = new_data.loc[new_data['id'] != 'real']
 
-            norm_stops_greater = len(sims[sims["total_norm_stop"] >= real["total_norm_stop"].values[0]])
-            norm_stops_p = np.divide(norm_stops_greater + 1, len(sims) + 1)
-            norm_non_stops_greater = len(sims[sims["total_norm_non_stop"] >= real["total_norm_non_stop"].values[0]])
-            norm_non_stops_p = np.divide(norm_non_stops_greater + 1, len(sims) + 1)
-            diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
-            diff_p = np.divide(diff_greater + 1, len(sims) + 1)
 
-            output = [file_no+1]
-            output.append(real["total_norm_stop"].values[0])
-            output.append(sims["total_norm_stop"].median())
-            output.append(np.divide(real["total_norm_stop"].values[0] - sims["total_norm_stop"].mean(), sims["total_norm_stop"].mean()))
-            output.append(norm_stops_p)
-            output.append(real["total_norm_non_stop"].values[0])
-            output.append(sims["total_norm_non_stop"].median())
-            output.append(np.divide(real["total_norm_non_stop"].values[0] - sims["total_norm_non_stop"].mean(), sims["total_norm_non_stop"].mean()))
-            output.append(norm_non_stops_p)
-            output.append(real["diff"].values[0])
-            output.append(sims["diff"].median())
-            output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
-            output.append(diff_p)
-            outfile.write("{0}\n".format(",".join(gen.stringify(output))))
+
+
+            stop_hits = 1000*np.divide(real["total_norm_stop"].values[0], total_bp)
+            sim_stop_hits = [1000*np.divide(i, total_bp) for i in sims["total_norm_stop"]]
+            p_stop_hits = np.divide(len([i for i in sim_stop_hits if i >= stop_hits]) + 1, len(sim_stop_hits))
+            output1.append([file_no + 1, stop_hits, np.nanmedian(sim_stop_hits), p_stop_hits])
+
+            non_stop_hits = 1000*np.divide(real["total_norm_non_stop"].values[0], total_bp)
+            sim_non_stop_hits = [1000*np.divide(i, total_bp) for i in sims["total_norm_non_stop"]]
+            p_non_stop_hits = np.divide(len([i for i in sim_non_stop_hits if i >= non_stop_hits]) + 1, len(sim_non_stop_hits))
+            output2.append([file_no + 1, non_stop_hits, np.nanmedian(sim_non_stop_hits), p_non_stop_hits])
+
+            ratio_hits = np.divide(stop_hits, sim_stop_hits)[0]
+            sim_ratio_hits = [np.divide(sim_stop_hits[i], sim_non_stop_hits[i]) for i in range(len(sim_stop_hits))]
+            p_ratio_hits = np.divide(len([i for i in sim_ratio_hits if i >= ratio_hits]) + 1, len(sim_ratio_hits))
+            output3.append([file_no + 1, ratio_hits, np.nanmedian(sim_ratio_hits), p_ratio_hits])
+
+
+        outfile.write("Stop codon containing motifs per motif per 1000bp sequence hits\n")
+        outfile.write("run,NMH,median_sim_NMH,NMH_empirical_p\n")
+        [outfile.write("{0}\n".format(",".join(gen.stringify(i)))) for i in output1]
+        outfile.write("\n")
+        outfile.write("\n")
+        outfile.write("Non stop codon containing motifs per motif per 1000bp sequence hits\n")
+        outfile.write("run,NMH,median_sim_NMH,NMH_empirical_p\n")
+        [outfile.write("{0}\n".format(",".join(gen.stringify(i)))) for i in output2]
+        outfile.write("\n")
+        outfile.write("\n")
+        outfile.write("Normalised hit ratios stop cdon:non stop codon\n")
+        outfile.write("run,NMH_ratio,median_sim_NMH_ratio,NMH_ratio_empirical_p\n")
+        [outfile.write("{0}\n".format(",".join(gen.stringify(i)))) for i in output3]
+
+            # diff_greater = len(sims[sims["diff"] >= real["diff"].values[0]])
+            # diff_p = np.divide(diff_greater + 1, len(sims) + 1)
+            #
+            # output = [file_no+1]
+            # output.append(real["total_norm_stop"].values[0])
+            # output.append(sims["total_norm_stop"].median())
+            # output.append(np.divide(real["total_norm_stop"].values[0] - sims["total_norm_stop"].mean(), sims["total_norm_stop"].mean()))
+            # output.append(norm_stops_p)
+            # output.append(real["total_norm_non_stop"].values[0])
+            # output.append(sims["total_norm_non_stop"].median())
+            # output.append(np.divide(real["total_norm_non_stop"].values[0] - sims["total_norm_non_stop"].mean(), sims["total_norm_non_stop"].mean()))
+            # output.append(norm_non_stops_p)
+            # output.append(real["diff"].values[0])
+            # output.append(sims["diff"].median())
+            # output.append(np.divide(real["diff"].values[0] - sims["diff"].mean(), sims["diff"].mean()))
+            # output.append(diff_p)
+            # outfile.write("{0}\n".format(",".join(gen.stringify(output))))
 
 
 

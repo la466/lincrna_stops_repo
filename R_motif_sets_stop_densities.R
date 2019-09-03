@@ -2,12 +2,17 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
+grey = "#d1d2d4"
+fill_colour = "#2678b2"
+line_colour = "#222222"
+red_colour = "#d4292f"
+
 density_histogram <- function(data, xlab = "", ylab = "", binwidth = 0.01, title = "") {
   real = data[data$sim_id == "real",]
   sims = data[data$sim_id != "real",]
   p <- ggplot() +
-    geom_histogram(aes(sims$stop_density), binwidth = binwidth, fill = "#d1d2d4", col = "#222222") +
-    geom_vline(xintercept = real$stop_density, lty = 1, size = 2, col = "#e74b4f") +
+    geom_histogram(aes(sims$stop_density), binwidth = binwidth, fill = fill_colour, col = "#222222") +
+    geom_vline(xintercept = real$stop_density, lty = 1, size = 2, col = red_colour) +
     labs(x = xlab, y = ylab, title = title) +
     theme_minimal() +
     theme(
@@ -129,8 +134,8 @@ ese_plots = grid.arrange(
   int3_plot,
   rescue_plot,
   ke400_plot,
-  # pese_plot,
   esr_plot,
+  pese_plot,
   ncol = 2
 )
 
@@ -141,27 +146,29 @@ other_plots = grid.arrange(
   # fas_hex3_plot,
   rbp_cds_plot,
   # rbp_non_cds_plot,
-  ncol = 2
+  ncol = 1
 )
+
 
 plot = ggarrange(
   ese_plots,
   other_plots,
-  labels = c("A", "B")
-  # widths = c(2, 1)
+  labels = c("A", "B"),
+  widths = c(2, 1)
 )
+plot
+ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 8, height = 6, plot = plot)
 
-ggsave("clean_run/plots/motif_sets_stop_densities.pdf", width = 12, height = 8, plot = plot)
 
-region_plot = ggarrange(region_plot, labels = c("C"))
-
-final_plot = ggarrange(
-  plot,
-  region_plot,
-  nrow = 2,
-  heights = c(5, 3)
-)
-
-final_plot
-
-ggsave("clean_run/plots/motif_sets_stop_densities_regions_density.pdf", width = 8, height = 10, plot = final_plot)
+# region_plot = ggarrange(region_plot, labels = c("C"))
+# 
+# final_plot = ggarrange(
+#   plot,
+#   region_plot,
+#   nrow = 2,
+#   heights = c(5, 3)
+# )
+# 
+# final_plot
+# 
+# ggsave("clean_run/plots/motif_sets_stop_densities_regions_density.pdf", width = 8, height = 10, plot = final_plot)

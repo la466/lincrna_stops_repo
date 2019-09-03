@@ -12,9 +12,9 @@ import os
 def main():
 
 
-    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg", "excess_length_thresholds", "density_regions", "extract_second"]
+    arguments = ["input_bed", "input_fasta", "output_directory", "input_fasta2", "input_file", "required_simulations", "motif_file", "families_file", "output_prefix", "controls_dir", "extract_sequences", "calc_gc", "density_sim", "get_exon_dint_controls", "get_intron_dint_controls", "exon_region_density", "compare_stop_density", "sim_orf_lengths", "sim_orf_lengths_masked", "sim_stop_density", "sim_stop_density_introns", "sim_stop_density_within_genes", "sim_stop_density_removed_motifs", "sim_stop_density_removed_motifs_sim_seqs", "sim_stop_density_diff", "exon_intron_density", "motif_nd", "excess_test", "single_exon", "motif_overlap", "motif_overlap_density", "clean_alignments", "seq_hits_linc", "upstream_atg", "excess_length_thresholds", "density_regions", "extract_second", "seq_no"]
     description = "Container for analysis on lincRNAs"
-    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], opt_flags = [3,4,5,6,7,8,9])
+    args = gen.parse_arguments(description, arguments, flags = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36], opt_flags = [3,4,5,6,7,8,9,37])
 
     input_bed, \
     input_fasta, \
@@ -52,7 +52,8 @@ def main():
     upstream_atg, \
     excess_length_thresholds, \
     density_regions, \
-    extract_second = \
+    extract_second, \
+    seq_no = \
     args.input_bed, \
     args.input_fasta, \
     args.output_directory, \
@@ -89,12 +90,14 @@ def main():
     args.upstream_atg, \
     args.excess_length_thresholds, \
     args.density_regions, \
-    args.extract_second
+    args.extract_second, \
+    args.seq_no
 
     # make required simultions an int
     required_simulations = int(required_simulations) if required_simulations else None
     # prcoess output prefix
     output_prefix = output_prefix + "_" if output_prefix else ""
+    seq_no = int(seq_no) if seq_no else None
 
     # create output directories
     global_output_directory = "{0}/tests/lincrna".format(output_directory)
@@ -315,11 +318,11 @@ def main():
     if seq_hits_linc:
         local_output_dir = "{0}/ese_hits".format(global_output_directory)
         if output_prefix:
-            tests_output_dir = "{0}/{1}_{2}".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            final_output_file = "{0}/{1}_{2}_processed.csv".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            tests_output_dir = "{0}/{1}_{2}".format(local_output_dir, output_prefix[:-1], motif_file.split("/")[-1].split(".")[0])
+            final_output_file = "{0}/{1}_{2}_processed2.csv".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
         else:
             tests_output_dir = "{0}/{1}_{2}".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
-            final_output_file = "{0}/{1}_{2}_processed.csv".format(local_output_dir, output_prefix, motif_file.split("/")[-1].split(".")[0])
+            final_output_file = "{0}/{1}_{2}_processed2.csv".format(local_output_dir, output_prefix[:-1], motif_file.split("/")[-1].split(".")[0])
         gen.create_output_directories(tests_output_dir)
 
         runs = 10

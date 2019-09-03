@@ -4,6 +4,12 @@ library(ggpubr)
 library(data.table)
 library(png)
 
+grey = "#d1d2d4"
+fill_colour = "#2678b2"
+line_colour = "#222222"
+red_colour = "#d4292f"
+
+
 
 data = read.csv("clean_run/tests/lincrna/stop_density/stop_density_regions.csv", head = T)
 
@@ -51,7 +57,7 @@ plot = ggplot(data = meltdata, aes(x = region, y = value, fill = colour)) +
   geom_boxplot() +
   geom_vline(xintercept = 1.5, lty = 2, col = "#aaaaaa") +
   geom_vline(xintercept = 2.5, lty = 2, col = "#aaaaaa") +
-  scale_fill_manual(values = c("RoyalBlue", "#e74b4f")) +
+  scale_fill_manual(values = c(fill_colour, red_colour)) +
   scale_y_continuous(limits = c(0, 1)) +
   labs(x = "Region", y = "Density") +
   theme_minimal() +
@@ -59,5 +65,5 @@ plot = ggplot(data = meltdata, aes(x = region, y = value, fill = colour)) +
     legend.title = element_blank()
   ) +
   annotate("text", x = 2, y = 1, label = "Exon")
-
+plot
 ggsave(plot, filename = "clean_run/plots/exon_regions_per_seq.pdf", width = 8, height = 6)

@@ -695,5 +695,6 @@ def print_parallel_status(i, iteration_list):
 def get_filepaths(dir):
     filepaths = []
     for file in os.listdir(dir):
-        filepaths.append("{0}/{1}".format(dir, file))
+        if ".DS_Store" not in file:
+            filepaths.append("{0}/{1}".format(dir, file))
     return filepaths
