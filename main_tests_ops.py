@@ -1342,8 +1342,25 @@ def calc_seq_hits(coding_exons_fasta, cds_fasta, output_file, motif_file, motif_
     seq_list = collections.defaultdict(lambda: [])
     [seq_list[name.split(".")[0]].append(seqs[i]) for i, name in enumerate(names)]
     seq_list = sequo.pick_random_family_member(families_file, seq_list)
+
+
+    motifs = sequo.read_motifs(motif_file)
+    stop_motifs = [i for i in motifs if len(re.findall("(TAA|TAG|TGA)", i)) > 0]
+    non_stop_motifs = [i for i in motifs if i not in stop_motifs]
+
     flat_list = []
     [flat_list.extend(seq_list[i]) for i in seq_list]
+
+    stop_density = seqo.calc_motif_density(flat_list, stop_motifs)
+    non_stop_density = seqo.calc_motif_density(flat_list, non_stop_motifs)
+
+
+    density_output_file = "{0}_total_density.csv".format(output_file[:-4])
+    with open(density_output_file, "w") as outfile:
+        outfile.write("stop_density,non_stop_density\n{0},{1}\n".format(stop_density, non_stop_density))
+
+
+
     total_bp = sum([len(i) for i in flat_list])
     # get cds
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
@@ -1532,6 +1549,8 @@ def process_seq_hits_per_seq(input_dir, seq_no = 1):
 def process_seq_hits(input_dir, output_file):
 
     files = gen.get_filepaths(input_dir)
+    files = [i for i in files if "total_density" not in i]
+    
     with open(output_file, "w") as outfile:
         # outfile.write("run,stop_total,median_sim_stop_total,normalised_stop,stop_p,non_stop_total,median_sim_non_stop_total,normalised_non_stop,non_stop_p,diff,median_sim_diff,normalised_diff,diff_p\n")
 
