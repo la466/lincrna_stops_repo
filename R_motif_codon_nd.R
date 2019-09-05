@@ -56,22 +56,20 @@ binom_test <- function(data, ycol = "density", group = NULL) {
 ####
 
 filepath = "clean_run/motif_tests/int3_densities.csv"
-# filepath = "clean_run/motif_tests/int3_densities_strictly_no_stops.csv"
-# filepath = "clean_run/motif_tests/int3_densities_non_overlapping.csv"
+filepath = "clean_run/motif_tests/int3_densities_strictly_no_stops.csv"
+filepath = "clean_run/motif_tests/int3_densities_non_overlapping.csv"
 file = read.csv(filepath, head = T)
 
 file$gc = substr(file$gc_content, 0, 3)
 file$purine = substr(file$purine_content, 0, 3)
 
-nrow(file)
+
 
 stops =  file[file$codons == "TAA_TAG_TGA",]
 gc_matched = file[file$gc == stops$gc & file$codons != "TAA_TAG_TGA",]
 purine_matched = file[file$purine_content == stops$purine_content,]
 
-nrow(gc_matched)
-
-tail(gc_matched)
+nrow(purine_matched)
 
 # gc matched
 nrow(gc_matched)
