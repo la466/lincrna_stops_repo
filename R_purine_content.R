@@ -11,6 +11,7 @@ purine_boxplot = function(data) {
   colnames(data) = c("id", "Exons", "Introns")
   data = melt(data)
   plot = ggplot() + 
+    stat_boxplot(geom = 'errorbar') +
     geom_boxplot(aes(x = data$variable, y = data$value), fill = fill_colour) + 
     labs(x = "", y = "Purine content") + 
     geom_hline(yintercept = 0.784, col = red_colour, size = 1.1) +
@@ -28,6 +29,7 @@ median(purine$intron_purine)
 
 plot = purine_boxplot(purine)
 plot
+
 ggsave(plot = plot, file = "clean_run/plots/exon_intron_purine_boxplot.pdf", width = 4, height = 4)
 
 # no eses

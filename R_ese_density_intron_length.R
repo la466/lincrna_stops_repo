@@ -16,18 +16,18 @@ all_ese_plot <- function(data) {
 
 split_ese_plot <- function(data, title = NULL) {
   data.melt = melt(data, id.vars = c("id", "intron_size"), measure.vars = c("stop_ese_density", "non_stop_ese_density"), value.name = "density")
-  legend_labs = labels = c("Stop ESEs", "Non stop ESEs")
+  legend_labs = labels = c("Stop containing ESEs", "Other ESEs")
   ggplot(data.melt, aes(x = log10(intron_size), y = density, group = variable)) +
     geom_point(cex = 1, aes(colour = variable, shape = variable)) +
     geom_smooth(method = 'lm', aes(col = variable), show.legend = F, se = FALSE) +
     scale_color_manual(name = "", labels = legend_labs, values = c("RoyalBlue", "black")) +
     scale_shape_manual(name = "", labels = legend_labs, values = c(4, 16)) +
     scale_y_continuous(limits = c(0, 0.6)) +
-    labs(x = "log10 intron size", y = "Density", title = title) +
+    labs(x = "log10 intron length", y = "Density", title = title) +
     theme_minimal() +
     theme(
       plot.title = element_text(hjust = 0.5),
-      legend.position = c(0.85,0.9),
+      legend.position = c(0.82,0.9),
       legend.title = element_blank(),
       legend.background = element_blank(),
       legend.key = element_blank(),
@@ -85,7 +85,7 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
       correlations = blank_dataframe
       for (set_name in ese_sets) {
         print(set_name)
-        data = read.csv(paste("clean_run/tests/intron_length_ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
+        data = read.csv(paste("clean_run/tests/ese_densities/", set_name, "_", set_type, "_ese_densities", type, ".csv", sep = ""), head = T)
         data = data[log10(data$intron_size) != 0,]
 
         cor = cor.test(log10(data$intron_size), data$ese_density, method = "spearman")
@@ -109,7 +109,7 @@ stop_nonstop_correlations = function(set_types, types, ese_sets, output_name) {
       cors = rbind(cors, correlations)
       cors[nrow(cors)+1,] <- NA
     }
-    output_file = paste("clean_run/tests/intron_length_ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
+    output_file = paste("clean_run/tests/ese_densities/", output_name, "_", set_type, "_intron_size_ese_density_stop_non_stop_correlations.csv", sep = "")
     print(output_file)
     write.csv(cors, file = output_file, row.names = F, na = "")
 
@@ -122,16 +122,18 @@ ese_sets = c("int3")
 types = c("", "_flanks")
 stop_nonstop_correlations(set_types, types, ese_sets, "processed_output")
 
-pc = read.csv(paste("clean_run/tests/intron_length_ese_densities/int3_pc_ese_densities.csv", sep = ""), head = T)
+pc = read.csv(paste("clean_run/tests/ese_densities/int3_pc_ese_densities_flanks.csv", sep = ""), head = T)
 pc_plot = ggarrange(
   all_ese_plot(pc),
   split_ese_plot(pc),
   ncol = 2,
   labels = c("A", "B")
 )
+pc_plot
+# ggsave(plot = pc_plot, file = "clean_run/plots/pc_intron_size_ese_density_plot_flanks.pdf", width = 9, height = 4)
 ggsave(plot = pc_plot, file = "clean_run/plots/pc_intron_size_ese_density_plot_flanks.pdf", width = 9, height = 4)
 
-lincrna = read.csv(paste("clean_run/tests/intron_length_ese_densities/int3_linc_ese_densities_all_seq.csv", sep = ""), head = T)
+lincrna = read.csv(paste("clean_run/tests/ese_densities/int3_lincrna_ese_densities.csv", sep = ""), head = T)
 lincrna_plot = ggarrange(
   all_ese_plot(lincrna),
   split_ese_plot(lincrna),

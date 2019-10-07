@@ -16,7 +16,7 @@ normalised_density_plot = function(data, stops) {
   plot = ggplot() +
     geom_histogram(aes(data$nd), bins = 30, col = line_colour, fill = fill_colour) + 
     geom_vline(xintercept = stops$nd, lty = 1, cex = 2, col = red_colour) + 
-    labs(x = "Codon set fold enrichment (FE)", y = "Count") +
+    labs(x = "Codon set (FE)", y = "Count") +
     theme_minimal()
   return(plot)
 }
@@ -104,4 +104,4 @@ plot = ggarrange(
   ncol = 1
 )
 plot
-ggsave(plot = plot, file = "clean_run/plots/codon_nd_histogram_boxplot.pdf", width = 8, height = 10)
+ggsave(plot = plot, file = "clean_run/plots/codon_histogram_boxplot_fe.pdf", width = 8, height = 10)
