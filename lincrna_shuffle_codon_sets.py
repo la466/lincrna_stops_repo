@@ -29,7 +29,7 @@ families_file = "clean_run/genome_sequences/lincrna/cabili/multi_exon_families.t
 gc_sets = "clean_run/gc_matched_sets.bed"
 
 codon_sets = gen.read_many_fields(gc_sets, "\t")
-# codon_sets = codon_sets[:50]
+codon_sets = codon_sets[:3]
 
 names, seqs = gen.read_fasta(seqs_file)
 seq_list = {name: seqs[i] for i, name in enumerate(names) if "N" not in seqs[i]}
@@ -70,5 +70,5 @@ def run_simulations(iterations, seq_list, codon_sets, output_directory):
                     outfile.write("{0},{1}\n".format("_".join(codon_set), iteration_densities["_".join(codon_set)]))
     return outputs
 
-iterations = ["real"] + list(range(1000))
-soc.run_simulation_function(iterations, [seq_list, codon_sets, output_directory], run_simulations, sim_run = False)
+iterations = ["real"] + list(range(100))
+soc.run_simulation_function(iterations, [seq_list, codon_sets, output_directory], run_simulations, sim_run = False, workers = 50)
