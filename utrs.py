@@ -44,11 +44,11 @@ single_exon_mature_transcripts = "clean_run/genome_sequences/human/human.single_
 multi_utr = "clean_run/genome_sequences/human/human.multi_exons_five_utr.fasta"
 single_utr = "clean_run/genome_sequences/human/human.single_exon_five_utr.fasta"
 
+np.random.seed()
 
-# fo.fasta_from_intervals(exons_bed, all_exons_fasta, genome_fasta, names = True)
+fo.fasta_from_intervals(exons_bed, all_exons_fasta, genome_fasta, names = True)
 
-
-
+# get full transcripts
 def get_full_transcripts(cds_fasta, exons_fasta, output_file):
 
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
@@ -73,13 +73,15 @@ def get_full_transcripts(cds_fasta, exons_fasta, output_file):
         for id in full_spliced_transcripts:
             outfile.write(">{0}\n{1}\n".format(id, full_spliced_transcripts[id]))
 
-np.random.seed()
+
+# randomise sequences
 def randomise(seq):
     nts = list(seq)
     np.random.shuffle(nts)
     return "".join(nts)
 
 
+# get randomised sequence densities
 def randomise_densities(ids, seq_list, iterations):
 
     random_densities = collections.defaultdict(lambda: [])
@@ -128,7 +130,7 @@ def calc_values(seq_list):
 
     return densities, nds
 
-
+# get the utrs
 def get_utrs(transcript_fasta, cds_fasta, output_file):
 
     cds_names, cds_seqs = gen.read_fasta(cds_fasta)
@@ -157,33 +159,30 @@ def get_output(entry):
 
 # cons.filter_families(single_exon_cds_fasta, single_exon_blast_file, single_exon_families, database_path = None, clean_run = None)
 
-# get_full_transcripts(cds_fasta, all_exons_fasta, full_mature_transcripts)
-# get_full_transcripts(single_exon_cds_fasta, all_exons_fasta, single_exon_mature_transcripts)
+get_full_transcripts(cds_fasta, all_exons_fasta, full_mature_transcripts)
+get_full_transcripts(single_exon_cds_fasta, all_exons_fasta, single_exon_mature_transcripts)
 
-# get_utrs(full_mature_transcripts, cds_fasta, multi_utr)
-# get_utrs(single_exon_mature_transcripts, single_exon_cds_fasta, single_utr)
-#
-
+get_utrs(full_mature_transcripts, cds_fasta, multi_utr)
+get_utrs(single_exon_mature_transcripts, single_exon_cds_fasta, single_utr)
 
 
 single_cds_names, single_cds_seqs = gen.read_fasta(single_utr)
 single_cds_list = {name: [single_cds_seqs[i]] for i, name in enumerate(single_cds_names) if len(single_cds_seqs[i]) > 50}
 single_cds_list = sequo.pick_random_family_member(single_exon_families, single_cds_list)
-# single_densities, single_nds = calc_values(single_cds_list)
+single_densities, single_nds = calc_values(single_cds_list)
 
 # 473
 
 cds_names, cds_seqs = gen.read_fasta(cds_fasta)
 cds_list = {name: cds_seqs[i] for i, name in enumerate(cds_names)}
 
-# print(list(cds_list))
 
 multi_cds_names, multi_cds_seqs = gen.read_fasta(multi_utr)
 multi_cds_list = {name: [multi_cds_seqs[i]] for i, name in enumerate(multi_cds_names) if len(multi_cds_seqs[i]) > 50 and name in cds_list}
 multi_cds_list = sequo.pick_random_family_member(families_file, multi_cds_list)
 #
 # 6086
-# multi_densities, multi_nds = calc_values(multi_cds_list)
+multi_densities, multi_nds = calc_values(multi_cds_list)
 
 
 motifs = sequo.read_motifs(motif_file)
@@ -192,21 +191,8 @@ single_seqs = [single_cds_list[i][0] for i in single_cds_list]
 single_ese_desities = [seqo.calc_motif_density([i], motifs) for i in single_seqs]
 multi_ese_densities = [seqo.calc_motif_density([i], motifs) for i in multi_seqs]
 
-print(single_ese_desities)
 
-output_file = "temp_data/utr_ese_densities.csv"
+output_file = "clean_run/utr_ese_densities.csv"
 with open(output_file, "w") as outfile:
     outfile.write("single,{0}\n".format(",".join(gen.stringify(single_ese_desities))))
     outfile.write("multi,{0}\n".format(",".join(gen.stringify(multi_ese_densities))))
-
-
-# output_file = "temp_data/utr_densities.csv"
-#
-
-#
-# with open(output_file, "w") as outfile:
-#
-#     outfile.write("single_density,{0}\n".format(",".join(get_output(single_densities))))
-#     outfile.write("single_nd,{0}\n".format(",".join(get_output(single_nds))))
-#     outfile.write("multi_density,{0}\n".format(",".join(get_output(multi_densities))))
-#     outfile.write("multi_nd,{0}\n".format(",".join(get_output(multi_nds))))
