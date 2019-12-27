@@ -78,7 +78,7 @@ threshold_plot = function(directory, alpha) {
     geom_smooth(method = "loess", col = line_colour, se = T, size = 0.8) +
     scale_x_continuous(breaks = seq(0, 600, 25)) +
     scale_y_continuous(breaks = seq(0, 0.4, 0.05)) +
-    labs(x = "ORF length threshold", y = "Excess proportion of sequences with maximum\nORF lengths greater expected") +
+    labs(x = "ORF length threshold", y = "Excess proportion of sequences with longest\nORF lengths greater expected") +
     theme_minimal() + 
     theme(
       panel.grid.minor.x  = element_blank(),
@@ -156,8 +156,10 @@ plot = ggarrange(
   widths = c(4, 6)
 )
 
-ggsave(plot = plot, filename = "clean_run/plots/orf_lengths_z_thresholds.pdf", width = 10, height = 5)
 
+ggsave(plot = plot, filename = "clean_run/plots/orf_lengths_z_thresholds.pdf", width = 10, height = 5)
+ggsave(plot = plot, filename = "clean_run/plots/orf_lengths_z_thresholds.eps", width = 10, height = 5)
+dev.off()
 
 
 
