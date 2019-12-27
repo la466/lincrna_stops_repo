@@ -24,10 +24,17 @@ import itertools as it
 import random
 import copy
 
+exon_bed = "source_data/hsAllCompmerge.cage+polyASupported.bed"
+single_exon_bed = "clean_run/genome_sequences/lincrna/GENCODE_CLS/single_exons.bed"
+genome_fasta = "../source_data/genomes/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.fa"
 multi_exon_fasta = "clean_run/genome_sequences/lincrna/GENCODE_CLS/hsAllCompmerge.cage+polyASupported.bed.filtered.exons.fasta"
 multi_exon_families_file = "clean_run/genome_sequences/lincrna/GENCODE_CLS/families.txt"
 single_exon_fasta = "clean_run/genome_sequences/lincrna/GENCODE_CLS/single_exons.fasta"
 single_exon_families_file = "clean_run/genome_sequences/lincrna/GENCODE_CLS/single_exons_families.txt"
+multi_exon_transcripts = "clean_run/genome_sequences/lincrna/GENCODE_CLS/hsAllCompmerge.cage+polyASupported.full_transcripts.fasta"
+
+
+
 
 
 np.random.seed()

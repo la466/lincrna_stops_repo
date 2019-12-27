@@ -8,7 +8,7 @@ import re
 import collections
 from useful_motif_sets import dinucleotides, nucleotides, stops
 import multiprocessing as mp
-from progressbar import ProgressBar
+# from progressbar import ProgressBar
 import os
 import copy
 

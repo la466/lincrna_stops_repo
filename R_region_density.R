@@ -17,6 +17,8 @@ melt = melt(data, id.vars = c("region"), measure.vars = c("ese_density", "stop_d
 melt$region <- factor(melt$region, levels = c("five", "core", "three"))
 melt$variable <- factor(melt$variable, c("ese_density", "stop_density"))
 
+head(melt)
+
 region_plot = ggplot(melt, aes(fill=variable, y=value, x=region)) +
   geom_bar(position="dodge", stat="identity") +
   scale_fill_manual(values = c("RoyalBlue", "#e74b4f"), labels = c("ESE", "Stop codon")) +
@@ -49,6 +51,7 @@ meltdata$region = c(rep("5'", nrow(i)*2), rep("Core", nrow(i)*2), rep("3'", nrow
 meltdata$region <- factor(meltdata$region, levels=unique(meltdata$region))
 meltdata$colour = rep(c(rep("ESE", nrow(i)), rep("Stop codon", nrow(i))), 3)
 
+head(meltdata)
 
 img <- readPNG("./source_data/exon.png")
 plot = ggplot(data = meltdata, aes(x = region, y = value, fill = colour)) +

@@ -14,7 +14,7 @@ import os
 import re
 import multiprocessing as mp
 import pandas as pd
-from progressbar import ProgressBar
+# from progressbar import ProgressBar
 from useful_motif_sets import stops
 import pickle
 import scipy.stats

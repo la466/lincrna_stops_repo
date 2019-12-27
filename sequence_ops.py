@@ -15,13 +15,13 @@ from Bio.Alphabet import IUPAC
 import copy
 import sys
 from useful_motif_sets import nucleotides, stops, codon_map, twofold, fourfold, one_away_codons
-from progressbar import ProgressBar
+# from progressbar import ProgressBar
 import multiprocessing as mp
 import itertools as it
 import time
 import scipy.stats
 
-pbar = ProgressBar()
+# pbar = ProgressBar()
 
 def generate_genome_dataset(gtf_file, genome_fasta, dataset_name, dataset_output_directory, id_list = None, filter_by_transcript = None, filter_by_gene = None, filter_one_per_gene = None, clean_run = None, transcript_id_search_pattern = None, gene_id_search_pattern = None, stop_codon_set = None):
 

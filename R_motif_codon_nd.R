@@ -22,11 +22,11 @@ normalised_density_plot = function(data, stops) {
 }
 
 purine_boxplot = function(data, stops) {
-  data$colour <- ifelse(data$purine == stops$purine, "a", "b")
+  # data$colour <- ifelse(data$purine == stops$purine, "a", "b")
   plot = ggplot(data, aes(x = data$purine, y = data$nd)) + 
     geom_hline(yintercept = 0, lty=1) +
     stat_boxplot(geom ='errorbar') +
-    geom_boxplot(aes(fill=data$colour)) +
+    geom_boxplot(fill=grey) +
     scale_fill_manual(values=c(fill_colour, grey)) +
     geom_hline(yintercept = stops$nd, lty=2) +
     labs(x = "Codon set purine content", y="FE") + 
@@ -56,8 +56,8 @@ binom_test <- function(data, ycol = "density", group = NULL) {
 ####
 
 filepath = "clean_run/motif_tests/int3_densities.csv"
-filepath = "clean_run/motif_tests/int3_densities_strictly_no_stops.csv"
-filepath = "clean_run/motif_tests/int3_densities_non_overlapping.csv"
+# filepath = "clean_run/motif_tests/int3_densities_strictly_no_stops.csv"
+# filepath = "clean_run/motif_tests/int3_densities_non_overlapping.csv"
 file = read.csv(filepath, head = T)
 
 file$gc = substr(file$gc_content, 0, 3)
@@ -105,3 +105,5 @@ plot = ggarrange(
 )
 plot
 ggsave(plot = plot, file = "clean_run/plots/codon_histogram_boxplot_fe.pdf", width = 8, height = 10)
+ggsave(plot = plot, file = "clean_run/plots/codon_histogram_boxplot_fe.eps", width = 8, height = 10)
+
