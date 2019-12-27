@@ -70,3 +70,5 @@ plot = ggplot(data = meltdata, aes(x = region, y = value, fill = colour)) +
   annotate("text", x = 2, y = 1, label = "Exon")
 plot
 ggsave(plot, filename = "clean_run/plots/exon_regions_per_seq.pdf", width = 8, height = 6)
+ggsave(plot, filename = "clean_run/plots/exon_regions_per_seq.eps", width = 8, height = 6)
+ggsave(plot, filename = "clean_run/plots/exon_regions_per_seq.png", width = 8, height = 6)

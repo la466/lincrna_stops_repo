@@ -70,5 +70,5 @@ def run_simulations(iterations, seq_list, codon_sets, output_directory):
                     outfile.write("{0},{1}\n".format("_".join(codon_set), iteration_densities["_".join(codon_set)]))
     return outputs
 
-iterations = ["real"] + list(range(100))
+iterations = ["real"] + list(range(1000))
 soc.run_simulation_function(iterations, [seq_list, codon_sets, output_directory], run_simulations, sim_run = False, workers = 50)

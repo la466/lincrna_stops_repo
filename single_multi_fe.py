@@ -33,8 +33,8 @@ single_exon_fasta = "clean_run/genome_sequences/lincrna/GENCODE_CLS/single_exons
 single_exon_families_file = "clean_run/genome_sequences/lincrna/GENCODE_CLS/single_exons_families.txt"
 multi_exon_transcripts = "clean_run/genome_sequences/lincrna/GENCODE_CLS/hsAllCompmerge.cage+polyASupported.full_transcripts.fasta"
 
-
-
+motif_file = "source_data/motif_sets/int3.txt"
+motifs = sequo.read_motifs(motif_file)
 
 
 np.random.seed()
@@ -100,12 +100,14 @@ def calc_values(seq_list):
 
     densities = collections.defaultdict(lambda: [])
     gcs = collections.defaultdict(lambda: [])
+    ese = collections.defaultdict(lambda: [])
 
     for id in seq_list:
         for i, exon in enumerate(seq_list[id]):
             density = seqo.calc_motif_density([exon], stops)
             densities['{0}.{1}'.format(id, i)].append(density)
             gcs['{0}.{1}'.format(id, i)].append(seqo.calc_gc_seqs_combined([exon]))
+            ese['{0}.{1}'.format(id, i)].append(seqo.calc_motif_density([exon], motifs))
 
 
     ids = list(seq_list)
@@ -115,7 +117,7 @@ def calc_values(seq_list):
     randomised_densities = process_densities(sim_outputs)
     nds = calc_nds(densities, randomised_densities)
 
-    return densities, nds, gcs
+    return densities, nds, gcs, ese
 
 
 motif_file = "source_data/motif_sets/int3.txt"
@@ -130,19 +132,19 @@ single_exon_seq_list = sequo.pick_random_family_member(single_exon_families_file
 multi_exon_seq_list = get_seq_list(multi_exon_fasta, full_seq_list = full_seq_list, with_chr = True)
 multi_exon_seq_list = sequo.pick_random_family_member(multi_exon_families_file, multi_exon_seq_list)
 
-densities_s, nds_s, gcs_s = calc_values(single_exon_seq_list)
-densities_m, nds_m, gcs_m = calc_values(multi_exon_seq_list)
+densities_s, nds_s, gcs_s, ese_s = calc_values(single_exon_seq_list)
+densities_m, nds_m, gcs_m, ese_m = calc_values(multi_exon_seq_list)
 
 exon_count_s = {i: len(single_exon_seq_list[i]) for i in single_exon_seq_list}
 exon_count_m = {i: len(multi_exon_seq_list[i]) for i in multi_exon_seq_list}
 
 
-with open("clean_run/tests/single_multi_fe/single.csv", "w") as outfile:
-    outfile.write("id,gc,density,fe\n")
+with open("clean_run/gc_output_single.csv", "w") as outfile:
+    outfile.write("id,gc,density,fe,ese_density\n")
     for id in nds_s:
-        outfile.write("{0},{1},{2},{3}\n".format(id, gcs_s[id][0], densities_s[id][0], nds_s[id][0]))
+        outfile.write("{0},{1},{2},{3},{4}\n".format(id, gcs_s[id][0], densities_s[id][0], nds_s[id][0], ese_s[id][0]))
 
-with open("clean_run/tests/single_multi_fe/multi.csv", "w") as outfile:
-    outfile.write("id,gc,density,fe\n")
+with open("clean_run/gc_output_multi.csv", "w") as outfile:
+    outfile.write("id,gc,density,fe,ese_density\n")
     for id in nds_m:
-        outfile.write("{0},{1},{2},{3}\n".format(id, gcs_m[id][0], densities_m[id][0], nds_m[id][0]))
+        outfile.write("{0},{1},{2},{3},{4}\n".format(id, gcs_m[id][0], densities_m[id][0], nds_m[id][0], ese_m[id][0]))
